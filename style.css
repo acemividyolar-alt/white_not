@@ -1,0 +1,260 @@
+/* ==========================================================================
+   NOTLARIM - style.css (Görünüm)
+   Bu dosya sayfanın tüm görsel ayarlarını içerir: renkler, yerleşim,
+   karanlık tema, mobil/PC uyumu. index.html bu dosyayı <link> ile çağırır.
+   ========================================================================== */
+
+  /* ===================================================================
+     CSS BÖLÜMÜ - Sayfanın GÖRÜNÜMÜ buradan ayarlanır.
+     =================================================================== */
+
+  /* :root içinde "değişkenler" tanımlanır. Bir rengi tek yerden değiştirince
+     onu kullanan her yer otomatik değişir. (--isim şeklinde tanımlanır,
+     var(--isim) şeklinde kullanılır.) */
+  :root {
+    --bg: #f4f1ea;          /* Arka plan (açık bej) */
+    --paper: #fffdf7;       /* Kart/kağıt rengi (kırık beyaz) */
+    --ink: #2b2724;         /* Ana yazı rengi (koyu kahve-siyah) */
+    --muted: #8a8378;       /* Soluk yazı (tarih, ipucu metinleri) */
+    --accent: #c2410c;      /* Vurgu rengi (turuncu - butonlar, aktif proje) */
+    --accent-soft: #f5e6dd; /* Vurgunun açık tonu (etiket arka planı) */
+    --line: #e4ddd0;        /* Çizgi/kenarlık rengi */
+    --green: #4d7c4d;       /* İlerleme çubuğu ve onay rengi (yeşil) */
+    --sidebar-bg: #efe9de;  /* Kenar çubuğu arka planı */
+    --proj-hover: #e6dfd2;  /* Proje üzerine gelince */
+  }
+
+  /* KARANLIK TEMA: body'ye "dark" sınıfı eklenince bu değerler geçerli olur.
+     Aynı değişken isimleri kullanıldığı için tüm arayüz otomatik değişir. */
+  body.dark {
+    --bg: #1a1816;          /* Arka plan (çok koyu kahve) */
+    --paper: #262320;       /* Kart rengi (koyu) */
+    --ink: #ece7df;         /* Ana yazı (açık krem) */
+    --muted: #9a9286;       /* Soluk yazı */
+    --accent: #e2632c;      /* Vurgu (karanlıkta biraz daha parlak turuncu) */
+    --accent-soft: #3a2a20; /* Etiket arka planı (koyu) */
+    --line: #3a3530;        /* Çizgi/kenarlık */
+    --green: #6fa36f;       /* Yeşil (karanlıkta daha açık) */
+    --sidebar-bg: #211e1b;  /* Kenar çubuğu arka planı */
+    --proj-hover: #2e2a25;  /* Proje üzerine gelince */
+  }
+
+  /* "*" tüm öğeleri seçer. Tarayıcıların varsayılan boşluklarını sıfırlıyoruz
+     ki tasarımı sıfırdan kontrol edebilelim. */
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+
+  body {
+    font-family: Georgia, 'Times New Roman', serif; /* Kitap/gazete havası veren yazı tipi */
+    background: var(--bg);
+    color: var(--ink);
+    overflow: hidden;        /* Sayfanın tamamı kaymasın; içerideki paneller kendi içinde kaysın */
+    transition: background 0.25s, color 0.25s; /* Tema değişirken yumuşak geçiş */
+  }
+
+  /* Tema değiştirme düğmesi (güneş/ay) */
+  .theme-btn {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    border-radius: 5px; padding: 0.4rem 0.6rem; font-size: 1rem; line-height: 1;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .theme-btn:hover { color: var(--ink); border-color: var(--muted); }
+
+  /* .app = en dış kapsayıcı. display:flex ile kenar çubuğu ve ana alanı
+     YAN YANA dizer. 100dvh = telefonda adres çubuğu hesaba katılmış tam yükseklik. */
+  .app { display: flex; height: 100vh; height: 100dvh; }
+
+  /* ---------- SOL KENAR ÇUBUĞU (projeler) - masaüstü görünümü ---------- */
+  .sidebar {
+    width: 250px;            /* Sabit genişlik */
+    flex-shrink: 0;          /* Daralmasın */
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;  /* İçindekiler alt alta dizilsin */
+    padding: 1.2rem 0;
+  }
+  .sidebar h1 { font-size: 1.5rem; padding: 0 1.2rem 1rem; letter-spacing: -0.02em; }
+
+  /* Proje listesi alanı. flex:1 -> kalan boşluğu kaplar. overflow-y:auto ->
+     proje çoksa bu alan kendi içinde kayar. */
+  .proj-list { flex: 1; overflow-y: auto; padding: 0 0.6rem; }
+
+  /* Tek bir proje satırı */
+  .proj {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.6rem 0.7rem; border-radius: 6px; cursor: pointer;
+    margin-bottom: 3px; font-size: 1rem;
+  }
+  .proj:hover { background: var(--proj-hover); }                 /* Üzerine gelince hafif renk */
+  .proj.active { background: var(--accent); color: #fff; } /* Seçili proje turuncu */
+  .proj.active .proj-count { color: #ffe; }
+  .proj-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* Uzun isim "..." ile kısalır */
+  .proj-right { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+  .proj-count { font-size: 0.75rem; color: var(--muted); font-family: monospace; } /* Öğe sayısı rozeti */
+  .proj-x { font-size: 1rem; opacity: 0; padding: 0 0.2rem; }  /* Silme çarpısı - normalde gizli */
+  .proj:hover .proj-x { opacity: 0.55; }               /* Üzerine gelince belirir */
+  .proj-x:active, .proj-x:hover { opacity: 1; }
+
+  /* Alttaki "yeni proje ekle" kutusu */
+  .add-proj { margin: 0.8rem 1.2rem 0; display: flex; gap: 0.4rem; }
+  .add-proj input {
+    flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--paper);
+    border-radius: 5px; padding: 0.5rem 0.6rem; font-family: inherit; font-size: 0.95rem; outline: none;
+  }
+  .add-proj button {
+    background: var(--ink); color: #fff; border: none; border-radius: 5px;
+    width: 40px; flex-shrink: 0; cursor: pointer; font-size: 1.2rem;
+  }
+
+  /* ---------- ANA ALAN (sağ taraf) ---------- */
+  .main { flex: 1; min-width: 0; overflow-y: auto; padding: 1.4rem 2.5rem; }
+
+  /* Üst şerit: başlık + dışa aktar butonu */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 2px solid var(--ink); padding-bottom: 0.7rem; margin-bottom: 0.9rem; gap: 0.8rem;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 0.7rem; min-width: 0; }
+
+  /* Hamburger (☰) menü butonu - SADECE mobilde görünür (aşağıdaki media query açar) */
+  .menu-btn {
+    display: none; background: transparent; border: none; cursor: pointer;
+    font-size: 1.5rem; color: var(--ink); flex-shrink: 0; padding: 0.2rem;
+  }
+  .topbar h2 { font-size: 1.7rem; letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .export-btn {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    border-radius: 5px; padding: 0.4rem 0.8rem; font-family: inherit; font-size: 0.82rem;
+    cursor: pointer; flex-shrink: 0; white-space: nowrap;
+  }
+  .export-btn:hover { color: var(--ink); border-color: var(--muted); }
+
+  /* Dışa/içe aktarma açılır menüsü */
+  .export-wrap { position: relative; flex-shrink: 0; }    /* relative -> menü buna göre konumlanır */
+  .menu {
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 20;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.14); min-width: 220px; overflow: hidden;
+    display: none;                                        /* Normalde gizli */
+  }
+  .menu.open { display: block; }                          /* "open" sınıfı eklenince görünür */
+  .menu-group-label {
+    font-size: 0.7rem; color: var(--muted); font-family: monospace; text-transform: uppercase;
+    letter-spacing: 0.05em; padding: 0.6rem 0.9rem 0.3rem;
+  }
+  .menu button {
+    display: block; width: 100%; text-align: left; background: transparent; border: none;
+    font-family: inherit; font-size: 0.92rem; color: var(--ink); padding: 0.55rem 0.9rem; cursor: pointer;
+  }
+  .menu button:hover { background: var(--accent-soft); }
+  .menu .sep { height: 1px; background: var(--line); margin: 0.3rem 0; } /* Menü içi ayraç çizgi */
+
+  /* İlerleme çubuğu (görev tamamlanma oranı) */
+  .progress-wrap { margin-bottom: 1.2rem; }
+  .progress-bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--green); transition: width 0.3s; } /* width animasyonlu değişir */
+  .progress-label { font-size: 0.78rem; color: var(--muted); font-family: monospace; margin-top: 0.3rem; }
+
+  /* Arama kutusu */
+  .search {
+    width: 100%; border: 1px solid var(--line); background: var(--paper); border-radius: 6px;
+    padding: 0.65rem 0.85rem; font-family: inherit; font-size: 1rem; outline: none; margin-bottom: 1.2rem;
+  }
+  .search:focus { border-color: var(--accent); }         /* Tıklanınca turuncu kenarlık */
+
+  /* İçeriği ekranda ortalayan ve genişliğini sınırlayan kapsayıcı */
+  .max { max-width: 1100px; margin: 0 auto; width: 100%; }
+
+  /* Yeni not/görev ekleme kutusu */
+  .composer {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+    padding: 1rem; margin-bottom: 1.8rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .composer input, .composer textarea {
+    width: 100%; border: none; background: transparent; font-family: inherit;
+    color: var(--ink); outline: none; resize: none;
+  }
+  .composer .c-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 0.4rem; }
+  .composer textarea { font-size: 1rem; line-height: 1.6; min-height: 60px; }
+  .composer .c-tags { font-size: 0.9rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 0.6rem; margin-top: 0.5rem; }
+  .composer input::placeholder, .composer textarea::placeholder { color: var(--muted); }
+  .c-row { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; margin-top: 0.7rem; }
+
+  /* Not / Görev seçim düğmeleri */
+  .type-toggle { display: flex; gap: 0.3rem; }
+  .type-toggle button {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    border-radius: 5px; padding: 0.35rem 0.8rem; font-family: inherit; font-size: 0.85rem; cursor: pointer;
+  }
+  .type-toggle button.sel { background: var(--ink); color: #fff; border-color: var(--ink); } /* Seçili tür koyu */
+  .btn-add {
+    background: var(--accent); color: #fff; border: none; border-radius: 5px;
+    padding: 0.5rem 1.4rem; font-family: inherit; font-size: 0.92rem; cursor: pointer;
+  }
+  .btn-add:active { opacity: 0.85; }
+
+  /* Liste içindeki tek bir not/görev kartı */
+  .item {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+    padding: 0.9rem 1.1rem; margin-bottom: 0.9rem; box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  }
+  .item.pinned { border-left: 3px solid var(--accent); }  /* Sabitlenmiş kartta sol turuncu çizgi */
+  .item.task { display: flex; align-items: flex-start; gap: 0.7rem; } /* Görevde kutucuk + metin yan yana */
+  .task-check { width: 22px; height: 22px; flex-shrink: 0; margin-top: 2px; cursor: pointer; accent-color: var(--green); }
+  .task-body { flex: 1; min-width: 0; }
+  .item.done .task-text { text-decoration: line-through; color: var(--muted); } /* Tamamlanan görevin üstü çizili */
+  .item h3 { font-size: 1.15rem; margin-bottom: 0.3rem; word-break: break-word; }
+  .item p { font-size: 0.97rem; line-height: 1.6; white-space: pre-wrap; color: #443e38; word-break: break-word; }
+  .task-text { font-size: 1rem; word-break: break-word; }
+
+  /* Etiket rozetleri */
+  .tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+  .tag { background: var(--accent-soft); color: var(--accent); font-size: 0.75rem; padding: 0.15rem 0.6rem; border-radius: 10px; font-family: monospace; }
+
+  /* Kartın altı: tarih + işlem butonları */
+  .meta { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.7rem; padding-top: 0.55rem; border-top: 1px solid var(--line); }
+  .date { font-size: 0.74rem; color: var(--muted); font-family: monospace; }
+  .actions { display: flex; gap: 0.3rem; flex-shrink: 0; }
+  .actions button { background: transparent; border: none; color: var(--muted); font-size: 0.82rem; cursor: pointer; font-family: inherit; padding: 0.2rem 0.4rem; }
+  .actions button:active, .actions button:hover { color: var(--accent); }
+
+  .empty { text-align: center; color: var(--muted); padding: 2.5rem 0; font-style: italic; } /* "Henüz öğe yok" yazısı */
+  .status { font-size: 0.76rem; color: var(--muted); text-align: center; margin: 1rem 0; font-family: monospace; } /* Alt uyarı satırı */
+
+  /* GENİŞ EKRAN (1100px üstü): iki sütunlu yerleşim.
+     Sol sütun ekleme kutusu (yapışkan), sağ sütun liste. */
+  .content { width: 100%; }
+  @media (min-width: 1100px) {
+    .content {
+      display: grid;
+      grid-template-columns: 380px 1fr;  /* Sol 380px, sağ kalan alan */
+      gap: 2rem;
+      align-items: start;
+    }
+    .col-composer { position: sticky; top: 0; }  /* Kaydırırken ekleme kutusu üstte kalır */
+    .composer { margin-bottom: 0; }
+    .col-list { min-width: 0; }
+  }
+
+  /* Mobil çekmece açıkken arkayı karartan örtü */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 5; }
+
+  /* MOBİL EKRAN (720px altı): kenar çubuğu gizli, ☰ ile açılan çekmece olur. */
+  @media (max-width: 720px) {
+    .sidebar {
+      position: fixed; top: 0; left: 0; bottom: 0; z-index: 10;
+      width: 78%; max-width: 300px;
+      transform: translateX(-100%);             /* Normalde ekranın solunda gizli */
+      transition: transform 0.25s ease;          /* Açılırken kayma animasyonu */
+      box-shadow: 2px 0 18px rgba(0,0,0,0.18);
+    }
+    .app.drawer-open .sidebar { transform: translateX(0); } /* "drawer-open" eklenince içeri kayar */
+    .app.drawer-open .overlay { display: block; }
+    .menu-btn { display: block; }                /* Hamburger buton mobilde görünür */
+    .main { padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom)); }
+    .topbar h2 { font-size: 1.4rem; }
+    .max { max-width: 100%; }
+    .c-row { flex-wrap: wrap; }
+    .btn-add { flex: 1; }
+  }
