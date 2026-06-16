@@ -217,8 +217,14 @@
     background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
     padding: 0.9rem 1.1rem; margin-bottom: 0.9rem; box-shadow: 0 1px 4px rgba(0,0,0,0.03);
   }
+  /* Liste kartındaki kapak resmi: kartın üst kenarına yapışık, köşeleri yuvarlak */
+  .item-cover {
+    display: block; width: calc(100% + 2.2rem); max-height: 200px; object-fit: cover;
+    margin: -0.9rem -1.1rem 0.8rem;            /* kartın iç boşluğunu taşıp kenarlara değsin */
+    border-radius: 6px 6px 0 0;
+  }
   .item.pinned { border-left: 3px solid var(--accent); }  /* Sabitlenmiş kartta sol turuncu çizgi */
-  .item.task { display: flex; align-items: flex-start; gap: 0.7rem; } /* Görevde kutucuk + metin yan yana */
+  .item.task .task-row { display: flex; align-items: flex-start; gap: 0.7rem; } /* Görevde kutucuk + metin yan yana */
   .task-check { width: 22px; height: 22px; flex-shrink: 0; margin-top: 2px; cursor: pointer; accent-color: var(--green); }
   .task-body { flex: 1; min-width: 0; }
   .item.done .task-text { text-decoration: line-through; color: var(--muted); } /* Tamamlanan görevin üstü çizili */
@@ -240,6 +246,239 @@
 
   .empty { text-align: center; color: var(--muted); padding: 2.5rem 0; font-style: italic; } /* "Henüz öğe yok" yazısı */
   .status { font-size: 0.76rem; color: var(--muted); text-align: center; margin: 1rem 0; font-family: monospace; } /* Alt uyarı satırı */
+
+  /* ===================================================================
+     GÖRÜNÜM GEÇİŞİ (Liste / Pano)
+     Üstteki iki düğmeyle aktif görünüm seçilir. Aktif olan vurgulanır.
+     =================================================================== */
+  .view-toggle { display: flex; gap: 0.3rem; }
+  .view-toggle button {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    border-radius: 5px; padding: 0.4rem 0.8rem; font-family: inherit; font-size: 0.82rem; cursor: pointer;
+    white-space: nowrap;
+  }
+  .view-toggle button.sel { background: var(--ink); color: #fff; border-color: var(--ink); }
+  body.dark .view-toggle button.sel { color: #000; }
+  .view-toggle button:hover:not(.sel) { color: var(--ink); border-color: var(--muted); }
+
+  /* Liste görünümündeyken pano gizli; pano görünümündeyken liste içeriği gizli.
+     Bu sınıflar body üzerine eklenir/çıkarılır. */
+  body.view-board .content { display: none; }
+  body:not(.view-board) .board-wrap { display: none; }
+
+  /* ===================================================================
+     PANO GÖRÜNÜMÜ (Trello tarzı yan yana sütunlar)
+     =================================================================== */
+  /* Pano, ana alanın geri kalan yüksekliğini doldurur ve YATAY kayar. */
+  .board-wrap {
+    display: flex; gap: 1rem; align-items: flex-start;
+    overflow-x: auto; overflow-y: hidden;
+    padding-bottom: 1rem;
+    /* Üstteki başlık/arama yüksekliğini çıkarıp kalan alanı kapla */
+    min-height: 60vh;
+  }
+  /* Pano görünümünde ana alanın kendi dikey kaymasını kapat; sütunlar kendi içinde kaysın */
+  body.view-board .main { overflow: hidden; display: flex; flex-direction: column; }
+  body.view-board .max { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  body.view-board .board-wrap { flex: 1; min-height: 0; }
+
+  /* Tek bir sütun (Trello "list") */
+  .column {
+    background: var(--sidebar-bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    width: 280px; flex-shrink: 0;
+    display: flex; flex-direction: column;
+    max-height: 100%;
+    /* Sütunun üstündeki renk şeridi için */
+    position: relative;
+  }
+  /* Sütun başlık rengi (kullanıcı seçer); yoksa varsayılan çizgi rengi */
+  .column-color-bar { height: 6px; border-radius: 10px 10px 0 0; background: var(--accent); }
+
+  .column-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.7rem 0.8rem 0.5rem; gap: 0.4rem;
+  }
+  .column-title {
+    font-size: 1.05rem; font-weight: bold; flex: 1; min-width: 0;
+    word-break: break-word; cursor: text; line-height: 1.3;
+    border: 1px solid transparent; border-radius: 4px; padding: 0.1rem 0.2rem;
+  }
+  .column-title:hover { border-color: var(--line); }
+  /* Sütun adını düzenlerken kullanılan input */
+  .column-title-input {
+    font-family: inherit; font-size: 1.05rem; font-weight: bold; flex: 1; min-width: 0;
+    border: 1px solid var(--accent); border-radius: 4px; padding: 0.1rem 0.3rem;
+    background: var(--paper); color: var(--ink); outline: none;
+  }
+  .column-count {
+    font-size: 0.72rem; color: var(--muted); font-family: monospace;
+    background: var(--bg); border-radius: 10px; padding: 0.05rem 0.5rem; flex-shrink: 0;
+  }
+  .column-menu-btn {
+    background: transparent; border: none; color: var(--muted); cursor: pointer;
+    font-size: 1.1rem; line-height: 1; padding: 0 0.2rem; flex-shrink: 0;
+  }
+  .column-menu-btn:hover { color: var(--ink); }
+
+  /* Sütun içindeki kartların aktığı alan (dikey kayar) */
+  .column-cards {
+    flex: 1; overflow-y: auto; padding: 0.3rem 0.6rem 0.6rem;
+    display: flex; flex-direction: column; gap: 0.5rem;
+    min-height: 40px;
+  }
+  /* Sürükleme sırasında hedef sütunu hafifçe vurgula */
+  .column-cards.drag-over { background: var(--accent-soft); border-radius: 6px; }
+
+  /* Pano kartı */
+  .card {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 7px;
+    padding: 0; overflow: hidden; cursor: grab;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border-left: 3px solid transparent;
+    /* Dokunmatik ekranda dikey kaydırma yerine sürükleme yapılabilmesi için.
+       (touch-action olmadan telefonda sürükleme sayfayı kaydırır.) */
+    touch-action: manipulation;
+    user-select: none; -webkit-user-select: none;
+  }
+  .card:active { cursor: grabbing; }
+  /* Sürüklenen asıl kart yerinde soluk/küçük durur (yerini koruyan iz) */
+  .card.dragging { opacity: 0.35; transform: scale(0.98); }
+  .card.done .card-title { text-decoration: line-through; color: var(--muted); }
+
+  /* İmleci/parmağı takip eden "hayalet" kart (sürüklenenin kopyası).
+     position:fixed ile ekrana sabitlenir, JS ile konumlanır. */
+  .drag-ghost {
+    position: fixed; top: 0; left: 0; z-index: 1000;
+    pointer-events: none;            /* altındaki öğeleri engellemesin */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.28);
+    transform: rotate(2.5deg);        /* hafif eğik = "elime aldım" hissi */
+    opacity: 0.95;
+    border-radius: 7px; overflow: hidden;
+    background: var(--paper); border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+  }
+
+  /* Kartın hangi konuma düşeceğini gösteren yer tutucu boşluk */
+  .card-placeholder {
+    border: 2px dashed var(--accent);
+    background: var(--accent-soft);
+    border-radius: 7px;
+    min-height: 38px;
+    flex-shrink: 0;
+  }
+
+  /* Kart kapak resmi (varsa) */
+  .card-cover { width: 100%; max-height: 140px; object-fit: cover; display: block; pointer-events: none; }
+  .card-pad { padding: 0.6rem 0.7rem 0.55rem; }
+  .card-row { display: flex; align-items: flex-start; gap: 0.5rem; }
+  .card-check { width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; cursor: pointer; accent-color: var(--green); }
+  .card-title { font-size: 0.95rem; line-height: 1.4; word-break: break-word; flex: 1; min-width: 0; }
+  .card-body-preview { font-size: 0.82rem; color: var(--muted); margin-top: 0.3rem; line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.45rem; }
+  .card-tag { background: var(--accent-soft); color: var(--accent); font-size: 0.68rem; padding: 0.1rem 0.45rem; border-radius: 9px; font-family: monospace; }
+  /* Sürükleme sırasında metin seçimini tamamen kapat */
+  body.dragging-active { user-select: none; -webkit-user-select: none; cursor: grabbing; }
+  body.dragging-active .column-cards { scroll-behavior: smooth; }
+
+
+  /* "+ Kart ekle" butonu (sütun altı) */
+  .add-card-btn {
+    background: transparent; border: none; color: var(--muted); cursor: pointer;
+    font-family: inherit; font-size: 0.85rem; text-align: left;
+    padding: 0.5rem 0.7rem; border-radius: 6px; margin: 0 0.6rem 0.6rem;
+  }
+  .add-card-btn:hover { background: var(--proj-hover); color: var(--ink); }
+
+  /* "+ Sütun ekle" kutusu (panonun en sağı) */
+  .add-column {
+    width: 280px; flex-shrink: 0;
+    background: transparent; border: 2px dashed var(--line); border-radius: 10px;
+    color: var(--muted); cursor: pointer; font-family: inherit; font-size: 0.95rem;
+    padding: 0.9rem; text-align: left;
+  }
+  .add-column:hover { border-color: var(--muted); color: var(--ink); background: var(--sidebar-bg); }
+
+  /* Sütun açılır menüsü (renk seç / yeniden adlandır / sil) */
+  .col-menu {
+    position: absolute; right: 0.5rem; top: 2.6rem; z-index: 30;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.18); min-width: 180px; overflow: hidden;
+    display: none;
+  }
+  .col-menu.open { display: block; }
+  .col-menu button {
+    display: block; width: 100%; text-align: left; background: transparent; border: none;
+    font-family: inherit; font-size: 0.88rem; color: var(--ink); padding: 0.5rem 0.85rem; cursor: pointer;
+  }
+  .col-menu button:hover { background: var(--accent-soft); }
+  .col-menu .danger { color: #c0392b; }
+  body.dark .col-menu .danger { color: #e57373; }
+  .col-menu-label { font-size: 0.68rem; color: var(--muted); font-family: monospace; padding: 0.5rem 0.85rem 0.2rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  /* Renk seçim noktaları */
+  .color-dots { display: flex; flex-wrap: wrap; gap: 0.35rem; padding: 0.2rem 0.85rem 0.6rem; }
+  .color-dot { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+  .color-dot:hover { transform: scale(1.12); }
+  .color-dot.sel { border-color: var(--ink); }
+
+  /* ===================================================================
+     KART DETAY PENCERESİ (modal) - karta tıklayınca açılır
+     =================================================================== */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.5); padding: 2rem 1rem; overflow-y: auto;
+  }
+  .modal-overlay.open { display: flex; align-items: flex-start; justify-content: center; }
+  .modal {
+    background: var(--paper); border-radius: 12px; width: 100%; max-width: 600px;
+    margin: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.4); overflow: hidden;
+  }
+  .modal-cover { width: 100%; max-height: 220px; object-fit: cover; display: block; background: var(--bg); }
+  .modal-head { padding: 1.2rem 1.4rem 0.5rem; display: flex; align-items: flex-start; gap: 0.6rem; }
+  .modal-check { width: 24px; height: 24px; flex-shrink: 0; margin-top: 4px; cursor: pointer; accent-color: var(--green); }
+  .modal-title-input {
+    flex: 1; font-family: inherit; font-size: 1.5rem; font-weight: bold; color: var(--ink);
+    border: 1px solid transparent; border-radius: 6px; padding: 0.2rem 0.4rem; background: transparent; outline: none;
+  }
+  .modal-title-input:focus { border-color: var(--accent); background: var(--bg); }
+  .modal-close {
+    background: transparent; border: none; color: var(--muted); font-size: 1.6rem;
+    cursor: pointer; line-height: 1; padding: 0.2rem 0.4rem; flex-shrink: 0;
+  }
+  .modal-close:hover { color: var(--ink); }
+  .modal-body { padding: 0.5rem 1.4rem 1.4rem; }
+  .modal-section-label {
+    font-size: 0.72rem; color: var(--muted); font-family: monospace; text-transform: uppercase;
+    letter-spacing: 0.05em; margin: 1rem 0 0.4rem;
+  }
+  .modal-desc {
+    width: 100%; font-family: inherit; font-size: 0.97rem; line-height: 1.6; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px; padding: 0.6rem 0.7rem; background: var(--bg);
+    outline: none; resize: vertical; min-height: 90px;
+  }
+  .modal-desc:focus { border-color: var(--accent); }
+  .modal-tags-input {
+    width: 100%; font-family: inherit; font-size: 0.9rem; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px; padding: 0.5rem 0.7rem; background: var(--bg); outline: none;
+  }
+  .modal-tags-input:focus { border-color: var(--accent); }
+  .modal-row { display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center; }
+  .modal-select {
+    font-family: inherit; font-size: 0.9rem; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px; padding: 0.45rem 0.6rem; background: var(--bg); outline: none; cursor: pointer;
+  }
+  .modal-actions { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; margin-top: 1.4rem; flex-wrap: wrap; }
+  .modal-btn {
+    font-family: inherit; font-size: 0.9rem; border-radius: 6px; padding: 0.5rem 1rem; cursor: pointer; border: 1px solid var(--line);
+    background: transparent; color: var(--ink);
+  }
+  .modal-btn:hover { border-color: var(--muted); }
+  .modal-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .modal-btn.danger { color: #c0392b; border-color: #c0392b; }
+  body.dark .modal-btn.danger { color: #e57373; border-color: #e57373; }
+  .cover-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 
   /* GENİŞ EKRAN (1100px üstü): iki sütunlu yerleşim.
      Sol sütun ekleme kutusu (yapışkan), sağ sütun liste. */
@@ -276,6 +515,10 @@
     .max { max-width: 100%; }
     .c-row { flex-wrap: wrap; }
     .btn-add { flex: 1; }
+    /* Mobilde sütunlar biraz daralsın */
+    .column, .add-column { width: 250px; }
+    .modal-title-input { font-size: 1.25rem; }
+    .modal-overlay { padding: 1rem 0.5rem; }
   }
 </style>
 </head>
@@ -313,6 +556,11 @@
         </div>
 
         <div style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
+          <!-- Görünüm geçişi: Liste / Pano -->
+          <div class="view-toggle">
+            <button id="viewList" class="sel">Liste</button>
+            <button id="viewBoard">Pano</button>
+          </div>
           <!-- Tema değiştirme düğmesi (açık/karanlık) -->
           <button class="theme-btn" id="themeBtn" aria-label="Tema değiştir" title="Tema değiştir">&#9789;</button>
         <!-- Dışa/içe aktarma menüsü -->
@@ -370,8 +618,56 @@
           <div class="status" id="status"></div>    <!-- Bilgi/uyarı satırı -->
         </div>
       </div>
+
+      <!-- PANO GÖRÜNÜMÜ: sütunlar JS tarafından buraya yazılır.
+           Liste görünümündeyken CSS ile gizlidir. -->
+      <div class="board-wrap" id="boardWrap"></div>
     </div>
   </main>
+</div>
+
+<!-- ===================================================================
+     KART DETAY PENCERESİ (modal)
+     Bir pano kartına tıklanınca açılır. Başlık, açıklama, etiket, sütun,
+     görev durumu ve kapak resmi buradan düzenlenir. Değişiklikler anında kaydedilir.
+     =================================================================== -->
+<div class="modal-overlay" id="cardModal">
+  <div class="modal">
+    <img class="modal-cover" id="modalCover" style="display:none" alt="Kapak">
+    <div class="modal-head">
+      <input type="checkbox" class="modal-check" id="modalCheck" title="Görev tamamlandı" style="display:none">
+      <input class="modal-title-input" id="modalTitle" placeholder="Başlık" maxlength="120">
+      <button class="modal-close" id="modalClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section-label">Açıklama</div>
+      <textarea class="modal-desc" id="modalDesc" placeholder="Daha ayrıntılı bir açıklama ekle..."></textarea>
+
+      <div class="modal-section-label">Etiketler (virgülle ayır)</div>
+      <input class="modal-tags-input" id="modalTags" placeholder="tasarım, acil">
+
+      <div class="modal-section-label">Sütun ve tür</div>
+      <div class="modal-row">
+        <select class="modal-select" id="modalColumn"></select>
+        <select class="modal-select" id="modalType">
+          <option value="note">Not</option>
+          <option value="task">Görev</option>
+        </select>
+      </div>
+
+      <div class="modal-section-label">Kapak resmi</div>
+      <div class="cover-controls">
+        <button class="modal-btn" id="modalCoverBtn">Resim seç</button>
+        <button class="modal-btn" id="modalCoverRemove" style="display:none">Kapağı kaldır</button>
+        <input type="file" id="modalCoverFile" accept="image/*" style="display:none">
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-btn danger" id="modalDelete">Kartı sil</button>
+        <button class="modal-btn primary" id="modalDone">Bitti</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -389,23 +685,67 @@
      Uygulamanın "gerçek" verisi bu değişkenlerde tutulur.
      Ekranda görünen her şey bunların bir yansımasıdır. */
   let projects = [];         // Tüm projeler. Her proje: {id, name, created}
-  let items = [];            // Tüm notlar+görevler. Her öğe: {id, projectId, type, title, body, tags, done, pinned, created}
+  let items = [];            // Tüm notlar+görevler. Her öğe: {id, projectId, type, title, body, tags, done, pinned, created, columnId?, cover?}
+  let columns = [];          // Tüm pano sütunları. Her sütun: {id, projectId, name, color, order, created}
   let activeProject = null;  // O an açık olan projenin id'si
   let composerType = 'note'; // Ekleme kutusunda seçili tür: 'note' (not) veya 'task' (görev)
   let storageOK = true;      // Kalıcı depolama çalışıyor mu? (çalışmazsa uygulama yine de açılır)
+  let currentView = 'list';  // Aktif görünüm: 'list' (liste) veya 'board' (pano)
+  let openCardId = null;     // Detay penceresinde açık olan kartın id'si (yoksa null)
+
+  /* Sütunlara verilebilecek hazır renkler (Trello tarzı). İlk değer "renksiz" sayılır. */
+  const COLUMN_COLORS = ['#c2410c', '#4d7c4d', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#ca8a04', '#64748b'];
+
+  /* Yeni proje açıldığında oluşturulacak varsayılan sütunlar. */
+  const DEFAULT_COLUMNS = [
+    { name: 'Yapılacak', color: '#c2410c' },
+    { name: 'Yapılıyor', color: '#2563eb' },
+    { name: 'Bitti',     color: '#4d7c4d' }
+  ];
 
   /* Kısa yardımcı: id'sine göre bir HTML öğesini bulur.
      el('add') yazmak, document.getElementById('add') yazmanın kısa halidir. */
   const el = id => document.getElementById(id);
 
   /* ---- DEPOLAMA SARMALAYICILARI (güvenli erişim) ----
-     window.storage kalıcı depodur. Bazı ortamlarda bulunmayabilir; o yüzden
-     her çağrıyı try/catch ile sarıp hata olursa uygulamanın çökmesini engelliyoruz.
+     Veriler tarayıcının localStorage'ına KALICI olarak kaydedilir. Yani
+     dosyayı bilgisayarda açtığında veya GitHub Pages'te yayınladığında bile
+     notların o cihazın tarayıcısında saklanır ve sonraki açılışta geri gelir.
+     (Veriler kullanıcının kendi bilgisayarında durur; sunucuya gönderilmez.)
+
+     Tüm anahtarların başına "wn:" öneki eklenir ki aynı tarayıcıdaki başka
+     sayfalarla karışmasın. Eski koddaki sGet/sSet/sDel/sList imzaları aynı
+     kaldığı için uygulamanın geri kalanına dokunmaya gerek yoktur.
      (sGet=oku, sSet=yaz, sDel=sil, sList=anahtarları listele) */
-  async function sGet(k){ try { return await window.storage.get(k); } catch(e){ return null; } }
-  async function sSet(k,v){ try { const r = await window.storage.set(k,v); return !!r; } catch(e){ storageOK=false; return false; } }
-  async function sDel(k){ try { await window.storage.delete(k); } catch(e){} }
-  async function sList(p){ try { const r = await window.storage.list(p); return (r && r.keys) ? r.keys : []; } catch(e){ return null; } }
+  const STORE_PREFIX = 'wn:'; // White Note
+
+  async function sGet(k){
+    try {
+      const v = localStorage.getItem(STORE_PREFIX + k);
+      // Eski kodla uyumlu olması için { value } biçiminde döndürüyoruz
+      return (v === null) ? null : { value: v };
+    } catch(e){ return null; }
+  }
+  async function sSet(k,v){
+    try { localStorage.setItem(STORE_PREFIX + k, v); return true; }
+    catch(e){ storageOK = false; return false; } // örn. depo dolu / gizli mod
+  }
+  async function sDel(k){
+    try { localStorage.removeItem(STORE_PREFIX + k); } catch(e){}
+  }
+  async function sList(p){
+    try {
+      const out = [];
+      const full = STORE_PREFIX + p; // ör. "wn:proj:"
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.indexOf(full) === 0) {
+          out.push(key.slice(STORE_PREFIX.length)); // öneki çıkarıp ham anahtarı ver
+        }
+      }
+      return out;
+    } catch(e){ return null; }
+  }
 
   /* ---- BAŞLANGIÇ: her şeyi yükle ----
      Sayfa açılınca çalışır. Depodan kayıtlı projeleri ve öğeleri okuyup
@@ -413,8 +753,13 @@
   async function loadAll() {
     let okStorage = true;
 
-    // Depo hiç yoksa (örn. dosyayı bilgisayarda açtıysan) işaretle
-    if (typeof window.storage === 'undefined') { okStorage = false; }
+    // localStorage gerçekten çalışıyor mu diye dene (gizli mod / kısıtlı tarayıcı
+    // gibi durumlarda kullanılamayabilir). Çalışmazsa veriler sadece bu oturumda tutulur.
+    try {
+      const t = '__wn_test__';
+      localStorage.setItem(t, '1');
+      localStorage.removeItem(t);
+    } catch(e) { okStorage = false; }
 
     if (okStorage) {
       // 'proj:' ile başlayan tüm anahtarları al = tüm projeler
@@ -437,24 +782,36 @@
           if (it && it.value) { try { ilist.push(JSON.parse(it.value)); } catch(e){} }
         }
         items = ilist;
+
+        // 'col:' ile başlayan anahtarlar = tüm pano sütunları
+        const ckeys = await sList('col:') || [];
+        const clist = [];
+        for (const k of ckeys) {
+          const it = await sGet(k);
+          if (it && it.value) { try { clist.push(JSON.parse(it.value)); } catch(e){} }
+        }
+        columns = clist;
       }
     }
 
     storageOK = okStorage;
     // Depo çalışmıyorsa kullanıcıyı bilgilendir (veriler sadece bu oturumda kalır)
     if (!storageOK) {
-      el('status').textContent = 'Kalıcı depolama kullanılamıyor — değişiklikler bu oturumda tutulur.';
+      el('status').textContent = 'Kalıcı kayıt kullanılamıyor (örn. gizli mod) — değişiklikler yalnızca bu oturumda tutulur.';
+    } else {
+      el('status').textContent = 'Otomatik kayıt açık — notların bu cihaza kaydediliyor.';
     }
 
-    // Hiç proje yoksa varsayılan "Genel" projesini oluştur
+    // Hiç proje yoksa varsayılan "Genel" projesini (sütunlarıyla birlikte) oluştur
     if (projects.length === 0) {
-      const p = { id: uid(), name: 'Genel', created: Date.now() };
-      projects.push(p);
-      activeProject = p.id;
-      if (storageOK) await sSet('proj:' + p.id, JSON.stringify(p));
+      await createProject('Genel');
     } else {
       activeProject = projects[0].id; // Varsa ilk projeyi aç
     }
+
+    // Her projenin en az bir sütunu olduğundan emin ol; eski öğeleri sütunlara yerleştir
+    for (const p of projects) { await ensureColumns(p.id); }
+    await migrateItemsToColumns();
 
     renderProjects(); // Sol listeyi çiz
     renderMain();     // Ana alanı çiz
@@ -466,21 +823,65 @@
   async function saveProject(p) { if (storageOK) await sSet('proj:' + p.id, JSON.stringify(p)); }
   async function saveItem(i) { if (storageOK) await sSet('item:' + i.id, JSON.stringify(i)); }
   async function deleteItemStore(id) { if (storageOK) await sDel('item:' + id); }
+  async function saveColumn(c) { if (storageOK) await sSet('col:' + c.id, JSON.stringify(c)); }
+  async function deleteColumnStore(id) { if (storageOK) await sDel('col:' + id); }
 
   /* Benzersiz kimlik (ID) üretir: zaman + rastgele harfler.
      Her not, görev ve projenin birbirinden ayırt edilmesi için gerekir. */
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 
   /* ---- PROJE OLUŞTUR ----
-     Yeni proje nesnesi yapar, listeye ekler, aktif yapar, kaydeder, ekranı tazeler. */
+     Yeni proje nesnesi yapar, varsayılan sütunlarını oluşturur, aktif yapar,
+     kaydeder, ekranı tazeler. */
   async function createProject(name) {
     const p = { id: uid(), name: name, created: Date.now() };
     projects.push(p);
     activeProject = p.id;
     await saveProject(p);
+
+    // Varsayılan sütunları (Yapılacak / Yapılıyor / Bitti) oluştur
+    let order = 0;
+    for (const def of DEFAULT_COLUMNS) {
+      const c = { id: uid(), projectId: p.id, name: def.name, color: def.color, order: order++, created: Date.now() + order };
+      columns.push(c);
+      await saveColumn(c);
+    }
+
     renderProjects();
     renderMain();
     return p;
+  }
+
+  /* ---- SÜTUN GARANTİSİ ----
+     Bir projenin hiç sütunu yoksa (ör. eski yedek) tek bir varsayılan sütun oluşturur.
+     Böylece pano görünümü her zaman çalışır. */
+  async function ensureColumns(projectId) {
+    const has = columns.some(c => c.projectId === projectId);
+    if (!has) {
+      const c = { id: uid(), projectId: projectId, name: 'Kartlar', color: '#c2410c', order: 0, created: Date.now() };
+      columns.push(c);
+      await saveColumn(c);
+    }
+  }
+
+  /* ---- ESKİ ÖĞELERİ SÜTUNLARA YERLEŞTİR ----
+     columnId'si olmayan (pano öncesinden kalma) öğeleri ilgili projenin ilk
+     sütununa atar. Görevse ve tamamlanmışsa, varsa "bitti benzeri" son sütuna koyar. */
+  async function migrateItemsToColumns() {
+    for (const i of items) {
+      if (i.columnId && columns.some(c => c.id === i.columnId)) continue; // zaten geçerli
+      const cols = projectColumns(i.projectId);
+      if (!cols.length) continue;
+      // Tamamlanmış görevleri son sütuna, diğerlerini ilk sütuna koy
+      const target = (i.type === 'task' && i.done && cols.length > 1) ? cols[cols.length - 1] : cols[0];
+      i.columnId = target.id;
+      await saveItem(i);
+    }
+  }
+
+  /* Bir projeye ait sütunları sıra (order) değerine göre döndürür. */
+  function projectColumns(projectId) {
+    return columns.filter(c => c.projectId === projectId).sort((a, b) => a.order - b.order);
   }
 
   /* ---- PROJE SİL ----
@@ -494,6 +895,10 @@
     // Projenin tüm öğelerini sil
     for (const i of items.filter(x => x.projectId === id)) { await deleteItemStore(i.id); }
     items = items.filter(i => i.projectId !== id);  // bellekten de çıkar
+
+    // Projenin tüm sütunlarını sil
+    for (const c of columns.filter(x => x.projectId === id)) { await deleteColumnStore(c.id); }
+    columns = columns.filter(c => c.projectId !== id);
 
     await sDel('proj:' + id);
     projects = projects.filter(x => x.id !== id);
@@ -523,7 +928,7 @@
         activeProject = d.dataset.id;   // değilse o projeyi aç
         el('search').value = '';        // aramayı temizle
         closeDrawer();                  // mobilde çekmeceyi kapat
-        renderProjects(); renderMain();
+        renderProjects(); renderMain(); renderBoard();
       });
     });
   }
@@ -538,13 +943,21 @@
     const tags = el('cTags').value.split(',').map(t => t.trim()).filter(Boolean);
     if (!title && !body) return; // tamamen boşsa ekleme
 
+    const cols = projectColumns(activeProject);
+    const targetColId = cols.length ? cols[0].id : null;
+    // Yeni kart, sütununun en üstüne gelsin diye en küçük order'dan da küçük bir değer ver
+    const inCol = items.filter(x => x.columnId === targetColId);
+    const minOrder = inCol.length ? Math.min(...inCol.map(x => x.order ?? x.created)) : 0;
     const item = {
       id: uid(),
       projectId: activeProject,                                    // hangi projeye ait
+      columnId: targetColId,                                       // pano: ilk sütuna ekle
+      order: minOrder - 10,                                        // sütunun en üstünde göster
       type: composerType,                                          // 'note' ya da 'task'
       title: title || (composerType==='task' ? '' : 'Başlıksız'),  // not başlıksızsa varsayılan ver
       body: body,
       tags: tags,
+      cover: null,    // kapak resmi (data URL); başlangıçta yok
       done: false,    // görev başlangıçta tamamlanmamış
       pinned: false,  // başlangıçta sabitlenmemiş
       created: Date.now()
@@ -554,15 +967,15 @@
 
     // Kutuları temizle ki yeni giriş yapılabilsin
     el('cTitle').value = ''; el('cBody').value = ''; el('cTags').value = '';
-    renderProjects(); renderMain();
+    renderProjects(); renderMain(); renderBoard();
     el('cTitle').focus(); // imleci tekrar başlığa al
   }
 
   /* ---- DURUM DEĞİŞTİREN KÜÇÜK FONKSİYONLAR ----
      Önce ilgili öğeyi id'sinden bul, değerini ters çevir, kaydet, ekranı tazele. */
-  async function toggleDone(id) { const i = items.find(x => x.id === id); i.done = !i.done; await saveItem(i); renderMain(); }   // görev tamam/değil
-  async function togglePin(id) { const i = items.find(x => x.id === id); i.pinned = !i.pinned; await saveItem(i); renderMain(); } // sabitle/çöz
-  async function removeItem(id) { await deleteItemStore(id); items = items.filter(i => i.id !== id); renderProjects(); renderMain(); } // sil
+  async function toggleDone(id) { const i = items.find(x => x.id === id); i.done = !i.done; await saveItem(i); renderMain(); renderBoard(); }   // görev tamam/değil
+  async function togglePin(id) { const i = items.find(x => x.id === id); i.pinned = !i.pinned; await saveItem(i); renderMain(); renderBoard(); } // sabitle/çöz
+  async function removeItem(id) { await deleteItemStore(id); items = items.filter(i => i.id !== id); renderProjects(); renderMain(); renderBoard(); } // sil
 
   /* ---- ANA ALANI ÇİZ (en sık çalışan fonksiyon) ----
      1) Aktif projenin adını yazar.
@@ -620,7 +1033,9 @@
 
   /* Bir NOT nesnesini kart HTML'ine çevirir. */
   function noteHTML(i) {
+    const cover = i.cover ? '<img class="item-cover" src="' + i.cover + '" alt="">' : '';
     return '<div class="item ' + (i.pinned?'pinned':'') + '">' +
+      cover +
       '<h3>' + esc(i.title) + '</h3>' +
       (i.body ? '<p>' + esc(i.body) + '</p>' : '') +
       tagsHTML(i.tags) +
@@ -632,7 +1047,11 @@
 
   /* Bir GÖREV nesnesini kart HTML'ine çevirir (başında onay kutusu vardır). */
   function taskHTML(i) {
-    return '<div class="item task ' + (i.pinned?'pinned':'') + ' ' + (i.done?'done':'') + '">' +
+    const hasCover = !!i.cover;
+    const cover = hasCover ? '<img class="item-cover" src="' + i.cover + '" alt="">' : '';
+    // Onay kutusu + metin satırı (kapak varsa bu satır resmin altında yer alır)
+    const row =
+      '<div class="task-row">' +
       '<input type="checkbox" class="task-check" data-check="' + i.id + '" ' + (i.done?'checked':'') + '>' +
       '<div class="task-body">' +
       '<div class="task-text">' + esc(i.title || i.body) + '</div>' +
@@ -642,6 +1061,9 @@
       '<div class="actions">' +
       '<button data-pin="' + i.id + '">' + (i.pinned?'Sabit ✓':'Sabitle') + '</button>' +
       '<button data-del="' + i.id + '">Sil</button></div></div></div></div>';
+    return '<div class="item task ' + (i.pinned?'pinned':'') + ' ' + (i.done?'done':'') + ' ' + (hasCover?'has-cover':'') + '">' +
+      cover + row +
+    '</div>';
   }
 
   /* Çizimden sonra, yeni oluşan kartlardaki kutucuk ve butonlara
@@ -650,6 +1072,597 @@
     el('list').querySelectorAll('[data-check]').forEach(c => c.addEventListener('change', () => toggleDone(c.dataset.check)));
     el('list').querySelectorAll('[data-pin]').forEach(b => b.addEventListener('click', () => togglePin(b.dataset.pin)));
     el('list').querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => removeItem(b.dataset.del)));
+  }
+
+  /* ===================================================================
+     PANO (BOARD) GÖRÜNÜMÜ — Trello tarzı sütunlar ve kartlar
+     Aynı veriyi (items) kullanır; her öğenin columnId'sine göre sütunlara dağıtır.
+     Sütunlar yan yana dizilir, kartlar sürükle-bırak ile veya kart menüsünden taşınır.
+     =================================================================== */
+
+  /* (Sürükleme durumu artık aşağıdaki `drag` nesnesinde tutulur — Pointer Events bölümü.) */
+
+  /* Bir kartın (öğenin) pano üzerindeki HTML'ini üretir.
+     Kapak resmi varsa üste, sonra başlık/etiket/onay kutusu gelir. */
+  function cardHTML(i) {
+    const cover = i.cover ? '<img class="card-cover" src="' + i.cover + '" alt="">' : '';
+    const check = i.type === 'task'
+      ? '<input type="checkbox" class="card-check" data-check="' + i.id + '" ' + (i.done?'checked':'') + ' title="Tamamlandı">'
+      : '';
+    const title = esc(i.title || i.body || '(başlıksız)');
+    const bodyPrev = (i.title && i.body) ? '<div class="card-body-preview">' + esc(i.body) + '</div>' : '';
+    const tags = i.tags && i.tags.length
+      ? '<div class="card-tags">' + i.tags.map(t => '<span class="card-tag">#' + esc(t) + '</span>').join('') + '</div>'
+      : '';
+    return '<div class="card ' + (i.done?'done':'') + '" data-card="' + i.id + '">' +
+      cover +
+      '<div class="card-pad">' +
+        '<div class="card-row">' + check + '<div class="card-title">' + title + '</div></div>' +
+        bodyPrev + tags +
+      '</div>' +
+    '</div>';
+  }
+
+  /* Tüm pano görünümünü çizer: aktif projenin sütunlarını ve her sütundaki kartları. */
+  function renderBoard() {
+    const wrap = el('boardWrap');
+    if (!wrap) return;
+    if (!activeProject) { wrap.innerHTML = ''; return; }
+
+    const cols = projectColumns(activeProject);
+    const q = el('search').value.trim().toLowerCase().replace(/^#/, ''); // arama panoyu da süzer
+
+    let html = '';
+    cols.forEach(col => {
+      // Bu sütundaki öğeler (sabitlenmişler önce, sonra yeniden eskiye)
+      let cardsIn = items.filter(i => i.projectId === activeProject && i.columnId === col.id);
+      if (q) {
+        cardsIn = cardsIn.filter(i => {
+          const hay = ((i.title||'') + ' ' + (i.body||'') + ' ' + (i.tags||[]).map(t=>'#'+t).join(' ')).toLowerCase();
+          return hay.includes(q);
+        });
+      }
+      // Sıralama: önce sabitlenmişler, sonra kullanıcının elle verdiği sıra (order),
+      // order yoksa oluşturma zamanına göre. order kartları sürükleyince güncellenir.
+      cardsIn.sort((a,b) =>
+        (b.pinned - a.pinned) ||
+        ((a.order ?? a.created) - (b.order ?? b.created))
+      );
+
+      const color = col.color || 'var(--accent)';
+      html += '<div class="column" data-col="' + col.id + '">' +
+        '<div class="column-color-bar" style="background:' + color + '"></div>' +
+        '<div class="column-head">' +
+          '<div class="column-title" data-coltitle="' + col.id + '" title="Yeniden adlandırmak için tıkla">' + esc(col.name) + '</div>' +
+          '<span class="column-count">' + cardsIn.length + '</span>' +
+          '<button class="column-menu-btn" data-colmenu="' + col.id + '" title="Sütun seçenekleri">&#8943;</button>' +
+        '</div>' +
+        '<div class="col-menu" data-colmenubox="' + col.id + '">' +
+          '<div class="color-dots" data-colcolors="' + col.id + '">' + colorDotsHTML(col) + '</div>' +
+          '<button data-colrename="' + col.id + '">Yeniden adlandır</button>' +
+          '<button data-coldelete="' + col.id + '">Sütunu sil</button>' +
+        '</div>' +
+        '<div class="column-cards" data-cards="' + col.id + '">' +
+          cardsIn.map(cardHTML).join('') +
+        '</div>' +
+        '<button class="add-card-btn" data-addcard="' + col.id + '">+ Kart ekle</button>' +
+      '</div>';
+    });
+
+    // En sağda "yeni sütun ekle"
+    html += '<button class="add-column" id="addColumnBtn">+ Sütun ekle</button>';
+    wrap.innerHTML = html;
+    bindBoardEvents();
+  }
+
+  /* Sütun menüsündeki renk noktalarını üretir. */
+  function colorDotsHTML(col) {
+    return COLUMN_COLORS.map(c =>
+      '<span class="color-dot ' + (col.color===c?'sel':'') + '" data-setcolor="' + col.id + '" data-color="' + c + '" style="background:' + c + '"></span>'
+    ).join('');
+  }
+
+  /* Pano çizildikten sonra tüm tıklama, sürükleme ve menü olaylarını bağlar. */
+  function bindBoardEvents() {
+    const wrap = el('boardWrap');
+
+    // --- Kartlar: tıkla (detay aç) + dokunmatik/fare sürükleme ---
+    wrap.querySelectorAll('.card').forEach(card => {
+      const id = card.dataset.card;
+
+      // Karta tıklayınca detay penceresini aç (onay kutusu hariç, sürükleme değilse)
+      card.addEventListener('click', e => {
+        if (e.target.closest('.card-check')) return; // onay kutusuna basıldıysa açma
+        if (justDragged) return;                       // az önce sürüklendiyse tıklama sayma
+        openCard(id);
+      });
+
+      // Sürüklemeyi başlat (hem fare hem dokunmatik): pointerdown
+      card.addEventListener('pointerdown', e => onCardPointerDown(e, card, id));
+    });
+
+    // Onay kutuları (görev tamamlandı)
+    wrap.querySelectorAll('.card-check').forEach(c =>
+      c.addEventListener('change', e => { e.stopPropagation(); toggleDone(c.dataset.check); })
+    );
+
+    // --- Sütun başlığına tıkla -> yeniden adlandır ---
+    wrap.querySelectorAll('[data-coltitle]').forEach(t =>
+      t.addEventListener('click', () => renameColumn(t.dataset.coltitle))
+    );
+
+    // --- Sütun menü düğmesi (üç nokta) ---
+    wrap.querySelectorAll('[data-colmenu]').forEach(b =>
+      b.addEventListener('click', e => {
+        e.stopPropagation();
+        const box = wrap.querySelector('[data-colmenubox="' + b.dataset.colmenu + '"]');
+        const wasOpen = box.classList.contains('open');
+        closeAllColMenus();
+        if (!wasOpen) box.classList.add('open');
+      })
+    );
+
+    // Renk noktaları
+    wrap.querySelectorAll('[data-setcolor]').forEach(dot =>
+      dot.addEventListener('click', e => {
+        e.stopPropagation();
+        setColumnColor(dot.dataset.setcolor, dot.dataset.color);
+      })
+    );
+    // Yeniden adlandır / sil (menü içinden)
+    wrap.querySelectorAll('[data-colrename]').forEach(b =>
+      b.addEventListener('click', () => { closeAllColMenus(); renameColumn(b.dataset.colrename); })
+    );
+    wrap.querySelectorAll('[data-coldelete]').forEach(b =>
+      b.addEventListener('click', () => { closeAllColMenus(); deleteColumn(b.dataset.coldelete); })
+    );
+
+    // "+ Kart ekle" (sütun altı)
+    wrap.querySelectorAll('[data-addcard]').forEach(b =>
+      b.addEventListener('click', () => addCardToColumn(b.dataset.addcard))
+    );
+
+    // "+ Sütun ekle"
+    const addColBtn = el('addColumnBtn');
+    if (addColBtn) addColBtn.addEventListener('click', addColumn);
+  }
+
+  /* Açık tüm sütun menülerini kapatır. */
+  function closeAllColMenus() {
+    document.querySelectorAll('.col-menu.open').forEach(m => m.classList.remove('open'));
+  }
+  // Panonun boş bir yerine tıklayınca menüleri kapat
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.col-menu') && !e.target.closest('[data-colmenu]')) closeAllColMenus();
+  });
+
+  /* ---- AKICI SÜRÜKLEME (Pointer Events) ----
+     Native HTML5 drag-drop yerine kendi sürükleme motorumuz. Avantajları:
+       • Telefon/tablet (dokunmatik) ekranda da çalışır
+       • Parmağı/imleci takip eden bir "hayalet" kart gösterir
+       • Kartın TAM olarak nereye düşeceğini gösteren yer tutucu boşluk
+       • Aynı sütun içinde de yeniden sıralama (sadece sütun değiştirme değil)
+       • Küçük hareket eşiği sayesinde tıklama ile sürükleme karışmaz */
+
+  const DRAG_THRESHOLD = 6; // px: bu kadar hareket edince "sürükleme" başlar (altında = tıklama)
+  const drag = {
+    active: false,    // sürükleme gerçekten başladı mı (eşik aşıldı mı)
+    id: null,         // sürüklenen kartın id'si
+    cardEl: null,     // asıl kart DOM öğesi (yerinde soluk kalır)
+    ghost: null,      // imleci takip eden kopya
+    placeholder: null,// nereye düşeceğini gösteren boşluk
+    startX: 0, startY: 0,   // pointer başlangıç konumu
+    offX: 0, offY: 0,       // imlecin kart içindeki tutma noktası
+    pointerId: null,
+    autoScrollTimer: null
+  };
+  let justDragged = false; // sürükleme bittikten hemen sonra tıklamayı yutmak için
+
+  /* Kart üzerinde basıldığında: henüz sürükleme başlatmaz, sadece hazırlık yapar.
+     Gerçek sürükleme, parmak/imleç eşiği aşınca (pointermove'da) başlar. */
+  function onCardPointerDown(e, cardEl, id) {
+    // Sadece sol fare tuşu ya da dokunma/kalem; sağ tık vs. değil
+    if (e.button != null && e.button !== 0) return;
+    // Onay kutusuna basıldıysa sürükleme başlatma (işaretlemek isteniyor)
+    if (e.target.closest('.card-check')) return;
+
+    const rect = cardEl.getBoundingClientRect();
+    drag.id = id;
+    drag.cardEl = cardEl;
+    drag.startX = e.clientX;
+    drag.startY = e.clientY;
+    drag.offX = e.clientX - rect.left;
+    drag.offY = e.clientY - rect.top;
+    drag.pointerId = e.pointerId;
+    drag.active = false;
+    drag._w = rect.width;
+    drag._h = rect.height;
+
+    // Bu pointer'ın tüm hareketlerini yakalamak için belge düzeyinde dinle
+    document.addEventListener('pointermove', onPointerMove, { passive: false });
+    document.addEventListener('pointerup', onPointerUp);
+    document.addEventListener('pointercancel', onPointerUp);
+  }
+
+  function onPointerMove(e) {
+    if (drag.id == null) return;
+
+    // Henüz sürükleme başlamadıysa: eşiği kontrol et
+    if (!drag.active) {
+      const dx = e.clientX - drag.startX;
+      const dy = e.clientY - drag.startY;
+      if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return; // ufak titreme = tıklama
+      startDragging(); // eşik aşıldı, gerçekten sürüklemeye başla
+    }
+
+    e.preventDefault(); // sayfa kaymasını engelle (özellikle dokunmatik)
+
+    // Hayaleti imlece taşı
+    drag.ghost.style.left = (e.clientX - drag.offX) + 'px';
+    drag.ghost.style.top  = (e.clientY - drag.offY) + 'px';
+
+    // İmlecin altındaki sütunu ve en yakın kartı bul, yer tutucuyu oraya koy
+    updatePlaceholder(e.clientX, e.clientY);
+    // Kenara yaklaşınca panoyu otomatik kaydır
+    handleAutoScroll(e.clientX);
+  }
+
+  /* Eşik aşıldı: hayalet + yer tutucu oluştur, görsel sürükleme modunu aç. */
+  function startDragging() {
+    drag.active = true;
+    justDragged = false;
+    document.body.classList.add('dragging-active');
+
+    // Hayalet = kartın görsel kopyası
+    const ghost = drag.cardEl.cloneNode(true);
+    ghost.classList.add('drag-ghost');
+    ghost.classList.remove('dragging');
+    ghost.style.width = drag._w + 'px';
+    document.body.appendChild(ghost);
+    drag.ghost = ghost;
+
+    // Yer tutucu = kartın gireceği boşluk (kartla aynı yükseklikte)
+    const ph = document.createElement('div');
+    ph.className = 'card-placeholder';
+    ph.style.height = drag._h + 'px';
+    drag.placeholder = ph;
+
+    // Asıl kartı soluklaştır ve yerine yer tutucuyu koy
+    drag.cardEl.classList.add('dragging');
+    drag.cardEl.parentNode.insertBefore(ph, drag.cardEl.nextSibling);
+    drag.cardEl.style.display = 'none';
+  }
+
+  /* İmlecin altındaki sütunu bulur ve yer tutucuyu doğru karttan önce/sonra yerleştirir. */
+  function updatePlaceholder(x, y) {
+    const wrap = el('boardWrap');
+    // İmlecin altındaki sütunun kart alanını bul
+    let zone = null;
+    wrap.querySelectorAll('.column').forEach(col => {
+      const r = col.getBoundingClientRect();
+      if (x >= r.left && x <= r.right) zone = col.querySelector('.column-cards');
+    });
+    if (!zone) return; // sütun dışında: yer tutucu olduğu yerde kalır
+
+    // Sütundaki görünür kartlar (hayalet ve gizli asıl kart hariç)
+    const cards = [...zone.querySelectorAll('.card')].filter(c => c.style.display !== 'none');
+
+    // İmlecin Y konumuna göre yer tutucuyu hangi kartın önüne koyacağımızı bul
+    let inserted = false;
+    for (const c of cards) {
+      const r = c.getBoundingClientRect();
+      if (y < r.top + r.height / 2) {
+        zone.insertBefore(drag.placeholder, c);
+        inserted = true;
+        break;
+      }
+    }
+    if (!inserted) zone.appendChild(drag.placeholder); // en sona
+  }
+
+  /* Pano kenarlarına yaklaşınca yatay otomatik kaydırma (uzaktaki sütuna ulaşmak için). */
+  function handleAutoScroll(x) {
+    const wrap = el('boardWrap');
+    const r = wrap.getBoundingClientRect();
+    const edge = 70; // kenar bölgesi genişliği
+    let dir = 0;
+    if (x < r.left + edge) dir = -1;
+    else if (x > r.right - edge) dir = 1;
+
+    if (dir === 0) {
+      if (drag.autoScrollTimer) { cancelAnimationFrame(drag.autoScrollTimer); drag.autoScrollTimer = null; }
+      return;
+    }
+    if (drag.autoScrollTimer) return; // zaten kayıyor
+    const step = () => {
+      wrap.scrollLeft += dir * 14;
+      drag.autoScrollTimer = requestAnimationFrame(step);
+    };
+    drag.autoScrollTimer = requestAnimationFrame(step);
+  }
+
+  /* Parmak/fare kalkınca: kartı yer tutucunun olduğu yere bırak ve kaydet. */
+  async function onPointerUp() {
+    document.removeEventListener('pointermove', onPointerMove);
+    document.removeEventListener('pointerup', onPointerUp);
+    document.removeEventListener('pointercancel', onPointerUp);
+    if (drag.autoScrollTimer) { cancelAnimationFrame(drag.autoScrollTimer); drag.autoScrollTimer = null; }
+
+    // Hiç sürükleme başlamadıysa (sadece tıklama): temizle, click devam etsin
+    if (!drag.active) { resetDrag(); return; }
+
+    // Yer tutucunun bulunduğu sütun = hedef sütun
+    const ph = drag.placeholder;
+    const zone = ph ? ph.closest('.column-cards') : null;
+    const targetColId = zone ? zone.dataset.cards : null;
+
+    if (targetColId) {
+      // Yeni sıradaki komşu kartların id'lerini topla (yer tutucunun yerini referans al)
+      const ordered = [...zone.children]
+        .map(ch => ch === ph ? '__PH__' : (ch.classList && ch.classList.contains('card') && ch.style.display !== 'none' ? ch.dataset.card : null))
+        .filter(v => v !== null);
+      await dropCard(drag.id, targetColId, ordered);
+    }
+
+    // Sürükleme bitti: kısa süre tıklamayı yut (yanlışlıkla detay açılmasın)
+    justDragged = true;
+    setTimeout(() => { justDragged = false; }, 50);
+
+    cleanupDragVisuals();
+    renderProjects(); renderMain(); renderBoard();
+  }
+
+  /* Hayalet ve yer tutucuyu kaldırır, asıl kartı eski haline getirir. */
+  function cleanupDragVisuals() {
+    document.body.classList.remove('dragging-active');
+    if (drag.ghost && drag.ghost.parentNode) drag.ghost.parentNode.removeChild(drag.ghost);
+    if (drag.placeholder && drag.placeholder.parentNode) drag.placeholder.parentNode.removeChild(drag.placeholder);
+    if (drag.cardEl) { drag.cardEl.classList.remove('dragging'); drag.cardEl.style.display = ''; }
+    resetDrag();
+  }
+
+  function resetDrag() {
+    drag.active = false; drag.id = null; drag.cardEl = null;
+    drag.ghost = null; drag.placeholder = null; drag.pointerId = null;
+  }
+
+  /* ---- KARTI BIRAK: sütun + yeni sıra ----
+     Kartı hedef sütuna taşır ve "ordered" listesine göre order değerlerini
+     yeniden numaralandırır (sürüklenen kart yer tutucunun konumuna girer). */
+  async function dropCard(itemId, targetColId, orderedIds) {
+    const moved = items.find(x => x.id === itemId);
+    if (!moved) return;
+
+    // Sürüklenen kartı, yer tutucu işaretinin (__PH__) olduğu yere yerleştir
+    const finalOrder = orderedIds.map(v => v === '__PH__' ? itemId : v);
+
+    // Hedef sütundaki tüm kartlara yeni order ver (10'ar artarak, araya ekleme kolaylığı için)
+    let n = 0;
+    for (const cid of finalOrder) {
+      const it = items.find(x => x.id === cid);
+      if (!it) continue;
+      it.columnId = targetColId;
+      it.order = (n++) * 10;
+      await saveItem(it);
+    }
+
+    // Akıllı durum: hedef sütun adı "bitti"yi andırıyorsa görevi tamamla
+    const col = columns.find(c => c.id === targetColId);
+    if (moved.type === 'task' && col) {
+      const cn = col.name.toLowerCase();
+      if (/(bitti|tamam|done|complete|finish)/.test(cn) && !moved.done) {
+        moved.done = true; await saveItem(moved);
+      }
+    }
+  }
+
+  /* Eski "sütun menüsünden taşı" yolu hâlâ kullanılıyor (kart penceresindeki sütun seçici). */
+  async function moveItemToColumn(itemId, colId) {
+    const i = items.find(x => x.id === itemId);
+    if (!i || i.columnId === colId) return;
+    i.columnId = colId;
+    // Hedef sütunun sonuna ekle
+    const inCol = items.filter(x => x.projectId === i.projectId && x.columnId === colId && x.id !== itemId);
+    i.order = (inCol.length ? Math.max(...inCol.map(x => x.order ?? x.created)) : 0) + 10;
+    const col = columns.find(c => c.id === colId);
+    if (i.type === 'task' && col) {
+      const n = col.name.toLowerCase();
+      if (/(bitti|tamam|done|complete|finish)/.test(n)) i.done = true;
+    }
+    await saveItem(i);
+    renderProjects(); renderMain(); renderBoard();
+  }
+
+  /* ---- SÜTUN: YENİ EKLE ---- */
+  async function addColumn() {
+    const name = prompt('Yeni sütun adı:', '');
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const cols = projectColumns(activeProject);
+    const maxOrder = cols.length ? Math.max(...cols.map(c => c.order)) : -1;
+    // Sıradaki rengi otomatik seç (çeşitlilik için)
+    const color = COLUMN_COLORS[cols.length % COLUMN_COLORS.length];
+    const c = { id: uid(), projectId: activeProject, name: trimmed, color: color, order: maxOrder + 1, created: Date.now() };
+    columns.push(c);
+    await saveColumn(c);
+    renderBoard();
+  }
+
+  /* ---- SÜTUN: YENİDEN ADLANDIR ---- */
+  async function renameColumn(colId) {
+    const c = columns.find(x => x.id === colId);
+    if (!c) return;
+    const name = prompt('Sütun adı:', c.name);
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    c.name = trimmed;
+    await saveColumn(c);
+    renderBoard();
+  }
+
+  /* ---- SÜTUN: RENK DEĞİŞTİR ---- */
+  async function setColumnColor(colId, color) {
+    const c = columns.find(x => x.id === colId);
+    if (!c) return;
+    c.color = color;
+    await saveColumn(c);
+    closeAllColMenus();
+    renderBoard();
+  }
+
+  /* ---- SÜTUN: SİL ----
+     Onay sorar. Kartları silmeyiz; kalan ilk sütuna taşırız ki veri kaybolmasın.
+     Tek sütun kalıyorsa silmeye izin vermeyiz. */
+  async function deleteColumn(colId) {
+    const cols = projectColumns(activeProject);
+    if (cols.length <= 1) { alert('Son sütun silinemez. En az bir sütun gerekir.'); return; }
+    const c = columns.find(x => x.id === colId);
+    if (!c) return;
+    const inCol = items.filter(i => i.projectId === activeProject && i.columnId === colId);
+
+    let msg = '"' + c.name + '" sütunu silinsin mi?';
+    if (inCol.length) msg += '\nİçindeki ' + inCol.length + ' kart ilk sütuna taşınacak (silinmez).';
+    if (!confirm(msg)) return;
+
+    // Kartları kalan ilk sütuna taşı
+    const remaining = cols.filter(x => x.id !== colId);
+    const target = remaining[0];
+    for (const i of inCol) { i.columnId = target.id; await saveItem(i); }
+
+    // Sütunu sil
+    columns = columns.filter(x => x.id !== colId);
+    await deleteColumnStore(colId);
+    renderProjects(); renderMain(); renderBoard();
+  }
+
+  /* ---- KART: HIZLI EKLE (sütun altından) ----
+     Sadece başlık sorar; detaylar sonra kart penceresinden düzenlenebilir. */
+  async function addCardToColumn(colId) {
+    const title = prompt('Yeni kart:', '');
+    if (title === null) return;
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    // Sütunun sonuna eklensin
+    const inCol = items.filter(x => x.columnId === colId);
+    const maxOrder = inCol.length ? Math.max(...inCol.map(x => x.order ?? x.created)) : 0;
+    const item = {
+      id: uid(),
+      projectId: activeProject,
+      columnId: colId,
+      order: maxOrder + 10,
+      type: 'note',
+      title: trimmed,
+      body: '',
+      tags: [],
+      cover: null,
+      done: false,
+      pinned: false,
+      created: Date.now()
+    };
+    items.push(item);
+    await saveItem(item);
+    renderProjects(); renderMain(); renderBoard();
+  }
+
+  /* ===================================================================
+     KART DETAY PENCERESİ (modal)
+     Karta tıklanınca açılır; başlık, açıklama, etiket, sütun, tür, durum ve
+     kapak resmi düzenlenir. "Bitti"ye basınca veya pencere kapanınca kaydedilir.
+     =================================================================== */
+
+  /* Detay penceresini açar ve o kartın değerleriyle doldurur. */
+  function openCard(id) {
+    const i = items.find(x => x.id === id);
+    if (!i) return;
+    openCardId = id;
+
+    el('modalTitle').value = i.title || '';
+    el('modalDesc').value = i.body || '';
+    el('modalTags').value = (i.tags || []).join(', ');
+    el('modalType').value = i.type || 'note';
+
+    // Sütun açılır listesini bu projenin sütunlarıyla doldur
+    const cols = projectColumns(i.projectId);
+    el('modalColumn').innerHTML = cols.map(c =>
+      '<option value="' + c.id + '" ' + (c.id===i.columnId?'selected':'') + '>' + esc(c.name) + '</option>'
+    ).join('');
+
+    // Görev onay kutusu sadece tür "task" ise görünür
+    updateModalCheckVisibility(i.type, i.done);
+    // Kapak resmini göster/gizle
+    updateModalCover(i.cover);
+
+    el('cardModal').classList.add('open');
+  }
+
+  /* Görev onay kutusunun görünürlüğünü ve durumunu ayarlar. */
+  function updateModalCheckVisibility(type, done) {
+    const chk = el('modalCheck');
+    if (type === 'task') {
+      chk.style.display = '';
+      chk.checked = !!done;
+    } else {
+      chk.style.display = 'none';
+      chk.checked = false;
+    }
+  }
+
+  /* Kapak resmi önizlemesini ve "kaldır" düğmesini ayarlar. */
+  function updateModalCover(cover) {
+    const img = el('modalCover');
+    const rm = el('modalCoverRemove');
+    if (cover) {
+      img.src = cover; img.style.display = '';
+      rm.style.display = '';
+    } else {
+      img.removeAttribute('src'); img.style.display = 'none';
+      rm.style.display = 'none';
+    }
+  }
+
+  /* Penceredeki tüm değerleri okuyup kartı (öğeyi) günceller ve kaydeder. */
+  async function saveOpenCard() {
+    if (!openCardId) return;
+    const i = items.find(x => x.id === openCardId);
+    if (!i) return;
+
+    const newType = el('modalType').value;
+    i.title = el('modalTitle').value.trim();
+    i.body = el('modalDesc').value.trim();
+    i.tags = el('modalTags').value.split(',').map(t => t.trim()).filter(Boolean);
+    i.type = newType;
+    i.columnId = el('modalColumn').value;
+    i.done = (newType === 'task') ? el('modalCheck').checked : false;
+    // Not: kapak (cover) resim seç/kaldır anında doğrudan i.cover'a yazılır.
+
+    if (!i.title && !i.body) i.title = '(başlıksız)'; // tamamen boş kalmasın
+
+    await saveItem(i);
+    renderProjects(); renderMain(); renderBoard();
+  }
+
+  /* Pencereyi kapatır (önce kaydeder). */
+  async function closeCard() {
+    await saveOpenCard();
+    el('cardModal').classList.remove('open');
+    openCardId = null;
+  }
+
+  /* ===================================================================
+     GÖRÜNÜM GEÇİŞİ — Liste <-> Pano
+     body'ye "view-board" sınıfı eklenince CSS otomatik olarak panoyu gösterir.
+     Tercih localStorage'a kaydedilir, böylece sonraki açılışta hatırlanır.
+     =================================================================== */
+  async function setView(view) {
+    currentView = view;
+    const board = (view === 'board');
+    document.body.classList.toggle('view-board', board);
+    el('viewList').classList.toggle('sel', !board);
+    el('viewBoard').classList.toggle('sel', board);
+    if (board) renderBoard();
+    if (storageOK) await sSet('pref:view', view);
   }
 
   /* ===================================================================
@@ -772,7 +1785,7 @@
   function exportJSON() {
     // O anki tema: body'de "dark" sınıfı varsa karanlık, yoksa açık
     const theme = document.body.classList.contains('dark') ? 'dark' : 'light';
-    const data = { version: 1, exported: Date.now(), theme: theme, projects: projects, items: items };
+    const data = { version: 2, exported: Date.now(), theme: theme, projects: projects, columns: columns, items: items };
     download(JSON.stringify(data, null, 2), 'notlar-yedek-' + new Date().toISOString().slice(0,10) + '.json', 'application/json');
   }
 
@@ -790,17 +1803,26 @@
       if (storageOK) {
         for (const p of projects) await sDel('proj:' + p.id);
         for (const i of items) await sDel('item:' + i.id);
+        for (const c of columns) await sDel('col:' + c.id);
       }
       // Yedekteki veriyi belleğe al
       projects = data.projects;
       items = data.items;
+      // Eski yedeklerde (version 1) sütun olmayabilir; o zaman boş başlar ve
+      // aşağıda ensureColumns + migrateItemsToColumns ile otomatik oluşturulur.
+      columns = Array.isArray(data.columns) ? data.columns : [];
       // Depoya yaz
       if (storageOK) {
         for (const p of projects) await sSet('proj:' + p.id, JSON.stringify(p));
         for (const i of items) await sSet('item:' + i.id, JSON.stringify(i));
+        for (const c of columns) await sSet('col:' + c.id, JSON.stringify(c));
       }
       activeProject = projects.length ? projects[0].id : null;
       if (!activeProject) await createProject('Genel');
+
+      // Her projenin sütunu olduğundan emin ol ve öğeleri sütunlara yerleştir
+      for (const p of projects) { await ensureColumns(p.id); }
+      await migrateItemsToColumns();
 
       // Yedekte tema bilgisi varsa onu uygula ve kaydet.
       // (Eski yedeklerde theme alanı olmayabilir; o zaman tema değişmez.)
@@ -810,7 +1832,7 @@
         if (storageOK) await sSet('pref:theme', data.theme);
       }
 
-      renderProjects(); renderMain();
+      renderProjects(); renderMain(); renderBoard();
       el('status').textContent = 'Yedek yüklendi.';
     } catch(e) {
       alert('Geçersiz yedek dosyası.');
@@ -878,8 +1900,66 @@
   el('add').addEventListener('click', addItem);
   el('cBody').addEventListener('keydown', e => { if ((e.metaKey||e.ctrlKey) && e.key==='Enter') addItem(); });
 
-  // Arama kutusuna her yazıldığında listeyi süz
-  el('search').addEventListener('input', renderMain);
+  // Arama kutusuna her yazıldığında listeyi süz (pano da güncellenir)
+  el('search').addEventListener('input', () => { renderMain(); renderBoard(); });
+
+  /* ---- GÖRÜNÜM DÜĞMELERİ (Liste / Pano) ---- */
+  el('viewList').addEventListener('click', () => setView('list'));
+  el('viewBoard').addEventListener('click', () => setView('board'));
+
+  /* ---- KART DETAY PENCERESİ olayları ---- */
+  // Kapat / Bitti -> kaydet ve kapat
+  el('modalClose').addEventListener('click', closeCard);
+  el('modalDone').addEventListener('click', closeCard);
+  // Karartı alana (pencerenin dışına) tıklayınca kapat
+  el('cardModal').addEventListener('click', e => { if (e.target === el('cardModal')) closeCard(); });
+  // ESC ile kapat
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && el('cardModal').classList.contains('open')) closeCard(); });
+
+  // Penceredeki "tür" değişince onay kutusunun görünürlüğünü güncelle
+  el('modalType').addEventListener('change', () => {
+    const i = items.find(x => x.id === openCardId);
+    updateModalCheckVisibility(el('modalType').value, i ? i.done : false);
+  });
+
+  // Kartı sil (pencereden)
+  el('modalDelete').addEventListener('click', async () => {
+    if (!openCardId) return;
+    if (!confirm('Bu kart silinsin mi?')) return;
+    const id = openCardId;
+    el('cardModal').classList.remove('open');
+    openCardId = null;
+    await removeItem(id);
+  });
+
+  // Kapak resmi: "Resim seç" -> gizli dosya seçiciyi aç
+  el('modalCoverBtn').addEventListener('click', () => el('modalCoverFile').click());
+  // Dosya seçilince resmi data URL'e çevirip karta kaydet
+  el('modalCoverFile').addEventListener('change', e => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f || !openCardId) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const i = items.find(x => x.id === openCardId);
+      if (!i) return;
+      i.cover = reader.result; // base64 data URL (kullanıcının cihazında saklanır)
+      await saveItem(i);
+      updateModalCover(i.cover);
+      renderMain(); renderBoard();
+    };
+    reader.readAsDataURL(f);
+  });
+  // Kapağı kaldır
+  el('modalCoverRemove').addEventListener('click', async () => {
+    if (!openCardId) return;
+    const i = items.find(x => x.id === openCardId);
+    if (!i) return;
+    i.cover = null;
+    await saveItem(i);
+    updateModalCover(null);
+    renderMain(); renderBoard();
+  });
 
   /* ---- DIŞA AKTARMA MENÜSÜ aç/kapa ---- */
   function openExportMenu(){ el('exportMenu').classList.add('open'); }
@@ -930,12 +2010,23 @@
     applyTheme(dark);
   }
 
+  /* Kayıtlı görünüm tercihini (liste/pano) yükler; yoksa liste açılır. */
+  async function loadView() {
+    let view = 'list';
+    const saved = await sGet('pref:view');
+    if (saved && (saved.value === 'board' || saved.value === 'list')) {
+      view = saved.value;
+    }
+    await setView(view);
+  }
+
   el('themeBtn').addEventListener('click', toggleTheme);
 
   /* ---- UYGULAMAYI BAŞLAT ----
-     Her şey tanımlandı; şimdi temayı ve kayıtlı veriyi yükleyip ekranı çiziyoruz. */
+     Her şey tanımlandı; şimdi temayı ve kayıtlı veriyi yükleyip ekranı çiziyoruz.
+     Veriler yüklendikten SONRA görünüm tercihini uygula (pano render'ı veri ister). */
   loadTheme();
-  loadAll();
+  loadAll().then(loadView);
 </script>
 </body>
 </html>
