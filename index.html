@@ -111,6 +111,9 @@
   .proj-x { font-size: 1rem; opacity: 0; padding: 0 0.2rem; }  /* Silme çarpısı - normalde gizli */
   .proj:hover .proj-x { opacity: 0.55; }               /* Üzerine gelince belirir */
   .proj-x:active, .proj-x:hover { opacity: 1; }
+  /* Dokunmatik ekranda "üzerine gelme" yok: çarpı görünmezken bile basılabiliyordu ve
+     projenin sağ tarafına dokunmak beklenmedik şekilde "silinsin mi?" soruyordu. Görünür olsun. */
+  @media (hover: none) { .proj-x { opacity: 0.55; } }
 
   /* Alttaki "yeni proje ekle" kutusu */
   .add-proj { margin: 0.8rem 1.2rem 0; display: flex; gap: 0.4rem; }
@@ -139,7 +142,8 @@
     display: none; background: transparent; border: none; cursor: pointer;
     font-size: 1.5rem; color: var(--ink); flex-shrink: 0; padding: 0.2rem;
   }
-  .topbar h2 { font-size: 1.7rem; letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar h2 { font-size: 1.7rem; letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+  .topbar h2:hover { text-decoration: underline dotted var(--muted); text-underline-offset: 6px; } /* tıklayınca yeniden adlandırılır */
   .export-btn {
     background: transparent; border: 1px solid var(--line); color: var(--muted);
     border-radius: 5px; padding: 0.4rem 0.8rem; font-family: inherit; font-size: 0.82rem;
@@ -216,7 +220,9 @@
   .item {
     background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
     padding: 0.9rem 1.1rem; margin-bottom: 0.9rem; box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+    cursor: pointer; /* tıklayınca düzenleme penceresi açılır */
   }
+  .item:hover { border-color: var(--muted); }
   /* Liste kartındaki kapak resmi: kartın üst kenarına yapışık, köşeleri yuvarlak */
   .item-cover {
     display: block; width: calc(100% + 2.2rem); max-height: 200px; object-fit: cover;
@@ -340,11 +346,13 @@
     padding: 0; overflow: hidden; cursor: grab;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     border-left: 3px solid transparent;
-    /* Dokunmatik ekranda dikey kaydırma yerine sürükleme yapılabilmesi için.
-       (touch-action olmadan telefonda sürükleme sayfayı kaydırır.) */
+    /* Dokunmatikte parmakla kaydırma serbest kalır; sürüklemek için karta basılı tutulur
+       (bkz. onCardPointerDown). touch-callout: uzun basınca iOS menüsü çıkmasın. */
     touch-action: manipulation;
-    user-select: none; -webkit-user-select: none;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
+  /* Telefonda basılı tutunca kart "kalkar": artık sürüklenebilir */
+  .card.touch-armed { transform: scale(1.03); box-shadow: 0 8px 22px rgba(0,0,0,0.22); border-color: var(--accent); }
   .card:active { cursor: grabbing; }
   /* Sürüklenen asıl kart yerinde soluk/küçük durur (yerini koruyan iz) */
   .card.dragging { opacity: 0.35; transform: scale(0.98); }
@@ -707,6 +715,7 @@
   .tbl-in.small { font-size: 0.78rem; padding: 0.3rem 0.45rem; }
   .tbl-fname { flex: 1.4; }
   .tbl-ftype { flex: 1; }
+  select.tbl-in { cursor: pointer; padding-right: 0.3rem; }
   .tbl-def, .tbl-chk { flex: 1; }
   .tbl-flag {
     display: flex; align-items: center; gap: 0.15rem; flex-shrink: 0; cursor: pointer;
@@ -868,7 +877,7 @@
       <div class="topbar">
         <div class="topbar-left">
           <button class="menu-btn" id="menuBtn" aria-label="Projeler">&#9776;</button> <!-- ☰ hamburger -->
-          <h2 id="projTitle">&mdash;</h2>          <!-- Aktif projenin adı buraya yazılır -->
+          <h2 id="projTitle" title="Yeniden adlandırmak için tıkla">&mdash;</h2>          <!-- Aktif projenin adı buraya yazılır -->
         </div>
 
         <div class="topbar-right" style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
@@ -1079,12 +1088,6 @@
   </div>
 </div>
 
-<!-- Alan türü kutusunda çıkan hazır türler. İlk beşi SQLite'ın asıl türleridir; elle başka tür de yazılabilir. -->
-<datalist id="sqlTypes">
-  <option value="INTEGER"><option value="TEXT"><option value="REAL"><option value="NUMERIC"><option value="BLOB">
-  <option value="ANY"><option value="DATETIME"><option value="DATE"><option value="BOOLEAN">
-  <option value="VARCHAR(255)"><option value="DECIMAL(10,2)">
-</datalist>
 
 <!-- ===================================================================
      SQL ÇIKTISI PENCERESİ
@@ -1259,7 +1262,41 @@
   }
   async function sSet(k,v){
     try { localStorage.setItem(STORE_PREFIX + k, v); return true; }
-    catch(e){ storageOK = false; return false; } // örn. depo dolu / gizli mod
+    catch(e){
+      // Depo dolu (çoğunlukla büyük kapak resimleri yüzünden). Sadece BU kayıt yapılamadı;
+      // kullanıcıyı uyarıyoruz ve sonraki kayıtlar denenmeye devam ediyor.
+      // (Eskiden burada storageOK = false yapılıyordu: ondan sonraki hiçbir değişiklik
+      //  kaydedilmiyor, ekranda ise hâlâ "otomatik kayıt açık" yazıyordu.)
+      warnStorageFull();
+      return false;
+    }
+  }
+
+  /* Depo dolu uyarısı (art arda gelen başarısız kayıtlarda tek uyarı göstermek için 10 sn bekler) */
+  let lastStorageWarn = 0;
+  function warnStorageFull() {
+    el('status').textContent = '⚠ Depolama alanı dolu — son değişiklik KAYDEDİLEMEDİ. Büyük kapak resimlerini kaldırmak yer açar.';
+    if (Date.now() - lastStorageWarn > 10000) {
+      lastStorageWarn = Date.now();
+      alert('Depolama alanı dolu: son değişiklik kaydedilemedi.\n\nTarayıcı bu uygulamaya sınırlı yer veriyor (çoğu tarayıcıda yaklaşık 5 MB). ' +
+            'Büyük kapak resimlerini kaldırmak yer açar. Önlem olarak "Dışa / İçe aktar → JSON yedeği indir" ile yedek almanı öneririm.');
+    }
+  }
+
+  /* Bu uygulamanın depoda kapladığı yer (yaklaşık; tarayıcılar metni 2 bayt/karakter sayar) */
+  function storageUsedMB() {
+    let n = 0;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf(STORE_PREFIX) === 0) n += k.length + (localStorage.getItem(k) || '').length;
+      }
+    } catch (e) {}
+    return n * 2 / 1024 / 1024;
+  }
+  function updateStorageStatus() {
+    if (!storageOK) return;
+    el('status').textContent = 'Otomatik kayıt açık — notların bu cihaza kaydediliyor. (Kullanılan alan: ' + storageUsedMB().toFixed(1) + ' MB)';
   }
   async function sDel(k){
     try { localStorage.removeItem(STORE_PREFIX + k); } catch(e){}
@@ -1312,7 +1349,7 @@
           const it = await sGet(k);
           if (it && it.value) { try { ilist.push(JSON.parse(it.value)); } catch(e){} }
         }
-        items = ilist;
+        items = normalizeItems(ilist);
 
         // 'col:' ile başlayan anahtarlar = tüm pano sütunları
         const ckeys = await sList('col:') || [];
@@ -1355,7 +1392,7 @@
     if (!storageOK) {
       el('status').textContent = 'Kalıcı kayıt kullanılamıyor (örn. gizli mod) — değişiklikler yalnızca bu oturumda tutulur.';
     } else {
-      el('status').textContent = 'Otomatik kayıt açık — notların bu cihaza kaydediliyor.';
+      updateStorageStatus();
     }
 
     // Hiç proje yoksa varsayılan "Genel" projesini (sütunlarıyla birlikte) oluştur
@@ -1377,7 +1414,8 @@
      Bir projeyi/öğeyi depoya yazar. Nesneyi JSON.stringify ile metne çevirip
      benzersiz bir anahtarla ('proj:ID' veya 'item:ID') saklar. */
   async function saveProject(p) { if (storageOK) await sSet('proj:' + p.id, JSON.stringify(p)); }
-  async function saveItem(i) { if (storageOK) await sSet('item:' + i.id, JSON.stringify(i)); }
+  /* Başarılıysa true döner (depo doluysa false) — kapak resmi eklerken buna bakılıyor. */
+  async function saveItem(i) { return storageOK ? await sSet('item:' + i.id, JSON.stringify(i)) : true; }
   async function deleteItemStore(id) { if (storageOK) await sDel('item:' + id); }
   async function saveColumn(c) { if (storageOK) await sSet('col:' + c.id, JSON.stringify(c)); }
   async function deleteColumnStore(id) { if (storageOK) await sDel('col:' + id); }
@@ -1455,7 +1493,8 @@
   async function deleteProject(id) {
     const p = projects.find(x => x.id === id);
     const cnt = items.filter(i => i.projectId === id).length; // bu projedeki öğe sayısı
-    if (!confirm('"' + p.name + '" projesi ve içindeki ' + cnt + ' öğe silinsin mi?')) return;
+    const tcnt = dbTables.filter(t => t.projectId === id).length; // şema tablosu sayısı
+    if (!confirm('"' + p.name + '" projesi ve içindeki ' + cnt + ' öğe' + (tcnt ? ' ve ' + tcnt + ' şema tablosu' : '') + ' silinsin mi?\nBu işlem geri alınamaz.')) return;
 
     // Projenin tüm öğelerini sil
     for (const i of items.filter(x => x.projectId === id)) { await deleteItemStore(i.id); }
@@ -1471,6 +1510,7 @@
     for (const l of dbLinks.filter(x => x.projectId === id)) { await deleteDbLinkStore(l.id); }
     dbLinks = dbLinks.filter(l => l.projectId !== id);
     delete dbSettings[id];
+    delete erHistory[id];
     await sDel('sch:' + id);
     if (erConsole && erConsole.pid === id) closeConsoleDb();
 
@@ -1499,14 +1539,31 @@
 
     // Her proje satırına tıklama davranışı ekle
     el('projList').querySelectorAll('.proj').forEach(d => {
+      d.title = 'Çift tıkla: yeniden adlandır';
+      d.addEventListener('dblclick', e => { if (!e.target.dataset.del) renameProject(d.dataset.id); });
       d.addEventListener('click', e => {
         if (e.target.dataset.del) { deleteProject(e.target.dataset.del); return; } // çarpıya basıldıysa sil
+        if (d.dataset.id === activeProject) { closeDrawer(); return; } // zaten açık: yeniden çizme (çift tıklama çalışsın)
         activeProject = d.dataset.id;   // değilse o projeyi aç
         el('search').value = '';        // aramayı temizle
         closeDrawer();                  // mobilde çekmeceyi kapat
         renderProjects(); renderMain(); renderBoard(); renderSchema();
       });
     });
+  }
+
+  /* ---- PROJEYİ YENİDEN ADLANDIR ----
+     Üstteki proje başlığına tıklayınca ya da kenar çubuğunda çift tıklayınca çalışır. */
+  async function renameProject(id) {
+    const p = projects.find(x => x.id === id);
+    if (!p) return;
+    const name = prompt('Proje adı:', p.name);
+    if (name === null) return;
+    const n = name.trim().slice(0, 40);
+    if (!n || n === p.name) return;
+    p.name = n;
+    await saveProject(p);
+    renderProjects(); renderMain();
   }
 
   /* ---- YENİ NOT/GÖREV EKLE ----
@@ -1582,7 +1639,7 @@
     if (q) {
       mine = mine.filter(i => {
         // başlık + içerik + etiketleri tek metne birleştirip arama kelimesini içeriyor mu bak
-        const hay = (i.title + ' ' + i.body + ' ' + i.tags.map(t=>'#'+t).join(' ')).toLowerCase();
+        const hay = ((i.title || '') + ' ' + (i.body || '') + ' ' + (i.tags || []).map(t=>'#'+t).join(' ')).toLowerCase();
         return hay.includes(q.replace(/^#/, '')); // baştaki # işaretini yok say
       });
     }
@@ -1610,7 +1667,7 @@
   /* Bir NOT nesnesini kart HTML'ine çevirir. */
   function noteHTML(i) {
     const cover = i.cover ? '<img class="item-cover" src="' + i.cover + '" alt="">' : '';
-    return '<div class="item ' + (i.pinned?'pinned':'') + '">' +
+    return '<div class="item ' + (i.pinned?'pinned':'') + '" data-item="' + i.id + '" title="Düzenlemek için tıkla">' +
       cover +
       '<h3>' + esc(i.title) + '</h3>' +
       (i.body ? '<p>' + esc(i.body) + '</p>' : '') +
@@ -1637,7 +1694,7 @@
       '<div class="actions">' +
       '<button data-pin="' + i.id + '">' + (i.pinned?'Sabit ✓':'Sabitle') + '</button>' +
       '<button data-del="' + i.id + '">Sil</button></div></div></div></div>';
-    return '<div class="item task ' + (i.pinned?'pinned':'') + ' ' + (i.done?'done':'') + ' ' + (hasCover?'has-cover':'') + '">' +
+    return '<div class="item task ' + (i.pinned?'pinned':'') + ' ' + (i.done?'done':'') + ' ' + (hasCover?'has-cover':'') + '" data-item="' + i.id + '" title="Düzenlemek için tıkla">' +
       cover + row +
     '</div>';
   }
@@ -1647,7 +1704,16 @@
   function bindItemEvents() {
     el('list').querySelectorAll('[data-check]').forEach(c => c.addEventListener('change', () => toggleDone(c.dataset.check)));
     el('list').querySelectorAll('[data-pin]').forEach(b => b.addEventListener('click', () => togglePin(b.dataset.pin)));
-    el('list').querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => removeItem(b.dataset.del)));
+    // Silmeden önce sor (pano penceresindeki "Kartı sil" ile aynı davranış)
+    el('list').querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
+      if (confirm('Bu öğe silinsin mi?')) removeItem(b.dataset.del);
+    }));
+    // Karta tıklayınca düzenleme penceresi açılsın (düğme/kutucuk ve metin seçimi hariç)
+    el('list').querySelectorAll('[data-item]').forEach(n => n.addEventListener('click', e => {
+      if (e.target.closest('button, input, a')) return;
+      if (String(window.getSelection())) return; // kullanıcı metin seçiyorsa açma
+      openCard(n.dataset.item);
+    }));
   }
 
   /* ===================================================================
@@ -1705,7 +1771,7 @@
         ((a.order ?? a.created) - (b.order ?? b.created))
       );
 
-      const color = col.color || 'var(--accent)';
+      const color = safeColor(col.color);
       html += '<div class="column" data-col="' + col.id + '">' +
         '<div class="column-color-bar" style="background:' + color + '"></div>' +
         '<div class="column-head">' +
@@ -1755,6 +1821,8 @@
 
       // Sürüklemeyi başlat (hem fare hem dokunmatik): pointerdown
       card.addEventListener('pointerdown', e => onCardPointerDown(e, card, id));
+      // Telefonda uzun basınca tarayıcının menüsü (kopyala/paylaş) açılmasın
+      card.addEventListener('contextmenu', e => { if (drag.touch) e.preventDefault(); });
     });
 
     // Onay kutuları (görev tamamlandı)
@@ -1862,11 +1930,29 @@
     drag._w = rect.width;
     drag._h = rect.height;
 
+    // DOKUNMATİK: parmakla hemen sürüklemek sayfa kaydırmasıyla çakışır (tarayıcı kaydırmaya
+    // başlayınca sürüklemeyi iptal eder). Bu yüzden telefonda karta kısa süre BASILI TUTMAK
+    // gerekir; basılı tutmadan parmak kayarsa bu normal bir kaydırmadır.
+    drag.touch = (e.pointerType === 'touch');
+    drag.armed = !drag.touch;
+    if (drag.touch) {
+      drag.holdTimer = setTimeout(() => {
+        drag.armed = true;
+        cardEl.classList.add('touch-armed');
+        if (navigator.vibrate) navigator.vibrate(20); // "elime aldım" titreşimi
+      }, TOUCH_HOLD_MS);
+      // Kart elde tutulurken parmak hareketi sayfayı kaydırmasın
+      document.addEventListener('touchmove', blockTouchScroll, { passive: false });
+    }
+
     // Bu pointer'ın tüm hareketlerini yakalamak için belge düzeyinde dinle
     document.addEventListener('pointermove', onPointerMove, { passive: false });
     document.addEventListener('pointerup', onPointerUp);
     document.addEventListener('pointercancel', onPointerUp);
   }
+
+  const TOUCH_HOLD_MS = 280; // telefonda sürüklemek için basılı tutma süresi
+  function blockTouchScroll(e) { if (drag.armed && drag.touch) e.preventDefault(); }
 
   function onPointerMove(e) {
     if (drag.id == null) return;
@@ -1875,7 +1961,12 @@
     if (!drag.active) {
       const dx = e.clientX - drag.startX;
       const dy = e.clientY - drag.startY;
-      if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return; // ufak titreme = tıklama
+      if (!drag.armed) {
+        // Telefonda basılı tutmadan kaydı: kullanıcı sayfayı kaydırıyor, sürüklemeyi bırak
+        if (Math.hypot(dx, dy) >= DRAG_THRESHOLD) cancelPendingDrag();
+        return;
+      }
+      if (!drag.touch && Math.hypot(dx, dy) < DRAG_THRESHOLD) return; // ufak titreme = tıklama
       startDragging(); // eşik aşıldı, gerçekten sürüklemeye başla
     }
 
@@ -1900,7 +1991,7 @@
     // Hayalet = kartın görsel kopyası
     const ghost = drag.cardEl.cloneNode(true);
     ghost.classList.add('drag-ghost');
-    ghost.classList.remove('dragging');
+    ghost.classList.remove('dragging', 'touch-armed');
     ghost.style.width = drag._w + 'px';
     document.body.appendChild(ghost);
     drag.ghost = ghost;
@@ -2007,8 +2098,20 @@
   }
 
   function resetDrag() {
+    clearTimeout(drag.holdTimer);
+    document.removeEventListener('touchmove', blockTouchScroll);
+    if (drag.cardEl) drag.cardEl.classList.remove('touch-armed');
     drag.active = false; drag.id = null; drag.cardEl = null;
     drag.ghost = null; drag.placeholder = null; drag.pointerId = null;
+    drag.armed = false; drag.touch = false; drag.holdTimer = null;
+  }
+
+  /* Telefonda basılı tutulmadan kaydırılınca: bekleyen sürüklemeyi tamamen bırak. */
+  function cancelPendingDrag() {
+    document.removeEventListener('pointermove', onPointerMove);
+    document.removeEventListener('pointerup', onPointerUp);
+    document.removeEventListener('pointercancel', onPointerUp);
+    resetDrag();
   }
 
   /* ---- SÜTUN SÜRÜKLEME (sütunların yerini değiştirme) ----
@@ -2163,19 +2266,22 @@
     }
   }
 
-  /* Eski "sütun menüsünden taşı" yolu hâlâ kullanılıyor (kart penceresindeki sütun seçici). */
+  /* Öğeyi başka bir sütunun SONUNA yerleştirir (kaydetmez). "Bitti" benzeri bir sütuna
+     taşınan görev, sürükleyince olduğu gibi tamamlanmış sayılır.
+     Kart penceresindeki sütun seçici de bunu kullanır. */
+  function placeInColumn(i, colId) {
+    if (!i || !colId || i.columnId === colId) return;
+    const inCol = items.filter(x => x.projectId === i.projectId && x.columnId === colId && x.id !== i.id);
+    i.order = (inCol.length ? Math.max(...inCol.map(x => x.order ?? x.created)) : 0) + 10;
+    i.columnId = colId;
+    const col = columns.find(c => c.id === colId);
+    if (i.type === 'task' && col && /(bitti|tamam|done|complete|finish)/.test(col.name.toLowerCase())) i.done = true;
+  }
+
   async function moveItemToColumn(itemId, colId) {
     const i = items.find(x => x.id === itemId);
     if (!i || i.columnId === colId) return;
-    i.columnId = colId;
-    // Hedef sütunun sonuna ekle
-    const inCol = items.filter(x => x.projectId === i.projectId && x.columnId === colId && x.id !== itemId);
-    i.order = (inCol.length ? Math.max(...inCol.map(x => x.order ?? x.created)) : 0) + 10;
-    const col = columns.find(c => c.id === colId);
-    if (i.type === 'task' && col) {
-      const n = col.name.toLowerCase();
-      if (/(bitti|tamam|done|complete|finish)/.test(n)) i.done = true;
-    }
+    placeInColumn(i, colId);
     await saveItem(i);
     renderProjects(); renderMain(); renderBoard();
   }
@@ -2340,8 +2446,9 @@
     i.body = el('modalDesc').value.trim();
     i.tags = el('modalTags').value.split(',').map(t => t.trim()).filter(Boolean);
     i.type = newType;
-    i.columnId = el('modalColumn').value;
     i.done = (newType === 'task') ? el('modalCheck').checked : false;
+    // Sütun değiştiyse kart yeni sütunun sonuna gitsin (eskiden rastgele bir sıraya düşüyordu)
+    placeInColumn(i, el('modalColumn').value);
     // Not: kapak (cover) resim seç/kaldır anında doğrudan i.cover'a yazılır.
 
     if (!i.title && !i.body) i.title = '(başlıksız)'; // tamamen boş kalmasın
@@ -2810,7 +2917,10 @@
     const p = el('erLinkPanel');
     if (!mid || !selectedLinkId) { p.style.display = 'none'; return; }
     p.style.display = '';
-    p.style.left = (mid.x * erZoom) + 'px';
+    // Kutu tuvalin sol/sağ kenarından taşıp kesilmesin
+    const half = p.offsetWidth / 2 + 6;
+    const maxX = Math.max(half, el('erSizer').offsetWidth - half);
+    p.style.left = Math.min(Math.max(mid.x * erZoom, half), maxX) + 'px';
     p.style.top = (mid.y * erZoom + 12) + 'px';
   }
 
@@ -3269,6 +3379,39 @@
     renderTableModal(focusFieldId);
   }
 
+  /* Alan türü menüsünün seçenekleri: önce SQLite'ın asıl türleri, sonra yaygın diğerleri.
+     (Eskiden yazılabilir bir kutuydu; tarayıcı listeyi kutudaki yazıya göre süzdüğü için
+     "INTEGER" yazılıyken başka tür görünmüyordu. Menü her zaman hepsini gösterir.) */
+  const SQL_TYPE_GROUPS = [
+    ['SQLite türleri', [
+      ['INTEGER', 'tam sayı, id'],
+      ['TEXT', 'metin, tarih'],
+      ['REAL', 'ondalıklı sayı'],
+      ['NUMERIC', 'sayı (esnek)'],
+      ['BLOB', 'dosya / ikili veri']
+    ]],
+    ['Diğer yaygın türler', [
+      ['DATETIME', ''], ['DATE', ''], ['BOOLEAN', ''], ['VARCHAR(255)', ''], ['DECIMAL(10,2)', ''],
+      ['ANY', 'sadece STRICT tablolarda']
+    ]]
+  ];
+
+  /* Bir alanın tür menüsü. Listede olmayan bir tür (ör. VARCHAR(100)) en üstte seçili görünür. */
+  function typeSelectHTML(cur) {
+    cur = (cur || '').trim();
+    const same = o => o[0].toUpperCase() === cur.toUpperCase();
+    const known = SQL_TYPE_GROUPS.some(g => g[1].some(same));
+    let h = '<select class="tbl-in tbl-ftype" data-k="typesel" title="Alan türü">';
+    if (!known) h += '<option value="' + escAttr(cur) + '" selected>' + esc(cur || '(tür yok)') + '</option>';
+    SQL_TYPE_GROUPS.forEach(g => {
+      h += '<optgroup label="' + escAttr(g[0]) + '">' +
+        g[1].map(o => '<option value="' + escAttr(o[0]) + '"' + (known && same(o) ? ' selected' : '') + '>' +
+          esc(o[0] + (o[1] ? ' — ' + o[1] : '')) + '</option>').join('') +
+        '</optgroup>';
+    });
+    return h + '<option value="__custom__">Özel tür yaz…</option></select>';
+  }
+
   /* Pencerenin içeriğini (renkler, alanlar, indeksler, ilişkiler) çizer. */
   function renderTableModal(focusFieldId) {
     const t = findTable(openTableId);
@@ -3285,7 +3428,7 @@
       '<div class="tbl-field" data-fid="' + f.id + '">' +
         '<div class="tbl-line">' +
           '<input class="tbl-in tbl-fname" data-k="name" value="' + escAttr(f.name) + '" placeholder="alan_adi" maxlength="64" spellcheck="false">' +
-          '<input class="tbl-in tbl-ftype" data-k="type" value="' + escAttr(f.type) + '" placeholder="TÜR" list="sqlTypes" maxlength="40" spellcheck="false">' +
+          typeSelectHTML(f.type) +
           flag('pk', 'PK', 'PRIMARY KEY: satırı tekil olarak tanımlayan ana id', f.pk) +
           flag('ai', 'AI', 'AUTOINCREMENT: sadece INTEGER PRIMARY KEY alanında. (INTEGER PRIMARY KEY zaten kendiliğinden artar; AI ek olarak silinen numaraların tekrar kullanılmasını engeller.)', f.ai) +
           flag('nn', 'NN', 'NOT NULL: boş bırakılamaz', f.nn) +
@@ -4420,32 +4563,46 @@
     renderTableModal();
     renderSchema();
   });
-  // Alan adı / türü / varsayılan / CHECK yazıldıkça kaydet.
-  // Tür elle değiştirilmediyse addan otomatik tahmin edilir (musteri_id -> INTEGER).
+  // Alan adı / varsayılan / CHECK yazıldıkça kaydet.
+  // Tür elle seçilmediyse addan otomatik tahmin edilir (musteri_id -> INTEGER).
   el('tblFields').addEventListener('input', async e => {
     const k = e.target.dataset.k;
-    if (!['name', 'type', 'def', 'check'].includes(k)) return;
+    if (!['name', 'def', 'check'].includes(k)) return;
     const f = modalField(e.target);
     const t = findTable(openTableId);
     if (!f || !t) return;
     tableModalTouch();
-    f[k] = (k === 'name' || k === 'type') ? e.target.value.trim() : e.target.value;
-    if (k === 'type') f.typeAuto = false;
+    f[k] = (k === 'name') ? e.target.value.trim() : e.target.value;
     if (k === 'name' && f.typeAuto) {
       f.type = guessSqlType(f.name);
-      e.target.closest('[data-fid]').querySelector('[data-k="type"]').value = f.type;
+      e.target.closest('[data-fid]').querySelector('[data-k="typesel"]').value = f.type;
     }
     if (k === 'name') t.indexes.forEach(ix => { if (ix.nameAuto && ix.cols.includes(f.id)) ix.name = autoIndexName(t, ix); });
     await saveDbTable(t);
     renderSchema();
   });
-  // PK / AI / NN / UQ kutucukları
+  // Tür menüsü ve PK / AI / NN / UQ kutucukları
   el('tblFields').addEventListener('change', async e => {
     const k = e.target.dataset.k;
-    if (!['pk', 'ai', 'nn', 'uq'].includes(k)) return;
+    if (!['typesel', 'pk', 'ai', 'nn', 'uq'].includes(k)) return;
     const f = modalField(e.target);
     const t = findTable(openTableId);
     if (!f || !t) return;
+    if (k === 'typesel') {
+      let v = e.target.value;
+      if (v === '__custom__') {
+        const typed = prompt('Alan türünü yaz (ör. VARCHAR(100), TEXT COLLATE NOCASE):', f.type);
+        if (typed === null) { renderTableModal(); return; } // vazgeçildi: menü eski türe dönsün
+        v = typed.trim();
+      }
+      tableModalTouch();
+      f.type = v;
+      f.typeAuto = false; // elle seçildi: alan adı değişse de tür artık kendiliğinden değişmez
+      await saveDbTable(t);
+      renderTableModal();
+      renderSchema();
+      return;
+    }
     tableModalTouch();
     f[k] = e.target.checked;
     // AUTOINCREMENT işaretlenince alan INTEGER PRIMARY KEY olmalı: bunu kendimiz ayarlayalım
@@ -4597,6 +4754,15 @@
     const text = el('impText').value;
     runImport(mode => importSqlText(text, mode, 'yapıştırılan SQL'));
   });
+
+  /* SQL yazılan kutularda Tab tuşu odağı başka yere atlatmasın, iki boşluk girinti eklesin */
+  ['conSql', 'impText', 'sqlExtra'].forEach(id => el(id).addEventListener('keydown', e => {
+    if (e.key !== 'Tab' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
+    e.preventDefault();
+    const ta = e.target;
+    ta.setRangeText('  ', ta.selectionStart, ta.selectionEnd, 'end');
+    ta.dispatchEvent(new Event('input', { bubbles: true })); // kaydetme vb. tetiklensin
+  }));
 
   /* ---- KONSOL olayları ---- */
   el('conClose').addEventListener('click', () => el('consoleModal').classList.remove('open'));
@@ -4750,6 +4916,40 @@
     download(JSON.stringify(data, null, 2), 'notlar-yedek-' + new Date().toISOString().slice(0,10) + '.json', 'application/json');
   }
 
+  /* ---- YEDEK DOĞRULAMA ----
+     Kimlikler HTML'e yazıldığı için sadece güvenli karakterlere izin verilir; böylece başka
+     birinden gelen (bozuk ya da kötü niyetli) bir yedek sayfaya kod sokamaz. */
+  const SAFE_ID = /^[A-Za-z0-9_-]{1,80}$/;
+  const SAFE_COVER = /^data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=\s]*$/i;
+
+  function backupIdsOk(data) {
+    const ids = [];
+    const add = (...v) => v.forEach(x => ids.push(x));
+    (data.projects || []).forEach(p => add(p && p.id));
+    (data.items || []).forEach(i => { add(i && i.id, i && i.projectId); if (i && i.columnId != null) add(i.columnId); });
+    (data.columns || []).forEach(c => add(c && c.id, c && c.projectId));
+    (data.dbTables || []).forEach(t => {
+      add(t && t.id, t && t.projectId);
+      ((t && t.fields) || []).forEach(f => add(f && f.id));
+      ((t && t.indexes) || []).forEach(ix => { add(ix && ix.id); ((ix && ix.cols) || []).forEach(c => add(c)); });
+    });
+    (data.dbLinks || []).forEach(l => add(l && l.id, l && l.projectId, l && l.fromTable, l && l.fromField, l && l.toTable, l && l.toField));
+    return ids.every(x => typeof x === 'string' && SAFE_ID.test(x));
+  }
+
+  /* Not/görev nesnelerini tamamlar: eksik etiket listesi, metin olmayan başlık vb. çökmesin. */
+  function normalizeItems(list) {
+    return list.filter(i => i && typeof i === 'object' && i.id).map(i => {
+      i.title = typeof i.title === 'string' ? i.title : '';
+      i.body = typeof i.body === 'string' ? i.body : '';
+      i.tags = Array.isArray(i.tags) ? i.tags.filter(t => typeof t === 'string') : [];
+      i.type = i.type === 'task' ? 'task' : 'note';
+      if (i.cover && !(typeof i.cover === 'string' && SAFE_COVER.test(i.cover))) i.cover = null;
+      i.created = +i.created || Date.now();
+      return i;
+    });
+  }
+
   /* JSON YEDEĞİ YÜKLE:
      Seçilen yedek dosyasını okur, doğrular, onay sorar ve mevcut verinin
      ÜZERİNE yazar (eski veriyi depodan silip yenisini yazar). */
@@ -4757,8 +4957,9 @@
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      if (!data.projects || !data.items) throw new Error('format'); // beklenen alanlar yoksa geçersiz
-      if (!confirm('Yedek yüklensin mi? Mevcut projeler ve öğeler bununla DEĞİŞTİRİLECEK.')) return;
+      if (!Array.isArray(data.projects) || !Array.isArray(data.items)) throw new Error('format'); // beklenen alanlar yoksa geçersiz
+      if (!backupIdsOk(data)) { alert('Bu yedek dosyası bozuk ya da güvensiz görünüyor (geçersiz kimlikler). Yüklenmedi.'); return; }
+      if (!confirm('Yedek yüklensin mi? Mevcut projeler, öğeler ve şemalar bununla DEĞİŞTİRİLECEK.')) return;
 
       // Mevcut depoyu temizle
       if (storageOK) {
@@ -4771,11 +4972,12 @@
       }
       closeConsoleDb();
       // Yedekteki veriyi belleğe al
-      projects = data.projects;
-      items = data.items;
+      projects = data.projects.filter(p => p && p.id).map(p => Object.assign(p, { name: String(p.name || 'Proje'), created: +p.created || Date.now() }));
+      items = normalizeItems(data.items);
       // Eski yedeklerde (version 1) sütun olmayabilir; o zaman boş başlar ve
       // aşağıda ensureColumns + migrateItemsToColumns ile otomatik oluşturulur.
-      columns = Array.isArray(data.columns) ? data.columns : [];
+      columns = (Array.isArray(data.columns) ? data.columns : []).filter(c => c && c.id)
+        .map(c => Object.assign(c, { name: String(c.name || 'Sütun'), color: /^#[0-9a-f]{3,8}$/i.test(c.color || '') ? c.color : '#c2410c', order: +c.order || 0 }));
       // Şema verisi version 3 ile geldi; eski yedeklerde yoksa boş başlar.
       dbTables = normalizeDbTables(Array.isArray(data.dbTables) ? data.dbTables : []);
       dbLinks = normalizeDbLinks(Array.isArray(data.dbLinks) ? data.dbLinks : []);
@@ -4805,8 +5007,12 @@
         if (storageOK) await sSet('pref:theme', data.theme);
       }
 
+      // Eski verinin geri alma geçmişi yeni veriye uygulanmasın
+      for (const k in erHistory) delete erHistory[k];
+      selectedLinkId = null;
+
       renderProjects(); renderMain(); renderBoard(); renderSchema();
-      el('status').textContent = 'Yedek yüklendi.';
+      el('status').textContent = 'Yedek yüklendi. (Kullanılan alan: ' + storageUsedMB().toFixed(1) + ' MB)';
     } catch(e) {
       alert('Geçersiz yedek dosyası.');
     }
@@ -4847,6 +5053,7 @@
   function openDrawer(){ el('app').classList.add('drawer-open'); }
   function closeDrawer(){ el('app').classList.remove('drawer-open'); }
   el('menuBtn').addEventListener('click', openDrawer);   // ☰ butonu -> aç
+  el('projTitle').addEventListener('click', () => renameProject(activeProject)); // başlığa tıkla -> yeniden adlandır
   el('overlay').addEventListener('click', closeDrawer);  // karartıya tıkla -> kapat
 
   /* ---- OLAY BAĞLAMALARI (kullanıcı etkileşimleri) ----
@@ -4883,6 +5090,17 @@
   el('viewBoard').addEventListener('click', () => setView('board'));
   el('viewSchema').addEventListener('click', () => setView('schema'));
 
+  // Panoda fare tekerleği: sütun içi kartlar kaymıyorsa panoyu yatay kaydırsın
+  el('boardWrap').addEventListener('wheel', e => {
+    if (e.shiftKey || e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // zaten yatay / yakınlaştırma
+    const cards = e.target.closest('.column-cards');
+    if (cards && cards.scrollHeight > cards.clientHeight) return; // sütunun kendi dikey kaydırması
+    const w = el('boardWrap');
+    if (w.scrollWidth <= w.clientWidth) return;
+    w.scrollLeft += e.deltaY;
+    e.preventDefault();
+  }, { passive: false });
+
   /* ---- KART DETAY PENCERESİ olayları ---- */
   // Kapat / Bitti -> kaydet ve kapat
   el('modalClose').addEventListener('click', closeCard);
@@ -4910,21 +5128,63 @@
 
   // Kapak resmi: "Resim seç" -> gizli dosya seçiciyi aç
   el('modalCoverBtn').addEventListener('click', () => el('modalCoverFile').click());
-  // Dosya seçilince resmi data URL'e çevirip karta kaydet
-  el('modalCoverFile').addEventListener('change', e => {
+  /* Dosyayı olduğu gibi data URL'e çevirir. */
+  function readAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
+  }
+
+  /* Kapak resmini küçültüp sıkıştırır: en fazla 1200 px genişlik, JPEG %82 kalite.
+     Telefon fotoğrafları (3-8 MB) böylece genelde 150-300 KB'a iner; aksi halde
+     tarayıcının uygulamaya verdiği depo (çoğu tarayıcıda ~5 MB) tek resimle dolabilir. */
+  function compressImage(file, maxW = 1200, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, maxW / img.naturalWidth);
+        const w = Math.max(1, Math.round(img.naturalWidth * scale));
+        const h = Math.max(1, Math.round(img.naturalHeight * scale));
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff';            // saydam PNG'lerin arkası siyah çıkmasın
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Resim okunamadı')); };
+      img.src = url;
+    });
+  }
+
+  // Dosya seçilince resmi (gerekirse küçültüp) karta kaydet
+  el('modalCoverFile').addEventListener('change', async e => {
     const f = e.target.files[0];
     e.target.value = '';
     if (!f || !openCardId) return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const i = items.find(x => x.id === openCardId);
-      if (!i) return;
-      i.cover = reader.result; // base64 data URL (kullanıcının cihazında saklanır)
-      await saveItem(i);
-      updateModalCover(i.cover);
-      renderMain(); renderBoard();
-    };
-    reader.readAsDataURL(f);
+    const id = openCardId;
+    let data;
+    try {
+      // Küçük resimler (ör. ikonlar) olduğu gibi kalsın; saydamlıkları korunur
+      data = f.size <= 200 * 1024 ? await readAsDataURL(f) : await compressImage(f);
+    } catch (err) {
+      alert('Bu resim açılamadı. (iPhone\'un HEIC fotoğrafları bazı tarayıcılarda desteklenmez; JPG ya da PNG dene.)');
+      return;
+    }
+    const i = items.find(x => x.id === id);
+    if (!i) return;
+    const old = i.cover;
+    i.cover = data; // base64 data URL (kullanıcının cihazında saklanır)
+    if (!(await saveItem(i))) { i.cover = old; return; } // depo doluysa eski haline dön (uyarı zaten gösterildi)
+    if (openCardId === id) updateModalCover(i.cover);
+    renderMain(); renderBoard();
+    updateStorageStatus();
   });
   // Kapağı kaldır
   el('modalCoverRemove').addEventListener('click', async () => {
@@ -4935,6 +5195,7 @@
     await saveItem(i);
     updateModalCover(null);
     renderMain(); renderBoard();
+    updateStorageStatus();
   });
 
   /* ---- DIŞA AKTARMA MENÜSÜ aç/kapa ---- */
