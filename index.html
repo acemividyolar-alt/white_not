@@ -296,9 +296,12 @@
   /* Sütun başlık rengi (kullanıcı seçer); yoksa varsayılan çizgi rengi */
   .column-color-bar { height: 6px; border-radius: 10px 10px 0 0; background: var(--accent); }
 
+  /* Sütun başlığı aynı zamanda "tutma yeri"dir: buradan sürükleyince sütunun yeri değişir.
+     touch-action:none -> telefonda parmakla sürüklerken sayfa kaymasın. */
   .column-head {
     display: flex; align-items: center; justify-content: space-between;
     padding: 0.7rem 0.8rem 0.5rem; gap: 0.4rem;
+    cursor: grab; touch-action: none;
   }
   .column-title {
     font-size: 1.05rem; font-weight: bold; flex: 1; min-width: 0;
@@ -383,6 +386,19 @@
   body.dragging-active { user-select: none; -webkit-user-select: none; cursor: grabbing; }
   body.dragging-active .column-cards { scroll-behavior: smooth; }
 
+
+  /* Sürüklenen SÜTUNUN imleci takip eden kopyası (kart hayaletinin sütun versiyonu) */
+  .column-ghost {
+    position: fixed; top: 0; left: 0; z-index: 1000;
+    pointer-events: none; overflow: hidden;
+    transform: rotate(1.5deg); opacity: 0.95;
+    box-shadow: 0 14px 36px rgba(0,0,0,0.3);
+  }
+  /* Sütunun bırakılacağı yeri gösteren boşluk */
+  .column-placeholder {
+    flex-shrink: 0; border: 2px dashed var(--accent);
+    background: var(--accent-soft); border-radius: 10px;
+  }
 
   /* "+ Kart ekle" butonu (sütun altı) */
   .add-card-btn {
@@ -480,6 +496,290 @@
   body.dark .modal-btn.danger { color: #e57373; border-color: #e57373; }
   .cover-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 
+  /* ===================================================================
+     ŞEMA GÖRÜNÜMÜ (SQLite veritabanı tasarımcısı)
+     Serbest bir tuval: tablolar istenen yere taşınır, alanlar çizgiyle bağlanır.
+     =================================================================== */
+  /* Şema açıkken liste, arama ve ilerleme çubuğu gizlenir; tuval tüm alanı kaplar */
+  body.view-schema .content, body.view-schema .search { display: none; }
+  body.view-schema .progress-wrap { display: none !important; } /* JS satır içi stil verdiği için !important */
+  body:not(.view-schema) .er-wrap { display: none; }
+  body.view-schema .main { overflow: hidden; display: flex; flex-direction: column; }
+  body.view-schema .max { display: flex; flex-direction: column; flex: 1; min-height: 0; max-width: none; }
+
+  .er-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+
+  /* Üst araç çubuğu */
+  .er-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+  .er-group { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+  .er-sep { width: 1px; height: 22px; background: var(--line); margin: 0 0.2rem; }
+  .er-btn {
+    background: transparent; border: 1px solid var(--line); color: var(--ink);
+    border-radius: 5px; padding: 0.4rem 0.7rem; font-family: inherit; font-size: 0.84rem;
+    cursor: pointer; white-space: nowrap; line-height: 1.2;
+  }
+  .er-btn:hover:not(:disabled) { border-color: var(--muted); }
+  .er-btn:disabled { opacity: 0.4; cursor: default; }
+  .er-btn.icon { min-width: 2.1rem; padding: 0.4rem 0.45rem; font-size: 0.95rem; }
+  .er-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .er-btn.dark { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .er-select {
+    font-family: inherit; font-size: 0.84rem; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--line); border-radius: 5px; padding: 0.38rem 0.4rem; max-width: 170px; cursor: pointer;
+  }
+  .er-zoom { font-family: monospace; font-size: 0.78rem; color: var(--muted); min-width: 3.2em; text-align: center; cursor: pointer; }
+  .er-menu-wrap { position: relative; }
+  .er-menu-wrap .menu { min-width: 250px; }
+  .menu button.danger { color: #c0392b; }
+  body.dark .menu button.danger { color: #e57373; }
+
+  /* Tuval: iki yönde kendi içinde kayar. Boş yerden fareyle tutup sürükleyince de kayar. */
+  .er-canvas {
+    flex: 1; min-height: 0; position: relative; overflow: auto;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
+    cursor: grab;
+  }
+  .er-canvas.panning, .er-canvas.panning * { cursor: grabbing !important; }
+  /* sizer = kaydırma alanının boyutu (yakınlaştırmaya göre JS ayarlar) */
+  .er-sizer { position: relative; overflow: hidden; }
+  /* surface = asıl çizim yüzeyi; transform:scale ile yakınlaştırılır. Arka planda nokta deseni. */
+  .er-surface {
+    position: absolute; left: 0; top: 0; transform-origin: 0 0;
+    background-image: radial-gradient(circle, var(--line) 1.2px, transparent 1.4px);
+    background-size: 24px 24px;
+  }
+
+  /* Alt durum satırı: ipucu / bildirim + sayılar */
+  .er-status { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; font-size: 0.78rem; color: var(--muted); min-height: 1.2rem; }
+  .er-hint { flex: 1; min-width: 0; transition: color 0.2s; }
+  .er-hint.flash { color: var(--accent); }
+  .er-stats { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; font-family: monospace; }
+  .er-issue-btn {
+    font-family: monospace; font-size: 0.75rem; border-radius: 10px; padding: 0.1rem 0.55rem; cursor: pointer;
+    border: 1px solid currentColor; background: transparent;
+  }
+  .er-issue-btn.err { color: #c0392b; }
+  .er-issue-btn.warn { color: #b7791f; }
+  body.dark .er-issue-btn.err { color: #e57373; }
+  body.dark .er-issue-btn.warn { color: #e0b252; }
+
+  /* İlişki çizgileri (SVG). Tabloların ARKASINDA durur. */
+  .er-links { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+  .er-link { fill: none; stroke: var(--muted); stroke-width: 2; transition: opacity 0.12s; }
+  .er-link.sel, .er-link.hl { stroke: var(--accent); stroke-width: 2.5; }
+  .er-link.dim { opacity: 0.18; }
+  .er-link.temp { stroke: var(--accent); stroke-dasharray: 6 5; }
+  /* Görünmez kalın çizgi: ince çizgiye tıklamayı kolaylaştırır */
+  .er-link-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
+  .er-link-hit:hover + .er-link:not(.sel) { stroke: var(--ink); }
+  .er-arrow { fill: var(--muted); }
+  .er-arrow.sel { fill: var(--accent); }
+  .er-dot { fill: var(--paper); stroke: var(--muted); stroke-width: 1.5; }
+  .er-dot.sel { stroke: var(--accent); }
+  /* Çizgi uçlarındaki 1 / N yazıları ve ON DELETE etiketi */
+  .er-card { font-family: monospace; font-size: 11px; font-weight: bold; fill: var(--muted); text-anchor: middle; }
+  .er-act { font-family: monospace; font-size: 9.5px; fill: var(--muted); text-anchor: middle; paint-order: stroke; stroke: var(--paper); stroke-width: 4px; }
+  .er-card.sel, .er-card.hl, .er-act.sel, .er-act.hl { fill: var(--accent); }
+  .er-card.dim, .er-act.dim { opacity: 0.18; }
+
+  /* Seçili ilişkinin ayar kutusu (yakınlaştırmadan etkilenmez) */
+  .er-link-panel {
+    position: absolute; z-index: 99999; transform: translateX(-50%);
+    background: var(--paper); border: 1px solid var(--accent); border-radius: 8px;
+    box-shadow: 0 8px 26px rgba(0,0,0,0.2); padding: 0.55rem 0.65rem; width: 260px;
+    cursor: default; font-size: 0.8rem;
+  }
+  .elp-title { font-family: monospace; font-size: 0.78rem; margin-bottom: 0.45rem; word-break: break-all; color: var(--ink); }
+  .elp-row { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; margin-bottom: 0.35rem; font-family: monospace; font-size: 0.72rem; color: var(--muted); }
+  .elp-row select { font-family: inherit; font-size: 0.75rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 0.2rem; max-width: 165px; }
+  .elp-actions { display: flex; justify-content: space-between; gap: 0.4rem; margin-top: 0.45rem; }
+  .elp-btn { font-family: inherit; font-size: 0.78rem; border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 5px; padding: 0.25rem 0.55rem; cursor: pointer; }
+  .elp-btn:hover { border-color: var(--muted); }
+  .elp-btn.danger { color: #c0392b; border-color: #c0392b; }
+  body.dark .elp-btn.danger { color: #e57373; border-color: #e57373; }
+
+  /* Tek bir veritabanı tablosu */
+  .er-table {
+    position: absolute; width: max-content; min-width: 200px; max-width: 360px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    user-select: none; -webkit-user-select: none;
+    touch-action: none;  /* telefonda tablo/alan sürüklerken sayfa kaymasın */
+    cursor: default;
+  }
+  .er-table.moving { box-shadow: 0 14px 34px rgba(0,0,0,0.28); }
+  .er-table.has-err { border-color: #c0392b; }
+  .er-table.flash { animation: erFlash 1.2s ease; }
+  @keyframes erFlash { 0%, 60% { box-shadow: 0 0 0 4px var(--accent); } 100% { box-shadow: 0 2px 10px rgba(0,0,0,0.08); } }
+  .er-table.link-target-table { outline: 2px dashed var(--accent); outline-offset: 3px; }
+  /* Renkli başlık = tabloyu taşıma tutamacı */
+  .er-table-head {
+    display: flex; align-items: center; gap: 0.35rem;
+    padding: 0.45rem 0.45rem 0.45rem 0.75rem; border-radius: 7px 7px 0 0;
+    color: #fff; cursor: grab;
+  }
+  .er-table-name { flex: 1; min-width: 0; font-weight: bold; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .er-head-icon {
+    font-family: monospace; font-size: 0.65rem; background: rgba(255,255,255,0.22); border-radius: 8px;
+    padding: 0.05rem 0.4rem; flex-shrink: 0; cursor: help;
+  }
+  .er-head-icon.err { background: #fff; color: #c0392b; font-weight: bold; }
+  .er-head-icon.warn { background: rgba(255,255,255,0.85); color: #b7791f; font-weight: bold; }
+  .er-table-edit {
+    background: transparent; border: none; color: rgba(255,255,255,0.85); cursor: pointer;
+    font-size: 1.15rem; line-height: 1; padding: 0 0.25rem; flex-shrink: 0;
+  }
+  .er-table-edit:hover { color: #fff; }
+  .er-fields { padding: 0.25rem 0; }
+  /* Tek bir alan (sütun) satırı. Buradan tutup başka alana bırakınca ilişki kurulur. */
+  .er-field {
+    position: relative; display: flex; align-items: center; gap: 0.45rem;
+    padding: 0.3rem 0.75rem; cursor: crosshair;
+  }
+  .er-field:hover { background: var(--accent-soft); }
+  .er-field.link-source, .er-field.link-target {
+    background: var(--accent-soft); outline: 1.5px dashed var(--accent); outline-offset: -2px;
+  }
+  .er-badges { display: flex; gap: 2px; min-width: 1.9rem; flex-shrink: 0; }
+  .er-badge { font-family: monospace; font-size: 0.6rem; padding: 0.05rem 0.25rem; border-radius: 3px; color: #fff; line-height: 1.4; }
+  .er-badge.pk { background: #ca8a04; }
+  .er-badge.fk { background: #2563eb; }
+  .er-badge.uq { background: #0891b2; }
+  .er-fname { flex: 1; min-width: 0; font-family: monospace; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .er-fname.nn { font-weight: bold; }
+  .er-fname.empty { color: var(--muted); font-style: italic; }
+  .er-ftype { font-family: monospace; font-size: 0.7rem; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+  .er-ai { font-size: 0.58rem; border: 1px solid var(--muted); border-radius: 3px; padding: 0 0.15rem; margin-left: 0.15rem; }
+  /* Alanın iki yanındaki bağlantı noktaları (üzerine gelince görünür) */
+  .er-port {
+    position: absolute; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%;
+    background: var(--paper); border: 2px solid var(--accent); opacity: 0; transition: opacity 0.12s;
+    pointer-events: none;
+  }
+  .er-port.in { left: -6px; }
+  .er-port.out { right: -6px; }
+  .er-field:hover .er-port, .er-field.link-source .er-port, .er-field.link-target .er-port { opacity: 1; }
+  .er-nofield { padding: 0.4rem 0.75rem; font-size: 0.8rem; color: var(--muted); font-style: italic; }
+  .er-add-field {
+    display: block; width: 100%; text-align: left; background: transparent; border: none;
+    border-top: 1px solid var(--line); color: var(--muted); font-family: inherit; font-size: 0.8rem;
+    padding: 0.4rem 0.75rem; cursor: pointer; border-radius: 0 0 8px 8px;
+  }
+  .er-add-field:hover { color: var(--ink); background: var(--proj-hover); }
+
+  /* Hiç tablo yokken ortada çıkan yazı */
+  .er-empty {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    text-align: center; color: var(--muted); font-style: italic; line-height: 1.8;
+    padding: 2rem; pointer-events: none;
+  }
+
+  /* Sürükleme sırasında imleç ve metin seçimi */
+  body.er-moving, body.er-moving * { cursor: grabbing !important; }
+  body.er-linking, body.er-linking * { cursor: crosshair !important; }
+  body.er-moving, body.er-linking { user-select: none; -webkit-user-select: none; }
+
+  /* Dokunmatik ekranda "üzerine gelme" olmadığı için bağlantı noktaları hafif görünür kalsın */
+  @media (hover: none) {
+    .er-port { opacity: 0.45; }
+  }
+
+  /* ---- Şema pencereleri (tablo düzenleme, SQL, içe aktarma, konsol) ---- */
+  .modal.wide { max-width: 840px; }
+  .modal-heading { flex: 1; font-size: 1.35rem; font-weight: bold; padding: 0.2rem 0.4rem; }
+  .modal .color-dots { padding: 0; }
+  .modal-note { font-size: 0.86rem; color: var(--muted); line-height: 1.55; margin-bottom: 0.8rem; }
+  .modal-actions-right { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .modal-btn:disabled { opacity: 0.45; cursor: default; }
+  .opt { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; color: var(--ink); cursor: pointer; white-space: nowrap; }
+  .opt input { accent-color: var(--accent); cursor: pointer; }
+  .opt.off { opacity: 0.4; }
+
+  /* Tablo penceresi: alan satırları (iki satırlı kart) */
+  .tbl-field { border: 1px solid var(--line); border-radius: 7px; padding: 0.4rem; margin-bottom: 0.4rem; background: var(--bg); }
+  .tbl-line { display: flex; align-items: center; gap: 0.35rem; }
+  .tbl-line.sub { margin-top: 0.35rem; }
+  .tbl-in {
+    font-family: monospace; font-size: 0.85rem; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--line); border-radius: 5px; padding: 0.38rem 0.5rem; outline: none; min-width: 0;
+  }
+  .tbl-in:focus { border-color: var(--accent); }
+  .tbl-in.small { font-size: 0.78rem; padding: 0.3rem 0.45rem; }
+  .tbl-fname { flex: 1.4; }
+  .tbl-ftype { flex: 1; }
+  .tbl-def, .tbl-chk { flex: 1; }
+  .tbl-flag {
+    display: flex; align-items: center; gap: 0.15rem; flex-shrink: 0; cursor: pointer;
+    font-size: 0.68rem; font-family: monospace; color: var(--muted);
+  }
+  .tbl-flag input { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; margin: 0; }
+  .tbl-btns { display: flex; gap: 0.2rem; flex-shrink: 0; margin-left: auto; }
+  .tbl-mini {
+    background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 5px;
+    width: 27px; height: 27px; flex-shrink: 0; cursor: pointer; font-size: 0.82rem; line-height: 1;
+  }
+  .tbl-mini:hover:not(:disabled) { color: var(--ink); border-color: var(--muted); }
+  .tbl-mini.danger:hover:not(:disabled) { color: #c0392b; border-color: #c0392b; }
+  .tbl-mini:disabled { opacity: 0.3; cursor: default; }
+  .tbl-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.4rem; }
+  .tbl-chip {
+    font-family: monospace; font-size: 0.75rem; border: 1px solid var(--line); background: var(--paper); color: var(--muted);
+    border-radius: 12px; padding: 0.15rem 0.55rem; cursor: pointer;
+  }
+  .tbl-chip.sel { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tbl-chip b { margin-right: 0.2rem; }
+  .tbl-link-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    font-family: monospace; font-size: 0.8rem; padding: 0.3rem 0; border-bottom: 1px dashed var(--line);
+    word-break: break-all;
+  }
+  .tbl-link-row .act { color: var(--muted); font-size: 0.7rem; }
+  .tbl-empty { font-size: 0.85rem; color: var(--muted); font-style: italic; margin-bottom: 0.4rem; }
+  .tbl-note { min-height: 54px; font-size: 0.88rem; }
+
+  /* SQL penceresi */
+  .sql-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; }
+  .sql-out { font-family: monospace; font-size: 0.8rem; line-height: 1.5; min-height: 280px; white-space: pre; overflow: auto; margin-top: 0.8rem; }
+  .sql-in { font-family: monospace; font-size: 0.82rem; line-height: 1.5; min-height: 150px; white-space: pre; overflow: auto; }
+  .sql-in.small { min-height: 80px; }
+  .er-issues { margin-top: 0.8rem; border: 1px solid var(--line); border-radius: 6px; max-height: 150px; overflow-y: auto; }
+  .er-issue { display: flex; gap: 0.5rem; padding: 0.35rem 0.6rem; font-size: 0.8rem; line-height: 1.45; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .er-issue:last-child { border-bottom: none; }
+  .er-issue:hover { background: var(--accent-soft); }
+  .er-issue .lv { font-family: monospace; font-weight: bold; flex-shrink: 0; }
+  .er-issue.err .lv { color: #c0392b; }
+  .er-issue.warn .lv { color: #b7791f; }
+  body.dark .er-issue.err .lv { color: #e57373; }
+  body.dark .er-issue.warn .lv { color: #e0b252; }
+  .er-msg { font-size: 0.84rem; line-height: 1.5; margin-top: 0.7rem; white-space: pre-wrap; }
+  .er-msg:empty { display: none; }
+  .er-msg.ok { color: var(--green); }
+  .er-msg.err { color: #c0392b; }
+  body.dark .er-msg.err { color: #e57373; }
+  .er-msg.info { color: var(--muted); }
+
+  /* SQL konsolu */
+  .con-bar { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+  .con-src { font-size: 0.82rem; color: var(--muted); }
+  .con-src b { color: var(--ink); }
+  .con-bar-btns { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .con-stale { font-size: 0.8rem; color: #b7791f; margin-bottom: 0.5rem; }
+  body.dark .con-stale { color: #e0b252; }
+  .con-tables { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.6rem; }
+  .con-hint { font-size: 0.75rem; color: var(--muted); font-family: monospace; }
+  .con-out { margin-top: 0.9rem; display: flex; flex-direction: column; gap: 0.7rem; }
+  .con-ok { font-family: monospace; font-size: 0.78rem; color: var(--green); word-break: break-all; }
+  .con-err { font-family: monospace; font-size: 0.8rem; color: #c0392b; white-space: pre-wrap; }
+  body.dark .con-err { color: #e57373; }
+  .con-note { font-size: 0.8rem; color: var(--muted); font-style: italic; }
+  .con-res-head { font-family: monospace; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.25rem; word-break: break-all; }
+  .con-table-wrap { overflow: auto; max-height: 320px; border: 1px solid var(--line); border-radius: 6px; }
+  .con-table { border-collapse: collapse; font-family: monospace; font-size: 0.78rem; width: max-content; min-width: 100%; }
+  .con-table th, .con-table td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 0.3rem 0.55rem; text-align: left; white-space: nowrap; max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
+  .con-table th { position: sticky; top: 0; background: var(--sidebar-bg); color: var(--ink); }
+  .con-table td.null { color: var(--muted); font-style: italic; }
+  .con-table td.num { text-align: right; }
+
   /* GENİŞ EKRAN (1100px üstü): iki sütunlu yerleşim.
      Sol sütun ekleme kutusu (yapışkan), sağ sütun liste. */
   .content { width: 100%; }
@@ -519,6 +819,22 @@
     .column, .add-column { width: 250px; }
     .modal-title-input { font-size: 1.25rem; }
     .modal-overlay { padding: 1rem 0.5rem; }
+    /* Dar ekranda başlık (☰ + proje adı) üst satırda, düğmeler alt satırda dursun;
+       yoksa düğmeler ☰'yi ezip projeler menüsü açılamaz hale gelir. */
+    .topbar { flex-wrap: wrap; row-gap: 0.6rem; }
+    .topbar-left { flex: 1 1 100%; }
+    .topbar-right { flex: 1 1 100%; justify-content: space-between; }
+    .view-toggle button { padding: 0.4rem 0.5rem; }
+    /* Şema araç çubuğu dar ekranda sıkışmasın */
+    .er-sep, #erJump { display: none; }
+    .er-btn { padding: 0.4rem 0.55rem; }
+    .er-status { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
+    .sql-out { min-height: 200px; }
+    /* Tablo penceresinde alan satırı bölünsün: üstte ad + tür, altta kutucuklar ve düğmeler */
+    .tbl-line { flex-wrap: wrap; row-gap: 0.4rem; }
+    .tbl-line .tbl-fname { flex: 1 1 55%; }
+    .tbl-line .tbl-ftype { flex: 1 1 35%; }
+    .tbl-line.sub .tbl-in { flex: 1 1 100%; }
   }
 </style>
 </head>
@@ -555,11 +871,12 @@
           <h2 id="projTitle">&mdash;</h2>          <!-- Aktif projenin adı buraya yazılır -->
         </div>
 
-        <div style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
-          <!-- Görünüm geçişi: Liste / Pano -->
+        <div class="topbar-right" style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
+          <!-- Görünüm geçişi: Liste / Pano / Şema (SQL tabloları) -->
           <div class="view-toggle">
             <button id="viewList" class="sel">Liste</button>
             <button id="viewBoard">Pano</button>
+            <button id="viewSchema" title="SQL tabloları ve ilişkileri">Şema</button>
           </div>
           <!-- Tema değiştirme düğmesi (açık/karanlık) -->
           <button class="theme-btn" id="themeBtn" aria-label="Tema değiştir" title="Tema değiştir">&#9789;</button>
@@ -622,6 +939,61 @@
       <!-- PANO GÖRÜNÜMÜ: sütunlar JS tarafından buraya yazılır.
            Liste görünümündeyken CSS ile gizlidir. -->
       <div class="board-wrap" id="boardWrap"></div>
+
+      <!-- ŞEMA GÖRÜNÜMÜ: SQLite tabloları ve aralarındaki ilişkiler (serbest tuval).
+           Tablolar JS ile #erTables içine, ilişki çizgileri #erLinks (SVG) içine çizilir.
+           Diğer görünümlerdeyken CSS ile gizlidir. -->
+      <div class="er-wrap" id="erWrap">
+        <div class="er-toolbar">
+          <div class="er-group">
+            <button class="er-btn primary" id="erAddTable">+ Tablo</button>
+            <button class="er-btn icon" id="erUndo" title="Geri al (Ctrl+Z)" disabled>&#8630;</button>
+            <button class="er-btn icon" id="erRedo" title="Yinele (Ctrl+Y)" disabled>&#8631;</button>
+            <span class="er-sep"></span>
+            <button class="er-btn" id="erLayout" title="Tabloları ilişkilerine göre otomatik diz">Yerleştir</button>
+            <button class="er-btn" id="erFit" title="Tüm şemayı ekrana sığdır">Sığdır</button>
+            <select class="er-select" id="erJump" title="Tabloya git"><option value="">Tabloya git&hellip;</option></select>
+          </div>
+          <div class="er-group">
+            <button class="er-btn icon" id="erZoomOut" title="Uzaklaştır">&minus;</button>
+            <span class="er-zoom" id="erZoomLabel" title="%100'e dön">100%</span>
+            <button class="er-btn icon" id="erZoomIn" title="Yakınlaştır">+</button>
+            <span class="er-sep"></span>
+            <div class="er-menu-wrap">
+              <button class="er-btn" id="erFileBtn">Dosya &#9662;</button>
+              <div class="menu" id="erFileMenu">
+                <div class="menu-group-label">İçe aktar</div>
+                <button data-eract="import">SQLite / SQL dosyası aç&hellip;</button>
+                <div class="sep"></div>
+                <div class="menu-group-label">Dışa aktar</div>
+                <button data-eract="db">SQLite veritabanı (.sqlite)</button>
+                <button data-eract="sql">SQL betiği (.sql)</button>
+                <button data-eract="png">Diyagram resmi (.png)</button>
+                <button data-eract="svg">Diyagram vektör (.svg)</button>
+                <div class="sep"></div>
+                <button data-eract="clear" class="danger">Şemayı temizle&hellip;</button>
+              </div>
+            </div>
+            <button class="er-btn" id="erConsoleBtn" title="Şemayı gerçek SQLite'ta çalıştır, veri ekle, sorgu yaz">Konsol</button>
+            <button class="er-btn dark" id="erSqlBtn" title="Şemayı SQL komutları olarak göster">SQL</button>
+          </div>
+        </div>
+        <div class="er-canvas" id="erCanvas">
+          <div class="er-sizer" id="erSizer">
+            <div class="er-surface" id="erSurface">
+              <svg class="er-links" id="erLinks" xmlns="http://www.w3.org/2000/svg"></svg>
+              <div id="erTables"></div>
+            </div>
+            <!-- Seçili ilişkinin ayar kutusu (yakınlaştırmadan etkilenmesin diye yüzeyin dışında) -->
+            <div class="er-link-panel" id="erLinkPanel" style="display:none"></div>
+          </div>
+          <div class="er-empty" id="erEmpty">Henüz tablo yok.<br>"+ Tablo" ile ilk tablonu ekle, sonra alanları birbirine sürükleyerek bağla.<br>Var olan bir veritabanın varsa: Dosya &rarr; SQLite / SQL dosyası aç.</div>
+        </div>
+        <div class="er-status">
+          <span class="er-hint" id="erHint">Tabloyu renkli başlığından tutup taşı · Bir alanı tutup başka tablodaki alana (ya da tablonun kendisine) bırakarak ilişki kur · Çift tık = düzenle</span>
+          <span class="er-stats" id="erStats"></span>
+        </div>
+      </div>
     </div>
   </main>
 </div>
@@ -670,6 +1042,156 @@
   </div>
 </div>
 
+<!-- ===================================================================
+     TABLO DÜZENLEME PENCERESİ (Şema görünümü)
+     Şemadaki bir tablonun ⋯ düğmesine ya da üzerine çift tıklanınca açılır.
+     Tablo adı, rengi, alanları, indeksleri, ilişkileri ve açıklaması buradan düzenlenir.
+     =================================================================== -->
+<div class="modal-overlay" id="tableModal">
+  <div class="modal wide">
+    <div class="modal-head">
+      <input class="modal-title-input" id="tblName" placeholder="Tablo adı" maxlength="64" spellcheck="false">
+      <button class="modal-close" id="tblClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section-label">Renk</div>
+      <div class="color-dots" id="tblColors"></div>
+
+      <div class="modal-section-label">Alanlar &mdash; PK: ana id · AI: otomatik artan · NN: boş olamaz · UQ: tekrar edemez</div>
+      <div id="tblFields"></div>
+      <button class="modal-btn" id="tblAddField">+ Alan ekle</button>
+
+      <div class="modal-section-label">İndeksler (aramaları hızlandırır; UNIQUE = birlikte tekrar edemez)</div>
+      <div id="tblIndexes"></div>
+      <button class="modal-btn" id="tblAddIndex">+ İndeks ekle</button>
+
+      <div class="modal-section-label">İlişkiler (alt id &rarr; ana id)</div>
+      <div id="tblLinks"></div>
+
+      <div class="modal-section-label">Açıklama (SQL'e yorum satırı olarak yazılır)</div>
+      <textarea class="modal-desc tbl-note" id="tblNote" placeholder="Bu tablo ne tutuyor?"></textarea>
+
+      <div class="modal-actions">
+        <button class="modal-btn danger" id="tblDelete">Tabloyu sil</button>
+        <button class="modal-btn primary" id="tblDone">Bitti</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Alan türü kutusunda çıkan hazır türler. İlk beşi SQLite'ın asıl türleridir; elle başka tür de yazılabilir. -->
+<datalist id="sqlTypes">
+  <option value="INTEGER"><option value="TEXT"><option value="REAL"><option value="NUMERIC"><option value="BLOB">
+  <option value="ANY"><option value="DATETIME"><option value="DATE"><option value="BOOLEAN">
+  <option value="VARCHAR(255)"><option value="DECIMAL(10,2)">
+</datalist>
+
+<!-- ===================================================================
+     SQL ÇIKTISI PENCERESİ
+     Şema CREATE TABLE + FOREIGN KEY + INDEX komutlarına çevrilir.
+     "SQLite'ta dene" şemayı gerçek SQLite motorunda çalıştırıp denetler.
+     =================================================================== -->
+<div class="modal-overlay" id="sqlModal">
+  <div class="modal wide">
+    <div class="modal-head">
+      <div class="modal-heading">SQL</div>
+      <button class="modal-close" id="sqlClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="sql-opts">
+        <select class="modal-select" id="sqlDialect">
+          <option value="sqlite">SQLite</option>
+          <option value="mysql">MySQL / MariaDB</option>
+          <option value="postgres">PostgreSQL</option>
+          <option value="mssql">SQL Server</option>
+        </select>
+        <label class="opt" title="Tablo zaten varsa hata verme"><input type="checkbox" data-opt="ifNotExists"> IF NOT EXISTS</label>
+        <label class="opt" title="Önce eski tabloları sil (betiği tekrar tekrar çalıştırmak için). DİKKAT: içindeki veriler de silinir."><input type="checkbox" data-opt="dropFirst"> Önce DROP</label>
+        <label class="opt" title="SQLite yabancı anahtar alanlarına kendiliğinden indeks koymaz; bu seçenek ekler (JOIN ve silmeleri hızlandırır)"><input type="checkbox" data-opt="fkIndexes"> FK indeksleri</label>
+        <label class="opt" title="Hepsini tek işlemde çalıştır: bir hata olursa hiçbiri uygulanmaz"><input type="checkbox" data-opt="transaction"> BEGIN/COMMIT</label>
+        <label class="opt" id="optStrictWrap" title="SQLite 3.37+: türleri katı denetle (sadece INTEGER, TEXT, REAL, BLOB, ANY, INT kullanılabilir)"><input type="checkbox" data-opt="strict"> STRICT</label>
+      </div>
+      <div class="er-issues" id="sqlIssues"></div>
+      <textarea class="modal-desc sql-out" id="sqlOut" readonly spellcheck="false"></textarea>
+      <div class="modal-section-label">Ek SQL &mdash; view, trigger, örnek veri (çıktının sonuna eklenir, konsolda da çalışır)</div>
+      <textarea class="modal-desc sql-in small" id="sqlExtra" spellcheck="false" placeholder="INSERT INTO musteriler (ad) VALUES ('Ali');"></textarea>
+      <div class="er-msg" id="sqlMsg"></div>
+      <div class="modal-actions">
+        <button class="modal-btn" id="sqlValidate" title="Şemayı tarayıcıda gerçek bir SQLite veritabanında çalıştırıp hata var mı bak">SQLite'ta dene</button>
+        <div class="modal-actions-right">
+          <button class="modal-btn" id="sqlDownloadDb" title="Bu şemayla hazır, boş bir SQLite veritabanı dosyası indir">.sqlite indir</button>
+          <button class="modal-btn" id="sqlDownload">.sql indir</button>
+          <button class="modal-btn primary" id="sqlCopy">Kopyala</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     İÇE AKTARMA PENCERESİ
+     Var olan bir SQLite veritabanı (.db/.sqlite) ya da .sql dosyası diyagrama çevrilir.
+     =================================================================== -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal wide">
+    <div class="modal-head">
+      <div class="modal-heading">Şemayı içe aktar</div>
+      <button class="modal-close" id="impClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-note">Var olan bir SQLite veritabanını (.db, .sqlite, .sqlite3) ya da CREATE TABLE komutları içeren bir .sql dosyasını seç. Tablolar, alanlar, ilişkiler ve indeksler diyagrama aktarılır. Dosya bu cihazda işlenir, hiçbir yere gönderilmez (SQLite motoru ilk kullanımda internetten bir kez indirilir).</p>
+      <div class="modal-row">
+        <button class="modal-btn primary" id="impFileBtn">Dosya seç&hellip;</button>
+        <input type="file" id="impFile" accept=".db,.sqlite,.sqlite3,.db3,.s3db,.sql,.txt" style="display:none">
+      </div>
+      <div class="modal-section-label">ya da SQL'i buraya yapıştır</div>
+      <textarea class="modal-desc sql-in" id="impText" spellcheck="false" placeholder="CREATE TABLE musteriler (&#10;  id INTEGER PRIMARY KEY,&#10;  ad TEXT NOT NULL&#10;);"></textarea>
+      <div class="modal-section-label">Mevcut şemaya ne olsun?</div>
+      <div class="modal-row">
+        <label class="opt"><input type="radio" name="impMode" value="replace" checked> Yerine koy (mevcut tablolar silinir, geri alınabilir)</label>
+        <label class="opt"><input type="radio" name="impMode" value="append"> Mevcut şemaya ekle</label>
+      </div>
+      <div class="er-msg" id="impMsg"></div>
+      <div class="modal-actions">
+        <span></span>
+        <button class="modal-btn primary" id="impTextBtn">Yapıştırılanı içe aktar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     SQLITE KONSOLU
+     Şemadan (ya da açılan .db dosyasından) bellekte gerçek bir SQLite veritabanı kurulur;
+     INSERT / SELECT gibi komutlar yazılıp sonuçlar tablo olarak görülür.
+     =================================================================== -->
+<div class="modal-overlay" id="consoleModal">
+  <div class="modal wide">
+    <div class="modal-head">
+      <div class="modal-heading">SQLite konsolu</div>
+      <button class="modal-close" id="conClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="con-bar">
+        <span class="con-src" id="conSrc">&mdash;</span>
+        <div class="con-bar-btns">
+          <button class="modal-btn" id="conReset" title="Şemadan boş bir veritabanı kur (Ek SQL'deki örnek veriler de çalışır)">Şemadan yeniden kur</button>
+          <button class="modal-btn" id="conDownload" title="Konsoldaki veritabanını verileriyle birlikte indir">.sqlite indir</button>
+        </div>
+      </div>
+      <div class="con-stale" id="conStale" style="display:none"></div>
+      <div class="con-tables" id="conTables"></div>
+      <textarea class="modal-desc sql-in" id="conSql" spellcheck="false"></textarea>
+      <div class="modal-actions">
+        <span class="con-hint">Ctrl+Enter ile çalıştır · bir kısmı seçiliyse sadece o çalışır</span>
+        <button class="modal-btn primary" id="conRun">Çalıştır</button>
+      </div>
+      <div class="er-msg" id="conMsg"></div>
+      <div class="con-out" id="conOut"></div>
+    </div>
+  </div>
+</div>
+
 <script>
   /* ===================================================================
      JAVASCRIPT BÖLÜMÜ - Uygulamanın TÜM İŞLEYİŞİ burada.
@@ -692,6 +1214,15 @@
   let storageOK = true;      // Kalıcı depolama çalışıyor mu? (çalışmazsa uygulama yine de açılır)
   let currentView = 'list';  // Aktif görünüm: 'list' (liste) veya 'board' (pano)
   let openCardId = null;     // Detay penceresinde açık olan kartın id'si (yoksa null)
+
+  /* ŞEMA (SQL) verisi — her tablo ve ilişki bir projeye aittir. */
+  let dbTables = [];         // Şema tabloları. Her tablo: {id, projectId, name, color, x, y, fields:[{id, name, type, pk, typeAuto}], created}
+  let dbLinks = [];          // Alanlar arası ilişkiler. Her ilişki: {id, projectId, fromTable, fromField, toTable, toField, created}
+                             //   from = alt id (FOREIGN KEY olan alan), to = bağlandığı ana id (genelde PRIMARY KEY)
+  let erZoom = 1;            // Şema tuvalinin yakınlaştırma oranı (1 = %100)
+  let openTableId = null;    // Tablo düzenleme penceresinde açık olan tablonun id'si
+  let selectedLinkId = null; // Şemada tıklanıp seçilmiş (silinebilir) ilişkinin id'si
+  let dbSettings = {};       // Proje başına SQL ayarları: {projectId, dialect, ifNotExists, dropFirst, fkIndexes, transaction, strict, extraSql, consoleSql}
 
   /* Sütunlara verilebilecek hazır renkler (Trello tarzı). İlk değer "renksiz" sayılır. */
   const COLUMN_COLORS = ['#c2410c', '#4d7c4d', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#ca8a04', '#64748b'];
@@ -791,6 +1322,31 @@
           if (it && it.value) { try { clist.push(JSON.parse(it.value)); } catch(e){} }
         }
         columns = clist;
+
+        // 'tbl:' ile başlayan anahtarlar = şema tabloları
+        const tkeys = await sList('tbl:') || [];
+        const tlist = [];
+        for (const k of tkeys) {
+          const it = await sGet(k);
+          if (it && it.value) { try { tlist.push(JSON.parse(it.value)); } catch(e){} }
+        }
+        dbTables = normalizeDbTables(tlist);
+
+        // 'rel:' ile başlayan anahtarlar = tablolar arası ilişkiler
+        const rkeys = await sList('rel:') || [];
+        const rlist = [];
+        for (const k of rkeys) {
+          const it = await sGet(k);
+          if (it && it.value) { try { rlist.push(JSON.parse(it.value)); } catch(e){} }
+        }
+        dbLinks = normalizeDbLinks(rlist);
+
+        // 'sch:' ile başlayan anahtarlar = proje başına SQL ayarları (veritabanı türü, seçenekler, ek SQL)
+        const skeys = await sList('sch:') || [];
+        for (const k of skeys) {
+          const it = await sGet(k);
+          if (it && it.value) { try { const s = JSON.parse(it.value); if (s.projectId) dbSettings[s.projectId] = s; } catch(e){} }
+        }
       }
     }
 
@@ -825,10 +1381,17 @@
   async function deleteItemStore(id) { if (storageOK) await sDel('item:' + id); }
   async function saveColumn(c) { if (storageOK) await sSet('col:' + c.id, JSON.stringify(c)); }
   async function deleteColumnStore(id) { if (storageOK) await sDel('col:' + id); }
+  async function saveDbTable(t) { if (storageOK) await sSet('tbl:' + t.id, JSON.stringify(t)); }
+  async function deleteDbTableStore(id) { if (storageOK) await sDel('tbl:' + id); }
+  async function saveDbLink(l) { if (storageOK) await sSet('rel:' + l.id, JSON.stringify(l)); }
+  async function deleteDbLinkStore(id) { if (storageOK) await sDel('rel:' + id); }
 
   /* Benzersiz kimlik (ID) üretir: zaman + rastgele harfler.
      Her not, görev ve projenin birbirinden ayırt edilmesi için gerekir. */
-  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+  /* Sonundaki sayaç, aynı milisaniyede üretilen çok sayıda kimliğin (ör. içe aktarmada
+     yüzlerce alan) çakışmasını önler. */
+  let uidSeq = 0;
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8) + (uidSeq++).toString(36); }
 
   /* ---- PROJE OLUŞTUR ----
      Yeni proje nesnesi yapar, varsayılan sütunlarını oluşturur, aktif yapar,
@@ -849,6 +1412,8 @@
 
     renderProjects();
     renderMain();
+    renderBoard();
+    renderSchema();
     return p;
   }
 
@@ -900,6 +1465,15 @@
     for (const c of columns.filter(x => x.projectId === id)) { await deleteColumnStore(c.id); }
     columns = columns.filter(c => c.projectId !== id);
 
+    // Projenin şema tablolarını ve ilişkilerini sil
+    for (const t of dbTables.filter(x => x.projectId === id)) { await deleteDbTableStore(t.id); }
+    dbTables = dbTables.filter(t => t.projectId !== id);
+    for (const l of dbLinks.filter(x => x.projectId === id)) { await deleteDbLinkStore(l.id); }
+    dbLinks = dbLinks.filter(l => l.projectId !== id);
+    delete dbSettings[id];
+    await sDel('sch:' + id);
+    if (erConsole && erConsole.pid === id) closeConsoleDb();
+
     await sDel('proj:' + id);
     projects = projects.filter(x => x.id !== id);
 
@@ -907,6 +1481,8 @@
     if (activeProject === id) activeProject = projects[0].id; // silinen aktifse başka projeye geç
     renderProjects();
     renderMain();
+    renderBoard();
+    renderSchema();
   }
 
   /* ---- SOL PROJE LİSTESİNİ ÇİZ ----
@@ -928,7 +1504,7 @@
         activeProject = d.dataset.id;   // değilse o projeyi aç
         el('search').value = '';        // aramayı temizle
         closeDrawer();                  // mobilde çekmeceyi kapat
-        renderProjects(); renderMain(); renderBoard();
+        renderProjects(); renderMain(); renderBoard(); renderSchema();
       });
     });
   }
@@ -1186,9 +1762,17 @@
       c.addEventListener('change', e => { e.stopPropagation(); toggleDone(c.dataset.check); })
     );
 
-    // --- Sütun başlığına tıkla -> yeniden adlandır ---
+    // --- Sütunlar: başlıktan (veya üstteki renk şeridinden) tutup sürükle -> yerini değiştir ---
+    wrap.querySelectorAll('.column').forEach(col => {
+      col.addEventListener('pointerdown', e => {
+        if (!e.target.closest('.column-head, .column-color-bar')) return; // sadece başlık bölgesi
+        onColumnPointerDown(e, col, col.dataset.col);
+      });
+    });
+
+    // --- Sütun başlığına tıkla -> yeniden adlandır (az önce sürüklendiyse değil) ---
     wrap.querySelectorAll('[data-coltitle]').forEach(t =>
-      t.addEventListener('click', () => renameColumn(t.dataset.coltitle))
+      t.addEventListener('click', () => { if (justDragged) return; renameColumn(t.dataset.coltitle); })
     );
 
     // --- Sütun menü düğmesi (üç nokta) ---
@@ -1304,7 +1888,7 @@
     // İmlecin altındaki sütunu ve en yakın kartı bul, yer tutucuyu oraya koy
     updatePlaceholder(e.clientX, e.clientY);
     // Kenara yaklaşınca panoyu otomatik kaydır
-    handleAutoScroll(e.clientX);
+    handleAutoScroll(e.clientX, drag);
   }
 
   /* Eşik aşıldı: hayalet + yer tutucu oluştur, görsel sürükleme modunu aç. */
@@ -1360,8 +1944,9 @@
     if (!inserted) zone.appendChild(drag.placeholder); // en sona
   }
 
-  /* Pano kenarlarına yaklaşınca yatay otomatik kaydırma (uzaktaki sütuna ulaşmak için). */
-  function handleAutoScroll(x) {
+  /* Pano kenarlarına yaklaşınca yatay otomatik kaydırma (uzaktaki sütuna ulaşmak için).
+     st = sürükleme durumu nesnesi: kart için `drag`, sütun için `colDrag`. */
+  function handleAutoScroll(x, st) {
     const wrap = el('boardWrap');
     const r = wrap.getBoundingClientRect();
     const edge = 70; // kenar bölgesi genişliği
@@ -1370,15 +1955,15 @@
     else if (x > r.right - edge) dir = 1;
 
     if (dir === 0) {
-      if (drag.autoScrollTimer) { cancelAnimationFrame(drag.autoScrollTimer); drag.autoScrollTimer = null; }
+      if (st.autoScrollTimer) { cancelAnimationFrame(st.autoScrollTimer); st.autoScrollTimer = null; }
       return;
     }
-    if (drag.autoScrollTimer) return; // zaten kayıyor
+    if (st.autoScrollTimer) return; // zaten kayıyor
     const step = () => {
       wrap.scrollLeft += dir * 14;
-      drag.autoScrollTimer = requestAnimationFrame(step);
+      st.autoScrollTimer = requestAnimationFrame(step);
     };
-    drag.autoScrollTimer = requestAnimationFrame(step);
+    st.autoScrollTimer = requestAnimationFrame(step);
   }
 
   /* Parmak/fare kalkınca: kartı yer tutucunun olduğu yere bırak ve kaydet. */
@@ -1424,6 +2009,128 @@
   function resetDrag() {
     drag.active = false; drag.id = null; drag.cardEl = null;
     drag.ghost = null; drag.placeholder = null; drag.pointerId = null;
+  }
+
+  /* ---- SÜTUN SÜRÜKLEME (sütunların yerini değiştirme) ----
+     Sütun, başlığından tutulup sağa/sola sürüklenir. Kart sürüklemesiyle aynı mantık:
+     eşik aşılınca hayalet + yer tutucu oluşur, bırakınca yeni sıra (order) kaydedilir. */
+  const colDrag = {
+    active: false,     // sürükleme gerçekten başladı mı
+    id: null,          // sürüklenen sütunun id'si
+    colEl: null,       // asıl sütun DOM öğesi (sürüklenirken gizlenir)
+    ghost: null,       // imleci takip eden kopya
+    placeholder: null, // bırakılacağı yeri gösteren boşluk
+    startX: 0, startY: 0, offX: 0, offY: 0,
+    autoScrollTimer: null
+  };
+
+  function onColumnPointerDown(e, colEl, colId) {
+    if (e.button != null && e.button !== 0) return;
+    // Üç nokta menüsü / açık menü sürüklemeyi başlatmasın
+    if (e.target.closest('.column-menu-btn, .col-menu')) return;
+    if (drag.id != null) return; // bir kart sürükleniyorsa karışmasın
+
+    const rect = colEl.getBoundingClientRect();
+    colDrag.id = colId;
+    colDrag.colEl = colEl;
+    colDrag.startX = e.clientX;
+    colDrag.startY = e.clientY;
+    colDrag.offX = e.clientX - rect.left;
+    colDrag.offY = e.clientY - rect.top;
+    colDrag._w = rect.width;
+    colDrag._h = rect.height;
+    colDrag.active = false;
+
+    document.addEventListener('pointermove', onColPointerMove, { passive: false });
+    document.addEventListener('pointerup', onColPointerUp);
+    document.addEventListener('pointercancel', onColPointerUp);
+  }
+
+  function onColPointerMove(e) {
+    if (colDrag.id == null) return;
+    if (!colDrag.active) {
+      const dx = e.clientX - colDrag.startX;
+      const dy = e.clientY - colDrag.startY;
+      if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return; // ufak titreme = tıklama (yeniden adlandır)
+      startColDragging();
+    }
+    e.preventDefault();
+    colDrag.ghost.style.left = (e.clientX - colDrag.offX) + 'px';
+    colDrag.ghost.style.top  = (e.clientY - colDrag.offY) + 'px';
+    updateColPlaceholder(e.clientX);
+    handleAutoScroll(e.clientX, colDrag);
+  }
+
+  /* Eşik aşıldı: sütunun kopyasını (hayalet) ve yerine boşluğu oluştur. */
+  function startColDragging() {
+    colDrag.active = true;
+    justDragged = false;
+    closeAllColMenus();
+    document.body.classList.add('dragging-active');
+
+    const ghost = colDrag.colEl.cloneNode(true);
+    ghost.classList.add('column-ghost');
+    ghost.style.width = colDrag._w + 'px';
+    ghost.style.height = colDrag._h + 'px';
+    document.body.appendChild(ghost);
+    colDrag.ghost = ghost;
+
+    const ph = document.createElement('div');
+    ph.className = 'column-placeholder';
+    ph.style.width = colDrag._w + 'px';
+    ph.style.height = colDrag._h + 'px';
+    colDrag.placeholder = ph;
+
+    colDrag.colEl.parentNode.insertBefore(ph, colDrag.colEl);
+    colDrag.colEl.style.display = 'none';
+  }
+
+  /* İmlecin X konumuna göre boşluğu doğru iki sütunun arasına koyar. */
+  function updateColPlaceholder(x) {
+    const wrap = el('boardWrap');
+    const cols = [...wrap.querySelectorAll('.column')].filter(c => c.style.display !== 'none');
+    for (const c of cols) {
+      const r = c.getBoundingClientRect();
+      if (x < r.left + r.width / 2) { wrap.insertBefore(colDrag.placeholder, c); return; }
+    }
+    // Hiçbir sütunun ortasını geçmediyse en sona ("+ Sütun ekle" kutusunun önüne)
+    wrap.insertBefore(colDrag.placeholder, el('addColumnBtn'));
+  }
+
+  /* Bırakınca: boşluğun yerine göre tüm sütunlara yeni sıra numarası ver ve kaydet. */
+  async function onColPointerUp() {
+    document.removeEventListener('pointermove', onColPointerMove);
+    document.removeEventListener('pointerup', onColPointerUp);
+    document.removeEventListener('pointercancel', onColPointerUp);
+    if (colDrag.autoScrollTimer) { cancelAnimationFrame(colDrag.autoScrollTimer); colDrag.autoScrollTimer = null; }
+
+    // Hiç sürükleme başlamadıysa (sadece tıklama): başlığa tıklama normal çalışsın
+    if (!colDrag.active) { colDrag.id = null; colDrag.colEl = null; return; }
+
+    // Sürükleme bitti: hemen ardından gelen tıklama "yeniden adlandır" açmasın
+    justDragged = true;
+    setTimeout(() => { justDragged = false; }, 50);
+
+    // Panodaki yeni sırayı oku (boşluk = sürüklenen sütun)
+    const ordered = [...el('boardWrap').children]
+      .map(ch => ch === colDrag.placeholder ? colDrag.id
+        : (ch.classList.contains('column') && ch.style.display !== 'none' ? ch.dataset.col : null))
+      .filter(Boolean);
+
+    let n = 0;
+    for (const cid of ordered) {
+      const c = columns.find(x => x.id === cid);
+      if (!c) continue;
+      c.order = n++;
+      await saveColumn(c);
+    }
+
+    document.body.classList.remove('dragging-active');
+    if (colDrag.ghost) colDrag.ghost.remove();
+    if (colDrag.placeholder) colDrag.placeholder.remove();
+    colDrag.active = false; colDrag.id = null; colDrag.colEl = null;
+    colDrag.ghost = null; colDrag.placeholder = null;
+    renderBoard();
   }
 
   /* ---- KARTI BIRAK: sütun + yeni sıra ----
@@ -1651,19 +2358,2266 @@
   }
 
   /* ===================================================================
-     GÖRÜNÜM GEÇİŞİ — Liste <-> Pano
-     body'ye "view-board" sınıfı eklenince CSS otomatik olarak panoyu gösterir.
+     GÖRÜNÜM GEÇİŞİ — Liste / Pano / Şema
+     body'ye "view-board" veya "view-schema" sınıfı eklenince CSS ilgili görünümü gösterir.
      Tercih localStorage'a kaydedilir, böylece sonraki açılışta hatırlanır.
      =================================================================== */
   async function setView(view) {
     currentView = view;
     const board = (view === 'board');
+    const schema = (view === 'schema');
     document.body.classList.toggle('view-board', board);
-    el('viewList').classList.toggle('sel', !board);
+    document.body.classList.toggle('view-schema', schema);
+    el('viewList').classList.toggle('sel', view === 'list');
     el('viewBoard').classList.toggle('sel', board);
+    el('viewSchema').classList.toggle('sel', schema);
     if (board) renderBoard();
+    if (schema) renderSchema();
     if (storageOK) await sSet('pref:view', view);
   }
+
+  /* ===================================================================
+     ŞEMA GÖRÜNÜMÜ — SQLite veritabanı tasarımcısı
+     Serbest bir tuval üzerinde veritabanı tabloları durur:
+       • Tablo, renkli başlığından tutulup istenen yere sürüklenir
+       • Bir alan (ör. siparisler.musteri_id) tutulup başka tablodaki bir alana
+         (ör. musteriler.id) bırakılınca ikisi bağlanır = FOREIGN KEY ilişkisi.
+         Ana id (ör. musteriler.id) başka bir tablonun ÜZERİNE bırakılırsa o tabloya
+         "musteri_id" alanı kendiliğinden eklenip bağlanır.
+       • Çizgiye tıklayınca ayar kutusu açılır: ON DELETE / ON UPDATE, yön çevirme, silme
+       • "SQL" şemayı CREATE TABLE + FOREIGN KEY + INDEX komutlarına çevirir
+       • "Konsol" şemayı tarayıcıda gerçek bir SQLite veritabanında çalıştırır
+       • Dosya menüsü: .db/.sql içe aktarma, .sqlite/.sql/.png/.svg dışa aktarma
+     Konumlar "yüzey" (surface) koordinatında tutulur; yakınlaştırma bunu sadece ölçekler.
+     Gerçek SQLite motoru (sql.js) sadece gerektiğinde, ilk kullanımda CDN'den yüklenir.
+     =================================================================== */
+
+  /* ---------- SABİTLER ---------- */
+
+  /* SVG çizgi uçları: ana id (PK) tarafında ok, alt id (FK) tarafında küçük daire.
+     Seçili/vurgulu çizgi için turuncu kopyaları da var. */
+  const ER_DEFS =
+    '<defs>' +
+      '<marker id="erArrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto"><path class="er-arrow" d="M0,0 L10,5 L0,10 z"/></marker>' +
+      '<marker id="erArrowSel" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto"><path class="er-arrow sel" d="M0,0 L10,5 L0,10 z"/></marker>' +
+      '<marker id="erDot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse"><circle class="er-dot" cx="5" cy="5" r="3.6"/></marker>' +
+      '<marker id="erDotSel" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse"><circle class="er-dot sel" cx="5" cy="5" r="3.6"/></marker>' +
+    '</defs>';
+
+  const ER_HINT = el('erHint').textContent;
+
+  /* Yabancı anahtar eylemleri: ana kayıt silinince/güncellenince alt kayıtlara ne olsun? */
+  const FK_ACTIONS = [
+    ['', 'NO ACTION (varsayılan)'],
+    ['CASCADE', 'CASCADE — onlar da silinsin/güncellensin'],
+    ['SET NULL', 'SET NULL — alt id boşaltılsın'],
+    ['SET DEFAULT', 'SET DEFAULT — varsayılana dönsün'],
+    ['RESTRICT', 'RESTRICT — işlem engellensin']
+  ];
+
+  /* Proje başına SQL ayarlarının varsayılanları */
+  const SCHEMA_DEFAULTS = {
+    dialect: 'sqlite', ifNotExists: true, dropFirst: false, fkIndexes: true,
+    transaction: true, strict: false, extraSql: '', consoleSql: ''
+  };
+
+  /* SQL'de özel anlamı olan kelimeler: bu adlar tırnak içine alınır */
+  const SQL_RESERVED = ['abort','action','add','after','all','alter','analyze','and','as','asc','attach','autoincrement',
+    'before','begin','between','by','cascade','case','cast','check','collate','column','commit','conflict','constraint',
+    'create','cross','current','current_date','current_time','current_timestamp','database','default','deferrable',
+    'deferred','delete','desc','detach','distinct','drop','each','else','end','escape','except','exclusive','exists',
+    'explain','fail','for','foreign','from','full','glob','group','having','if','ignore','immediate','in','index',
+    'indexed','initially','inner','insert','instead','intersect','into','is','isnull','join','key','left','like',
+    'limit','match','natural','no','not','notnull','null','of','offset','on','or','order','outer','plan','pragma',
+    'primary','query','raise','recursive','references','regexp','reindex','release','rename','replace','restrict',
+    'right','rollback','row','savepoint','select','set','table','temp','temporary','then','to','transaction',
+    'trigger','union','unique','update','user','using','vacuum','values','view','virtual','when','where','with','without'];
+
+  /* ---------- KÜÇÜK YARDIMCILAR ---------- */
+
+  function projectTables(pid) { return dbTables.filter(t => t.projectId === pid).sort((a, b) => a.created - b.created); }
+  function projectLinks(pid) { return dbLinks.filter(l => l.projectId === pid); }
+  function findTable(id) { return dbTables.find(t => t.id === id); }
+  function findField(tid, fid) { const t = findTable(tid); return t ? t.fields.find(f => f.id === fid) : null; }
+  function sameSet(a, b) { return a.length === b.length && a.every(x => b.includes(x)); }
+  function lower(s) { return (s || '').trim().toLowerCase(); }
+
+  /* Bozuk/eksik kayıtlarda çökmemek için tablo nesnelerini tamamlar
+     (eski sürümde oluşturulan tablolarda yeni alanlar yoktur). */
+  function normalizeDbTables(list) {
+    list.forEach(t => {
+      if (!Array.isArray(t.fields)) t.fields = [];
+      if (!Array.isArray(t.indexes)) t.indexes = [];
+      t.name = t.name || '';
+      t.note = t.note || '';
+      t.x = Math.max(0, +t.x || 0);
+      t.y = Math.max(0, +t.y || 0);
+      t.fields.forEach(f => {
+        f.name = f.name || ''; f.type = f.type || ''; f.def = f.def || ''; f.check = f.check || '';
+        f.pk = !!f.pk; f.ai = !!f.ai; f.nn = !!f.nn; f.uq = !!f.uq;
+      });
+      t.indexes.forEach(ix => {
+        if (!Array.isArray(ix.cols)) ix.cols = [];
+        if (!Array.isArray(ix.desc)) ix.desc = [];
+        ix.name = ix.name || ''; ix.unique = !!ix.unique;
+      });
+    });
+    return list;
+  }
+  function normalizeDbLinks(list) {
+    list.forEach(l => { l.onDelete = l.onDelete || ''; l.onUpdate = l.onUpdate || ''; l.grp = l.grp || null; });
+    return list;
+  }
+
+  /* Proje başına SQL ayarları (eksik olanlar varsayılanla doldurulur) */
+  function schemaSettings(pid) {
+    pid = pid || activeProject;
+    const s = dbSettings[pid] || (dbSettings[pid] = { projectId: pid });
+    for (const k in SCHEMA_DEFAULTS) if (s[k] === undefined) s[k] = SCHEMA_DEFAULTS[k];
+    return s;
+  }
+  async function saveSchemaSettings(pid) {
+    pid = pid || activeProject;
+    if (storageOK) await sSet('sch:' + pid, JSON.stringify(schemaSettings(pid)));
+  }
+
+  /* İlişkinin okunabilir hali: "siparisler.musteri_id → musteriler.id" */
+  function linkLabel(l) {
+    const ta = findTable(l.fromTable), tb = findTable(l.toTable);
+    const fa = findField(l.fromTable, l.fromField), fb = findField(l.toTable, l.toField);
+    if (!ta || !tb || !fa || !fb) return '?';
+    return ta.name + '.' + fa.name + ' → ' + tb.name + '.' + fb.name;
+  }
+
+  /* Sadece #rrggbb gibi geçerli renkleri kabul et (yedekten gelen veriye karşı güvenlik). */
+  function safeColor(c) { return /^#[0-9a-f]{3,8}$/i.test(c || '') ? c : 'var(--accent)'; }
+
+  /* SQLite'ın "tür yakınlığı" (type affinity) kuralı: yazılan türün SQLite'ta neye denk geldiği */
+  function typeAffinity(type) {
+    const t = (type || '').toUpperCase();
+    if (t.includes('INT')) return 'INTEGER';
+    if (/CHAR|CLOB|TEXT/.test(t)) return 'TEXT';
+    if (!t.trim() || t.includes('BLOB')) return 'BLOB';
+    if (/REAL|FLOA|DOUB/.test(t)) return 'REAL';
+    return 'NUMERIC';
+  }
+
+  /* Alan adına bakarak SQLite türü tahmin eder (ör. musteri_id -> INTEGER, fiyat -> REAL). */
+  function guessSqlType(name) {
+    const n = (name || '').toLowerCase()
+      .replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ı/g,'i').replace(/ö/g,'o').replace(/ş/g,'s').replace(/ü/g,'u');
+    if (/^id$|_id$|^id_|adet|miktar|sayisi$|^yas$|count|qty|quantity|^sira$|stok/.test(n)) return 'INTEGER';
+    if (/^is_|^has_|^aktif|^active|^silindi|deleted$|_mi$|_mu$/.test(n)) return 'INTEGER';
+    if (/fiyat|tutar|ucret|maas|price|amount|total|toplam|bakiye|oran|puan|rate|score|enlem|boylam|lat$|lng$/.test(n)) return 'REAL';
+    return 'TEXT';
+  }
+
+  /* Tablo adından tekil isim: musteriler -> musteri, categories -> category */
+  function singularName(name) {
+    const n = (name || '').trim();
+    if (/(ler|lar)$/i.test(n) && n.length > 4) return n.slice(0, -3);
+    if (/ies$/i.test(n) && n.length > 4) return n.slice(0, -3) + 'y';
+    if (/(sses|xes|ches|shes)$/i.test(n)) return n.slice(0, -2);
+    if (/[^s]s$/i.test(n) && n.length > 3) return n.slice(0, -1);
+    return n;
+  }
+
+  /* Tabloda olmayan bir alan adı üretir (varsa sonuna _2, _3 ekler). */
+  function uniqueFieldName(t, base) {
+    let n = base, k = 2;
+    while (t.fields.some(f => lower(f.name) === lower(n))) n = base + '_' + (k++);
+    return n;
+  }
+  function uniqueTableName(base, pid) {
+    let n = base, k = 2;
+    while (projectTables(pid).some(t => lower(t.name) === lower(n))) n = base + '_' + (k++);
+    return n;
+  }
+
+  /* Yeni boş alan nesnesi */
+  function newField(name, type, extra) {
+    return Object.assign({ id: uid(), name: name, type: type, pk: false, ai: false, nn: false, uq: false, def: '', check: '', typeAuto: true }, extra || {});
+  }
+
+  /* Alt durum satırında kısa bir mesaj gösterir, sonra eski ipucuna döner. */
+  let erToastTimer = null;
+  function erToast(msg, ms) {
+    const h = el('erHint');
+    h.textContent = msg;
+    h.classList.add('flash');
+    clearTimeout(erToastTimer);
+    erToastTimer = setTimeout(() => { h.textContent = ER_HINT; h.classList.remove('flash'); }, ms || 3000);
+  }
+
+  /* Ekrandaki (imleç) koordinatını şema yüzeyi koordinatına çevirir
+     (kaydırma ve yakınlaştırma hesaba katılır). */
+  function toSurface(cx, cy) {
+    const r = el('erSurface').getBoundingClientRect();
+    return { x: (cx - r.left) / erZoom, y: (cy - r.top) / erZoom };
+  }
+
+  /* Bir FK alanı tekil mi? (PK tek başına, UNIQUE ya da tek sütunluk UNIQUE indeks) -> 1:1 ilişki */
+  function isFieldUnique(t, f) {
+    const pks = t.fields.filter(x => x.pk);
+    return (f.pk && pks.length === 1) || f.uq || t.indexes.some(ix => ix.unique && ix.cols.length === 1 && ix.cols[0] === f.id);
+  }
+
+  /* ---------- GERİ AL / YİNELE ----------
+     Her değişiklikten önce projenin şemasının bir kopyası (anlık görüntü) saklanır.
+     Geri al = son kopyaya dön. Proje başına en fazla 60 adım tutulur (sadece bu oturumda). */
+  const erHistory = {};
+  function erHist(pid) { return erHistory[pid] || (erHistory[pid] = { undo: [], redo: [] }); }
+  function erSnapshot(pid) {
+    return JSON.stringify({ tables: dbTables.filter(t => t.projectId === pid), links: dbLinks.filter(l => l.projectId === pid) });
+  }
+  function erCheckpoint() {
+    const h = erHist(activeProject);
+    h.undo.push(erSnapshot(activeProject));
+    if (h.undo.length > 60) h.undo.shift();
+    h.redo = [];
+    updateUndoButtons();
+  }
+  async function erRestore(snap) {
+    const data = JSON.parse(snap);
+    const pid = activeProject;
+    const keepT = new Set(data.tables.map(t => t.id)), keepL = new Set(data.links.map(l => l.id));
+    for (const t of dbTables.filter(x => x.projectId === pid && !keepT.has(x.id))) await deleteDbTableStore(t.id);
+    for (const l of dbLinks.filter(x => x.projectId === pid && !keepL.has(x.id))) await deleteDbLinkStore(l.id);
+    dbTables = dbTables.filter(t => t.projectId !== pid).concat(data.tables);
+    dbLinks = dbLinks.filter(l => l.projectId !== pid).concat(data.links);
+    for (const t of data.tables) await saveDbTable(t);
+    for (const l of data.links) await saveDbLink(l);
+    selectedLinkId = null;
+    renderSchema();
+  }
+  async function erUndo() {
+    const h = erHist(activeProject);
+    if (!h.undo.length) return;
+    h.redo.push(erSnapshot(activeProject));
+    await erRestore(h.undo.pop());
+    erToast('Geri alındı.');
+  }
+  async function erRedo() {
+    const h = erHist(activeProject);
+    if (!h.redo.length) return;
+    h.undo.push(erSnapshot(activeProject));
+    await erRestore(h.redo.pop());
+    erToast('Yinelendi.');
+  }
+  function updateUndoButtons() {
+    const h = erHist(activeProject);
+    el('erUndo').disabled = !h.undo.length;
+    el('erRedo').disabled = !h.redo.length;
+  }
+
+  /* ---------- ÇİZİM ---------- */
+
+  let erHoverTable = null; // fare üzerinde olan tablo: ilişkileri vurgulanır
+
+  /* Bir tablonun tuval üzerindeki HTML'i. */
+  function erTableHTML(t, fkSet, issues) {
+    const rows = t.fields.map(f => {
+      let badges = '';
+      if (f.pk) badges += '<span class="er-badge pk" title="PRIMARY KEY (ana id)">PK</span>';
+      if (fkSet.has(f.id)) badges += '<span class="er-badge fk" title="FOREIGN KEY (alt id)">FK</span>';
+      if (f.uq && !f.pk) badges += '<span class="er-badge uq" title="UNIQUE (tekrar edemez)">UQ</span>';
+      // Fareyle üzerine gelince alanın tüm özellikleri görünsün
+      const tip = [f.type || 'tür yok'];
+      if (f.pk) tip.push('PRIMARY KEY');
+      if (f.ai) tip.push('AUTOINCREMENT');
+      if (f.nn) tip.push('NOT NULL');
+      if (f.uq) tip.push('UNIQUE');
+      if (f.def) tip.push('DEFAULT ' + f.def);
+      if (f.check) tip.push('CHECK (' + f.check + ')');
+      const nn = f.nn || f.pk;
+      return '<div class="er-field" data-tbl="' + t.id + '" data-field="' + f.id + '" title="' + escAttr(tip.join(' · ')) + '">' +
+        '<span class="er-port in"></span>' +
+        '<span class="er-badges">' + badges + '</span>' +
+        '<span class="er-fname' + (nn ? ' nn' : '') + (f.name ? '' : ' empty') + '">' + esc(f.name || '(adsız)') + '</span>' +
+        '<span class="er-ftype">' + esc(f.type || '') + (f.ai ? '<span class="er-ai">AI</span>' : '') + '</span>' +
+        '<span class="er-port out"></span>' +
+      '</div>';
+    }).join('');
+
+    const errs = issues.filter(i => i.lvl === 'err'), warns = issues.filter(i => i.lvl === 'warn');
+    let icon = '';
+    if (errs.length || warns.length) {
+      const tip = issues.map(i => (i.lvl === 'err' ? 'HATA: ' : 'Uyarı: ') + i.msg).join('\n');
+      icon = '<span class="er-head-icon ' + (errs.length ? 'err' : 'warn') + '" title="' + escAttr(tip) + '">!</span>';
+    }
+    if (t.indexes.length) icon += '<span class="er-head-icon" title="' + t.indexes.length + ' indeks">idx ' + t.indexes.length + '</span>';
+
+    return '<div class="er-table' + (errs.length ? ' has-err' : '') + '" data-tbl="' + t.id + '" style="left:' + t.x + 'px; top:' + t.y + 'px">' +
+      '<div class="er-table-head" style="background:' + safeColor(t.color) + '" title="' + escAttr((t.note ? t.note + '\n\n' : '') + 'Taşımak için sürükle · düzenlemek için çift tıkla') + '">' +
+        '<span class="er-table-name">' + esc(t.name || '(adsız)') + '</span>' + icon +
+        '<button class="er-table-edit" data-tbledit="' + t.id + '" title="Tabloyu düzenle">&#8943;</button>' +
+      '</div>' +
+      '<div class="er-fields">' + (rows || '<div class="er-nofield">Alan yok</div>') + '</div>' +
+      '<button class="er-add-field" data-addfield="' + t.id + '">+ Alan</button>' +
+    '</div>';
+  }
+
+  /* Şema görünümünü baştan çizer: tablolar, ilişki çizgileri, durum satırı. */
+  function renderSchema() {
+    if (currentView !== 'schema') return; // gizli tuvalde ölçüm yapılamaz; görünüm açılınca çizilir
+    const tables = projectTables(activeProject);
+    const links = projectLinks(activeProject);
+    if (selectedLinkId && !links.some(l => l.id === selectedLinkId)) selectedLinkId = null;
+    if (erHoverTable && !tables.some(t => t.id === erHoverTable)) erHoverTable = null;
+
+    const fkSet = new Set(links.map(l => l.fromField)); // FK rozeti gösterilecek alanlar
+    const issues = lintSchema(activeProject);
+    const byTable = {};
+    issues.forEach(i => { if (i.tid) (byTable[i.tid] = byTable[i.tid] || []).push(i); });
+
+    el('erTables').innerHTML = tables.map(t => erTableHTML(t, fkSet, byTable[t.id] || [])).join('');
+    el('erEmpty').style.display = tables.length ? 'none' : '';
+    el('erZoomLabel').textContent = Math.round(erZoom * 100) + '%';
+    updateErSurfaceSize();
+    renderLinkPanel();
+    drawErLinks();
+
+    // "Tabloya git" listesi
+    el('erJump').innerHTML = '<option value="">Tabloya git…</option>' +
+      tables.slice().sort((a, b) => a.name.localeCompare(b.name, 'tr')).map(t => '<option value="' + t.id + '">' + esc(t.name || '(adsız)') + '</option>').join('');
+
+    // Durum satırı: sayılar + hata/uyarı düğmesi
+    const nErr = issues.filter(i => i.lvl === 'err').length, nWarn = issues.length - nErr;
+    let stats = tables.length + ' tablo · ' + links.length + ' ilişki';
+    if (nErr) stats += ' <button class="er-issue-btn err" data-issues>' + nErr + ' hata</button>';
+    if (nWarn) stats += ' <button class="er-issue-btn warn" data-issues>' + nWarn + ' uyarı</button>';
+    el('erStats').innerHTML = stats;
+    updateUndoButtons();
+  }
+
+  /* Tuvalin boyutunu, en uzaktaki tablonun biraz ötesine kadar büyütür
+     (böylece tablo sağa/aşağı sürüklendikçe alan genişler) ve yakınlaştırmayı uygular. */
+  function updateErSurfaceSize() {
+    const c = el('erCanvas');
+    let w = 0, h = 0;
+    el('erTables').querySelectorAll('.er-table').forEach(n => {
+      w = Math.max(w, n.offsetLeft + n.offsetWidth);
+      h = Math.max(h, n.offsetTop + n.offsetHeight);
+    });
+    const W = Math.max(w + 400, Math.floor(c.clientWidth / erZoom));
+    const H = Math.max(h + 400, Math.floor(c.clientHeight / erZoom));
+    const s = el('erSurface');
+    s.style.width = W + 'px';
+    s.style.height = H + 'px';
+    s.style.transform = 'scale(' + erZoom + ')';
+    el('erSizer').style.width = Math.floor(W * erZoom) + 'px';
+    el('erSizer').style.height = Math.floor(H * erZoom) + 'px';
+    el('erLinks').setAttribute('width', W);
+    el('erLinks').setAttribute('height', H);
+  }
+
+  /* İki nokta arasında yumuşak (bezier) bir eğri üretir.
+     d1/d2 = çizginin o uçtan hangi yöne çıktığı (+1 sağa, -1 sola). */
+  function bezier(x1, y1, d1, x2, y2, d2) {
+    const k = Math.max(50, Math.abs(x2 - x1) / 2); // kavis miktarı
+    const c1x = x1 + d1 * k, c2x = x2 + d2 * k;
+    return {
+      d: 'M' + x1 + ',' + y1 + ' C' + c1x + ',' + y1 + ' ' + c2x + ',' + y2 + ' ' + x2 + ',' + y2,
+      mid: { x: (x1 + 3 * c1x + 3 * c2x + x2) / 8, y: (y1 + y2) / 2 }, // eğrinin orta noktası
+      a: { x: x1, y: y1, d: d1 }, b: { x: x2, y: y2, d: d2 }
+    };
+  }
+
+  /* İki alan satırı arasındaki çizginin yolunu hesaplar.
+     Tablolar yan yanaysa birbirine bakan kenarlardan, üst üsteyse aynı kenardan bağlanır. */
+  function linkGeometry(fa, fb) {
+    const ta = fa.closest('.er-table'), tb = fb.closest('.er-table');
+    const ay = ta.offsetTop + ta.clientTop + fa.offsetTop + fa.offsetHeight / 2;
+    const by = tb.offsetTop + tb.clientTop + fb.offsetTop + fb.offsetHeight / 2;
+    const aL = ta.offsetLeft, aR = aL + ta.offsetWidth;
+    const bL = tb.offsetLeft, bR = bL + tb.offsetWidth;
+    if (ta === tb)          return bezier(aR, ay,  1, bR, by,  1); // aynı tablo (ör. ust_kategori_id -> id)
+    if (aR + 40 <= bL)      return bezier(aR, ay,  1, bL, by, -1); // A solda, B sağda
+    if (bR + 40 <= aL)      return bezier(aL, ay, -1, bR, by,  1); // A sağda, B solda
+    return bezier(aL, ay, -1, bL, by, -1);                          // üst üste: ikisi de soldan
+  }
+
+  /* Tüm ilişki çizgilerini SVG'ye çizer. tempD verilirse (sürüklerken) kesikli geçici çizgi de çizer. */
+  function drawErLinks(tempD) {
+    const fieldEls = {};
+    el('erTables').querySelectorAll('.er-field').forEach(f => { fieldEls[f.dataset.field] = f; });
+
+    let paths = '', labels = '';
+    let selMid = null;
+    projectLinks(activeProject).forEach(l => {
+      const fa = fieldEls[l.fromField], fb = fieldEls[l.toField];
+      if (!fa || !fb) return;
+      const g = linkGeometry(fa, fb);
+      const sel = (l.id === selectedLinkId);
+      const related = erHoverTable && (l.fromTable === erHoverTable || l.toTable === erHoverTable);
+      const cls = sel ? ' sel' : (related ? ' hl' : (erHoverTable ? ' dim' : ''));
+      const m = (sel || related) ? 'Sel' : '';
+      const acts = [];
+      if (l.onDelete) acts.push('ON DELETE ' + l.onDelete);
+      if (l.onUpdate) acts.push('ON UPDATE ' + l.onUpdate);
+      // Önce tıklamayı kolaylaştıran görünmez kalın çizgi, sonra görünen ince çizgi
+      paths += '<path class="er-link-hit" data-link="' + l.id + '" d="' + g.d + '"><title>' + esc(linkLabel(l) + (acts.length ? '\n' + acts.join('\n') : '')) + '</title></path>' +
+               '<path class="er-link' + cls + '" d="' + g.d + '" marker-start="url(#erDot' + m + ')" marker-end="url(#erArrow' + m + ')"/>';
+
+      // Uçlardaki 1 / N: alt id tekil değilse bir ana kayda birden çok (N) alt kayıt bağlanabilir
+      const ft = findTable(l.fromTable), ff = findField(l.fromTable, l.fromField);
+      const many = !(ft && ff && isFieldUnique(ft, ff));
+      labels += '<text class="er-card' + cls + '" x="' + (g.a.x + g.a.d * 15) + '" y="' + (g.a.y - 6) + '">' + (many ? 'N' : '1') + '</text>' +
+                '<text class="er-card' + cls + '" x="' + (g.b.x + g.b.d * 15) + '" y="' + (g.b.y - 6) + '">1</text>';
+      // ON DELETE / ON UPDATE etiketi: kalabalık olmasın diye sadece tablonun üzerine gelince
+      if (acts.length && related && !sel) labels += '<text class="er-act' + cls + '" x="' + g.mid.x + '" y="' + (g.mid.y - 7) + '">' + esc(acts.join(' · ')) + '</text>';
+      if (sel) selMid = g.mid;
+    });
+    if (tempD) paths += '<path class="er-link temp" d="' + tempD + '" marker-end="url(#erArrowSel)"/>';
+    el('erLinks').innerHTML = ER_DEFS + paths + labels;
+    positionLinkPanel(selMid);
+  }
+
+  /* Alan sürüklenirken kaynaktan imlece (ya da üzerine gelinen hedef alana) giden geçici çizgi. */
+  function tempLinkPath(p) {
+    const fa = erDrag.fromEl;
+    if (erDrag.hoverEl) return linkGeometry(fa, erDrag.hoverEl).d; // hedef alana "yapış"
+    const ta = fa.closest('.er-table');
+    const y1 = ta.offsetTop + ta.clientTop + fa.offsetTop + fa.offsetHeight / 2;
+    const right = p.x >= ta.offsetLeft + ta.offsetWidth / 2;
+    const x1 = right ? ta.offsetLeft + ta.offsetWidth : ta.offsetLeft;
+    return bezier(x1, y1, right ? 1 : -1, p.x, p.y, right ? -1 : 1).d;
+  }
+
+  /* ---------- SEÇİLİ İLİŞKİNİN AYAR KUTUSU ---------- */
+
+  function actionOptions(cur) {
+    return FK_ACTIONS.map(a => '<option value="' + a[0] + '"' + (a[0] === cur ? ' selected' : '') + '>' + esc(a[1]) + '</option>').join('');
+  }
+
+  function renderLinkPanel() {
+    const p = el('erLinkPanel');
+    const l = dbLinks.find(x => x.id === selectedLinkId);
+    if (!l) { p.style.display = 'none'; p.innerHTML = ''; return; }
+    p.innerHTML =
+      '<div class="elp-title">' + esc(linkLabel(l)) + '</div>' +
+      '<label class="elp-row">ON DELETE <select data-k="onDelete">' + actionOptions(l.onDelete) + '</select></label>' +
+      '<label class="elp-row">ON UPDATE <select data-k="onUpdate">' + actionOptions(l.onUpdate) + '</select></label>' +
+      '<div class="elp-actions">' +
+        '<button class="elp-btn" data-act="swap" title="Hangi tarafın alt id olduğunu ters çevir">&#8644; Yönü çevir</button>' +
+        '<button class="elp-btn danger" data-act="del">İlişkiyi sil</button>' +
+      '</div>';
+    // Konumu drawErLinks() -> positionLinkPanel() ayarlar
+  }
+
+  /* Kutuyu seçili çizginin ortasının hemen altına koyar (yakınlaştırmaya göre). */
+  function positionLinkPanel(mid) {
+    const p = el('erLinkPanel');
+    if (!mid || !selectedLinkId) { p.style.display = 'none'; return; }
+    p.style.display = '';
+    p.style.left = (mid.x * erZoom) + 'px';
+    p.style.top = (mid.y * erZoom + 12) + 'px';
+  }
+
+  /* ---------- YAKINLAŞTIRMA, SIĞDIRMA, TABLOYA GİT ---------- */
+
+  /* (cx, cy) ekrandaki sabit kalacak nokta; verilmezse tuvalin ortası. */
+  function setErZoom(z, cx, cy) {
+    z = Math.min(2, Math.max(0.25, Math.round(z * 20) / 20));
+    if (z === erZoom) return;
+    const c = el('erCanvas');
+    const r = c.getBoundingClientRect();
+    if (cx == null) { cx = r.left + c.clientWidth / 2; cy = r.top + c.clientHeight / 2; }
+    const p = toSurface(cx, cy); // imlecin altındaki şema noktası
+    erZoom = z;
+    updateErSurfaceSize();
+    c.scrollLeft = p.x * z - (cx - r.left);
+    c.scrollTop  = p.y * z - (cy - r.top);
+    el('erZoomLabel').textContent = Math.round(z * 100) + '%';
+    drawErLinks();
+  }
+
+  /* Tüm tabloları ekrana sığacak şekilde yakınlaştırır ve kaydırır. */
+  function erFit() {
+    const nodes = [...el('erTables').querySelectorAll('.er-table')];
+    const c = el('erCanvas');
+    if (!nodes.length) { setErZoom(1); c.scrollTo(0, 0); return; }
+    let x1 = Infinity, y1 = Infinity, x2 = 0, y2 = 0;
+    nodes.forEach(n => {
+      x1 = Math.min(x1, n.offsetLeft); y1 = Math.min(y1, n.offsetTop);
+      x2 = Math.max(x2, n.offsetLeft + n.offsetWidth); y2 = Math.max(y2, n.offsetTop + n.offsetHeight);
+    });
+    const pad = 40;
+    let z = Math.min(1, (c.clientWidth - pad) / (x2 - x1 + pad), (c.clientHeight - pad) / (y2 - y1 + pad));
+    z = Math.max(0.25, Math.floor(z * 20) / 20);
+    if (z !== erZoom) setErZoom(z);
+    c.scrollLeft = Math.max(0, x1 * erZoom - pad / 2);
+    c.scrollTop = Math.max(0, y1 * erZoom - pad / 2);
+  }
+
+  /* Bir tabloyu ekranın ortasına getirip kısa süre parlatır. */
+  function erJumpTo(tid) {
+    const n = [...el('erTables').querySelectorAll('.er-table')].find(x => x.dataset.tbl === tid);
+    if (!n) return;
+    const c = el('erCanvas');
+    c.scrollLeft = (n.offsetLeft + n.offsetWidth / 2) * erZoom - c.clientWidth / 2;
+    c.scrollTop = (n.offsetTop + n.offsetHeight / 2) * erZoom - c.clientHeight / 2;
+    n.classList.remove('flash');
+    void n.offsetWidth; // animasyonu yeniden başlatmak için
+    n.classList.add('flash');
+  }
+
+  /* ---------- OTOMATİK YERLEŞTİRME ----------
+     Tablolar ilişki "derinliğine" göre sütunlara dizilir: başkasına bağlanmayan ana tablolar
+     solda, onlara bağlanan alt tablolar sağda. Çok uzun sütunlar ikiye bölünür. */
+  function erAutoLayout(onlyIds, startX) {
+    const tables = projectTables(activeProject).filter(t => !onlyIds || onlyIds.has(t.id));
+    if (!tables.length) return;
+    const ids = new Set(tables.map(t => t.id));
+    const deps = projectLinks(activeProject).filter(l => l.fromTable !== l.toTable && ids.has(l.fromTable) && ids.has(l.toTable));
+
+    // Seviye: bir tablo, bağlandığı (ana) tablolardan bir sağdadır. Döngülere karşı sınırlı tekrar.
+    const level = {};
+    tables.forEach(t => { level[t.id] = 0; });
+    for (let i = 0; i < tables.length; i++) {
+      let changed = false;
+      deps.forEach(l => {
+        const want = Math.min(level[l.toTable] + 1, tables.length);
+        if (level[l.fromTable] < want) { level[l.fromTable] = want; changed = true; }
+      });
+      if (!changed) break;
+    }
+
+    // Boyutlar ekrandaki gerçek tablolardan ölçülür
+    const size = {};
+    el('erTables').querySelectorAll('.er-table').forEach(n => { size[n.dataset.tbl] = { w: n.offsetWidth, h: n.offsetHeight }; });
+
+    const maxLevel = Math.max(...tables.map(t => level[t.id]));
+    const order = {}; // bir tablonun dikey sırası (çizgi kesişmelerini azaltmak için)
+    let x = startX || 40;
+    const maxH = 1000;
+    for (let lv = 0; lv <= maxLevel; lv++) {
+      let col = tables.filter(t => level[t.id] === lv);
+      if (!col.length) continue;
+      // Ana tablolarının ortalama sırasına göre diz (ilk sütunda: en çok bağlantı alan önce)
+      const score = t => {
+        const ps = deps.filter(l => l.fromTable === t.id && order[l.toTable] != null).map(l => order[l.toTable]);
+        if (ps.length) return ps.reduce((a, b) => a + b, 0) / ps.length;
+        return -deps.filter(l => l.toTable === t.id).length;
+      };
+      col = col.map(t => ({ t: t, s: score(t) })).sort((a, b) => a.s - b.s).map(o => o.t);
+
+      let y = 40, colW = 0;
+      col.forEach((t, i) => {
+        const sz = size[t.id] || { w: 220, h: 150 };
+        if (y > 40 && y + sz.h > maxH) { x += colW + 60; y = 40; colW = 0; }
+        t.x = Math.round(x); t.y = Math.round(y);
+        order[t.id] = lv * 1000 + i;
+        y += sz.h + 40;
+        colW = Math.max(colW, sz.w);
+      });
+      x += colW + 140;
+    }
+  }
+
+  async function erAutoLayoutCmd() {
+    if (!projectTables(activeProject).length) return;
+    erCheckpoint();
+    erAutoLayout();
+    for (const t of projectTables(activeProject)) await saveDbTable(t);
+    renderSchema();
+    erFit();
+    erToast('Tablolar ilişkilerine göre dizildi (geri almak için Ctrl+Z).');
+  }
+
+  /* ---------- SÜRÜKLEME MOTORU (Pointer Events: fare + dokunmatik) ----------
+     Üç tür sürükleme var:
+       'table' -> tabloyu başlığından taşıma
+       'link'  -> bir alandan başka bir alana (ya da tabloya) ilişki çizme
+       'pan'   -> tuvalin boş yerinden tutup kaydırma (fare ile) */
+  const ER_DRAG_THRESHOLD = 4;
+  const erDrag = { mode: null, active: false, startX: 0, startY: 0, lastX: 0, lastY: 0, autoTimer: null, autoDir: null };
+  let erJustDragged = false; // sürükleme bitince hemen gelen tıklamayı yutmak için
+  let erZTop = 10;           // en son taşınan tablo en üstte görünsün
+
+  function erStart(e, mode, extra) {
+    if (e.button != null && e.button !== 0) return;
+    if (erDrag.mode) return; // zaten bir sürükleme sürüyor
+    Object.assign(erDrag, {
+      mode: mode, active: false, hoverEl: null, hoverTable: null,
+      startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY
+    }, extra);
+    document.addEventListener('pointermove', erOnMove, { passive: false });
+    document.addEventListener('pointerup', erOnUp);
+    document.addEventListener('pointercancel', erOnUp);
+  }
+
+  function erOnMove(e) {
+    if (!erDrag.mode) return;
+    erDrag.lastX = e.clientX;
+    erDrag.lastY = e.clientY;
+    if (!erDrag.active) {
+      if (Math.hypot(e.clientX - erDrag.startX, e.clientY - erDrag.startY) < ER_DRAG_THRESHOLD) return;
+      erDrag.active = true;
+      if (erHoverTable) { erHoverTable = null; }
+      if (erDrag.mode === 'table') {
+        erCheckpoint(); // taşımadan önceki konum geri alınabilsin
+        erDrag.tableEl.classList.add('moving');
+        erDrag.tableEl.style.zIndex = ++erZTop;
+        document.body.classList.add('er-moving');
+      } else if (erDrag.mode === 'link') {
+        erDrag.fromEl.classList.add('link-source');
+        document.body.classList.add('er-linking');
+      } else if (erDrag.mode === 'pan') {
+        el('erCanvas').classList.add('panning');
+      }
+    }
+    e.preventDefault();
+    erApply();
+    if (erDrag.mode !== 'pan') erAutoScroll();
+  }
+
+  /* İmlecin son konumunu sürükleme türüne göre uygular. */
+  function erApply() {
+    const p = toSurface(erDrag.lastX, erDrag.lastY);
+    if (erDrag.mode === 'table') {
+      const t = findTable(erDrag.tableId);
+      if (!t) return;
+      t.x = Math.max(0, Math.round(p.x - erDrag.offX));
+      t.y = Math.max(0, Math.round(p.y - erDrag.offY));
+      erDrag.tableEl.style.left = t.x + 'px';
+      erDrag.tableEl.style.top = t.y + 'px';
+      updateErSurfaceSize();
+      drawErLinks();
+    } else if (erDrag.mode === 'link') {
+      // İmlecin altındaki alanı bul (kaynağın kendisi hariç); alan değilse başka bir tablo mu?
+      const under = document.elementFromPoint(erDrag.lastX, erDrag.lastY);
+      let target = under ? under.closest('.er-field') : null;
+      if (target === erDrag.fromEl) target = null;
+      let tableTarget = null;
+      if (!target && under) {
+        const tEl = under.closest('.er-table');
+        if (tEl && tEl !== erDrag.fromEl.closest('.er-table')) tableTarget = tEl;
+      }
+      if (target !== erDrag.hoverEl) {
+        if (erDrag.hoverEl) erDrag.hoverEl.classList.remove('link-target');
+        if (target) target.classList.add('link-target');
+        erDrag.hoverEl = target;
+      }
+      if (tableTarget !== erDrag.hoverTable) {
+        if (erDrag.hoverTable) erDrag.hoverTable.classList.remove('link-target-table');
+        if (tableTarget) tableTarget.classList.add('link-target-table');
+        erDrag.hoverTable = tableTarget;
+      }
+      drawErLinks(tempLinkPath(p));
+    } else if (erDrag.mode === 'pan') {
+      const c = el('erCanvas');
+      c.scrollLeft = erDrag.scrollL - (erDrag.lastX - erDrag.startX);
+      c.scrollTop  = erDrag.scrollT - (erDrag.lastY - erDrag.startY);
+    }
+  }
+
+  /* Tuvalin kenarına yaklaşınca otomatik kaydırır (uzaktaki tabloya ulaşmak için). */
+  function erAutoScroll() {
+    const c = el('erCanvas');
+    const r = c.getBoundingClientRect();
+    const edge = 36;
+    const dx = erDrag.lastX < r.left + edge ? -1 : (erDrag.lastX > r.right - edge ? 1 : 0);
+    const dy = erDrag.lastY < r.top + edge ? -1 : (erDrag.lastY > r.bottom - edge ? 1 : 0);
+    erDrag.autoDir = (dx || dy) ? { dx: dx, dy: dy } : null;
+    if (!erDrag.autoDir || erDrag.autoTimer) return;
+    const step = () => {
+      if (!erDrag.active || !erDrag.autoDir) { erDrag.autoTimer = null; return; }
+      c.scrollLeft += erDrag.autoDir.dx * 12;
+      c.scrollTop  += erDrag.autoDir.dy * 12;
+      erApply(); // tuval kaydıkça tablo/çizgi imlecin altında kalsın
+      erDrag.autoTimer = requestAnimationFrame(step);
+    };
+    erDrag.autoTimer = requestAnimationFrame(step);
+  }
+
+  async function erOnUp(e) {
+    document.removeEventListener('pointermove', erOnMove);
+    document.removeEventListener('pointerup', erOnUp);
+    document.removeEventListener('pointercancel', erOnUp);
+    if (erDrag.autoTimer) { cancelAnimationFrame(erDrag.autoTimer); erDrag.autoTimer = null; }
+
+    const d = Object.assign({}, erDrag); // durumun kopyası; asıl nesneyi hemen sıfırlıyoruz
+    erDrag.mode = null; erDrag.active = false; erDrag.autoDir = null;
+    document.body.classList.remove('er-moving', 'er-linking');
+    el('erCanvas').classList.remove('panning');
+    if (!d.active) return; // sadece tıklamaydı
+
+    erJustDragged = true;
+    setTimeout(() => { erJustDragged = false; }, 50);
+
+    if (d.mode === 'table') {
+      d.tableEl.classList.remove('moving');
+      const t = findTable(d.tableId);
+      if (t) await saveDbTable(t);
+    } else if (d.mode === 'link') {
+      d.fromEl.classList.remove('link-source');
+      if (d.hoverEl) d.hoverEl.classList.remove('link-target');
+      if (d.hoverTable) d.hoverTable.classList.remove('link-target-table');
+      if (e.type !== 'pointercancel') {
+        if (d.hoverEl) await createDbLink(d.tableId, d.fromField, d.hoverEl.dataset.tbl, d.hoverEl.dataset.field);
+        else if (d.hoverTable) await linkFieldToTable(d.tableId, d.fromField, d.hoverTable.dataset.tbl);
+      }
+      renderSchema(); // geçici çizgiyi kaldır, FK rozetlerini güncelle
+    }
+  }
+
+  /* ---------- VERİ İŞLEMLERİ ---------- */
+
+  /* Yeni tabloyu görünen alanda, diğer tablolarla çakışmayan bir yere koymak için boş yer arar. */
+  function erFreeSpot() {
+    const c = el('erCanvas');
+    const boxes = [...el('erTables').querySelectorAll('.er-table')]
+      .map(n => ({ x: n.offsetLeft, y: n.offsetTop, w: n.offsetWidth, h: n.offsetHeight }));
+    const W = 220, H = 130, gap = 30;
+    const left0 = Math.round(c.scrollLeft / erZoom) + 30;
+    const top0 = Math.round(c.scrollTop / erZoom) + 30;
+    const maxX = left0 + Math.max(W, c.clientWidth / erZoom - W - 60);
+    let x = left0, y = top0;
+    for (let i = 0; i < 300; i++) {
+      const hit = boxes.some(b => x < b.x + b.w + gap && x + W + gap > b.x && y < b.y + b.h + gap && y + H + gap > b.y);
+      if (!hit) return { x: x, y: y };
+      x += 60;
+      if (x > maxX) { x = left0; y += 60; }
+    }
+    return { x: left0, y: top0 };
+  }
+
+  /* ---- TABLO: YENİ EKLE ----
+     Ad sorar; içinde hazır bir "id INTEGER PRIMARY KEY" alanıyla oluşturur
+     (SQLite'ta bu alan kendiliğinden artan numara alır). */
+  async function addDbTable() {
+    const name = prompt('Yeni tablo adı (ör. musteriler):', '');
+    if (name === null) return;
+    const n = name.trim();
+    if (!n) return;
+    erCheckpoint();
+    const count = projectTables(activeProject).length;
+    const pos = erFreeSpot();
+    const t = {
+      id: uid(), projectId: activeProject, name: uniqueTableName(n, activeProject), note: '',
+      color: COLUMN_COLORS[count % COLUMN_COLORS.length],
+      x: pos.x, y: pos.y,
+      fields: [newField('id', 'INTEGER', { pk: true, typeAuto: false })],
+      indexes: [],
+      created: Date.now()
+    };
+    dbTables.push(t);
+    await saveDbTable(t);
+    renderSchema();
+    erJumpTo(t.id);
+  }
+
+  /* ---- ALAN: HIZLI EKLE (tablonun altındaki "+ Alan") ----
+     Türü addan tahmin edilir; sonra tablo penceresinden değiştirilebilir. */
+  async function quickAddField(tid) {
+    const t = findTable(tid);
+    if (!t) return;
+    const name = prompt('"' + t.name + '" tablosuna yeni alan (ör. musteri_id):', '');
+    if (name === null) return;
+    const n = name.trim();
+    if (!n) return;
+    erCheckpoint();
+    t.fields.push(newField(uniqueFieldName(t, n), guessSqlType(n)));
+    await saveDbTable(t);
+    renderSchema();
+  }
+
+  /* İlişki kaydını ekler (kontrol ve geri alma noktası olmadan; iç kullanım). */
+  async function addLinkRecord(fromT, fromF, toT, toF, extra) {
+    const l = Object.assign({ id: uid(), projectId: activeProject, fromTable: fromT, fromField: fromF, toTable: toT, toField: toF,
+                              onDelete: '', onUpdate: '', grp: null, created: Date.now() }, extra || {});
+    dbLinks.push(l);
+    await saveDbLink(l);
+    return l;
+  }
+
+  /* ---- İLİŞKİ KUR ----
+     a = sürüklemeye başlanan alan, b = bırakılan alan.
+     Normalde a alt id (FK), b ana id'dir. Ama kullanıcı PK'dan başlayıp PK olmayan
+     bir alana çektiyse yön ters çevrilir; böylece ok her zaman ana id'yi gösterir. */
+  async function createDbLink(aT, aF, bT, bF) {
+    if (aF === bF) return;
+    const fa = findField(aT, aF), fb = findField(bT, bF);
+    if (!fa || !fb) return;
+    let fromT = aT, fromF = aF, toT = bT, toF = bF;
+    if ((fa.pk || fa.uq) && !(fb.pk || fb.uq)) { fromT = bT; fromF = bF; toT = aT; toF = aF; }
+
+    const exists = dbLinks.some(l =>
+      (l.fromField === fromF && l.toField === toF) || (l.fromField === toF && l.toField === fromF));
+    if (exists) { erToast('Bu iki alan zaten bağlı.'); return; }
+
+    erCheckpoint();
+    // Alt id'nin türü kendiliğinden tahmin edildiyse ana id'nin türüne eşitle (ör. ikisi de INTEGER)
+    const from = findField(fromT, fromF), to = findField(toT, toF);
+    if (from.typeAuto && to.type && typeAffinity(from.type) !== typeAffinity(to.type)) {
+      from.type = to.type;
+      await saveDbTable(findTable(fromT));
+    }
+    const l = await addLinkRecord(fromT, fromF, toT, toF);
+    erToast('Bağlandı: ' + linkLabel(l));
+  }
+
+  /* ---- ALANI BİR TABLONUN ÜZERİNE BIRAKMA ----
+     • Bırakılan alan ana id ise (PK/UNIQUE): hedef tabloya "musteri_id" gibi yeni bir
+       alt id alanı eklenir ve bağlanır.
+     • Sıradan bir alansa (ör. musteri_id): hedef tablonun ana id'sine bağlanır. */
+  async function linkFieldToTable(aT, aF, bT) {
+    const ta = findTable(aT), fa = findField(aT, aF), tb = findTable(bT);
+    if (!ta || !fa || !tb) return;
+    if (fa.pk || fa.uq) {
+      erCheckpoint();
+      const base = singularName(ta.name) + '_' + fa.name;
+      const type = (fa.type || '').trim() || 'INTEGER';
+      const f = newField(uniqueFieldName(tb, base), type, { typeAuto: false });
+      tb.fields.push(f);
+      await saveDbTable(tb);
+      await addLinkRecord(bT, f.id, aT, aF);
+      erToast('"' + tb.name + '" tablosuna ' + f.name + ' alanı eklendi ve ' + ta.name + '.' + fa.name + ' alanına bağlandı.', 4500);
+    } else {
+      const pks = tb.fields.filter(f => f.pk);
+      if (pks.length !== 1) { erToast('"' + tb.name + '" tablosunun tek bir PRIMARY KEY alanı yok; bırakmak için bir alanın üzerine gel.', 4500); return; }
+      await createDbLink(aT, aF, bT, pks[0].id);
+    }
+  }
+
+  /* Bir ilişkinin (ve aynı çok sütunlu FK grubundaki diğerlerinin) ayarını değiştirir. */
+  async function updateLink(id, key, value) {
+    const l = dbLinks.find(x => x.id === id);
+    if (!l) return;
+    erCheckpoint();
+    const group = l.grp ? dbLinks.filter(x => x.grp === l.grp) : [l];
+    for (const x of group) { x[key] = value; await saveDbLink(x); }
+    renderSchema();
+  }
+
+  /* İlişkinin yönünü ters çevirir (alt id <-> ana id). */
+  async function swapLink(id) {
+    const l = dbLinks.find(x => x.id === id);
+    if (!l) return;
+    erCheckpoint();
+    const group = l.grp ? dbLinks.filter(x => x.grp === l.grp) : [l];
+    for (const x of group) {
+      const t = x.fromTable, f = x.fromField;
+      x.fromTable = x.toTable; x.fromField = x.toField; x.toTable = t; x.toField = f;
+      await saveDbLink(x);
+    }
+    renderSchema();
+  }
+
+  /* ---- İLİŞKİ SİL ---- (çok sütunlu FK ise grubun tamamı silinir) */
+  async function deleteDbLink(id) {
+    const l = dbLinks.find(x => x.id === id);
+    if (!l) return;
+    erCheckpoint();
+    const group = l.grp ? dbLinks.filter(x => x.grp === l.grp) : [l];
+    for (const x of group) await deleteDbLinkStore(x.id);
+    dbLinks = dbLinks.filter(x => !group.includes(x));
+    if (group.some(x => x.id === selectedLinkId)) selectedLinkId = null;
+    if (openTableId) renderTableModal();
+    renderSchema();
+  }
+
+  /* ---- TABLO SİL ----
+     Onay sorar; tabloya bağlı tüm ilişkiler de silinir (Ctrl+Z ile geri alınabilir). */
+  async function deleteDbTable(tid) {
+    const t = findTable(tid);
+    if (!t) return;
+    const rel = dbLinks.filter(l => l.fromTable === tid || l.toTable === tid);
+    let msg = '"' + t.name + '" tablosu silinsin mi?';
+    if (rel.length) msg += '\nBağlı ' + rel.length + ' ilişki de silinecek.';
+    if (!confirm(msg)) return;
+    erCheckpoint();
+    for (const l of rel) await deleteDbLinkStore(l.id);
+    dbLinks = dbLinks.filter(l => !rel.includes(l));
+    dbTables = dbTables.filter(x => x.id !== tid);
+    await deleteDbTableStore(tid);
+    if (openTableId === tid) { el('tableModal').classList.remove('open'); openTableId = null; }
+    renderSchema();
+  }
+
+  /* ---- ŞEMAYI TEMİZLE ---- (projenin tüm tabloları ve ilişkileri) */
+  async function clearSchema() {
+    const tables = projectTables(activeProject);
+    if (!tables.length) return;
+    if (!confirm('Bu projedeki ' + tables.length + ' tablo ve tüm ilişkileri silinsin mi?\n(Ctrl+Z ile geri alınabilir.)')) return;
+    erCheckpoint();
+    for (const l of projectLinks(activeProject)) await deleteDbLinkStore(l.id);
+    for (const t of tables) await deleteDbTableStore(t.id);
+    dbLinks = dbLinks.filter(l => l.projectId !== activeProject);
+    dbTables = dbTables.filter(t => t.projectId !== activeProject);
+    renderSchema();
+  }
+
+  /* ---------- TABLO DÜZENLEME PENCERESİ ---------- */
+
+  /* Pencere açıkken yapılan ilk değişiklikte bir geri alma noktası oluşturulur
+     (böylece tek Ctrl+Z, pencerede yapılan tüm düzenlemeyi geri alır). */
+  let tableModalTouched = false;
+  function tableModalTouch() {
+    if (!tableModalTouched) { erCheckpoint(); tableModalTouched = true; }
+  }
+
+  function openTableModal(tid, focusFieldId) {
+    const t = findTable(tid);
+    if (!t) return;
+    openTableId = tid;
+    tableModalTouched = false;
+    el('tableModal').classList.add('open');
+    el('tblName').value = t.name;
+    el('tblNote').value = t.note || '';
+    renderTableModal(focusFieldId);
+  }
+
+  /* Pencerenin içeriğini (renkler, alanlar, indeksler, ilişkiler) çizer. */
+  function renderTableModal(focusFieldId) {
+    const t = findTable(openTableId);
+    if (!t) return;
+
+    el('tblColors').innerHTML = COLUMN_COLORS.map(c =>
+      '<span class="color-dot ' + (t.color === c ? 'sel' : '') + '" data-tcolor="' + c + '" style="background:' + c + '"></span>'
+    ).join('');
+
+    const fields = t.fields;
+    const flag = (k, label, tip, on) =>
+      '<label class="tbl-flag" title="' + tip + '"><input type="checkbox" data-k="' + k + '"' + (on ? ' checked' : '') + '>' + label + '</label>';
+    el('tblFields').innerHTML = fields.length ? fields.map((f, idx) =>
+      '<div class="tbl-field" data-fid="' + f.id + '">' +
+        '<div class="tbl-line">' +
+          '<input class="tbl-in tbl-fname" data-k="name" value="' + escAttr(f.name) + '" placeholder="alan_adi" maxlength="64" spellcheck="false">' +
+          '<input class="tbl-in tbl-ftype" data-k="type" value="' + escAttr(f.type) + '" placeholder="TÜR" list="sqlTypes" maxlength="40" spellcheck="false">' +
+          flag('pk', 'PK', 'PRIMARY KEY: satırı tekil olarak tanımlayan ana id', f.pk) +
+          flag('ai', 'AI', 'AUTOINCREMENT: sadece INTEGER PRIMARY KEY alanında. (INTEGER PRIMARY KEY zaten kendiliğinden artar; AI ek olarak silinen numaraların tekrar kullanılmasını engeller.)', f.ai) +
+          flag('nn', 'NN', 'NOT NULL: boş bırakılamaz', f.nn) +
+          flag('uq', 'UQ', 'UNIQUE: aynı değer iki satırda olamaz', f.uq) +
+          '<span class="tbl-btns">' +
+            '<button class="tbl-mini" data-act="up" title="Yukarı taşı"' + (idx === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+            '<button class="tbl-mini" data-act="down" title="Aşağı taşı"' + (idx === fields.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
+            '<button class="tbl-mini danger" data-act="del" title="Alanı sil">&times;</button>' +
+          '</span>' +
+        '</div>' +
+        '<div class="tbl-line sub">' +
+          '<input class="tbl-in small tbl-def" data-k="def" value="' + escAttr(f.def) + '" placeholder="Varsayılan: 0, aktif, CURRENT_TIMESTAMP" spellcheck="false">' +
+          '<input class="tbl-in small tbl-chk" data-k="check" value="' + escAttr(f.check) + '" placeholder="CHECK: ' + escAttr(f.name || 'alan') + ' >= 0" spellcheck="false">' +
+        '</div>' +
+      '</div>'
+    ).join('') : '<div class="tbl-empty">Henüz alan yok.</div>';
+
+    // İndeksler: her indeks için ad, UNIQUE ve hangi alanlardan oluştuğu (tıklanan sırayla)
+    el('tblIndexes').innerHTML = t.indexes.length ? t.indexes.map(ix =>
+      '<div class="tbl-field" data-ixid="' + ix.id + '">' +
+        '<div class="tbl-line">' +
+          '<input class="tbl-in tbl-fname" data-k="name" value="' + escAttr(ix.name) + '" placeholder="indeks_adi" maxlength="64" spellcheck="false">' +
+          '<label class="tbl-flag" title="Seçilen alanların birlikte aldığı değer iki kez olamaz"><input type="checkbox" data-k="unique"' + (ix.unique ? ' checked' : '') + '>UNIQUE</label>' +
+          '<span class="tbl-btns"><button class="tbl-mini danger" data-act="del" title="İndeksi sil">&times;</button></span>' +
+        '</div>' +
+        '<div class="tbl-chips">' + fields.map(f => {
+          const pos = ix.cols.indexOf(f.id);
+          return '<button class="tbl-chip' + (pos >= 0 ? ' sel' : '') + '" data-col="' + f.id + '">' + (pos >= 0 ? '<b>' + (pos + 1) + '</b>' : '') + esc(f.name || '(adsız)') + '</button>';
+        }).join('') + '</div>' +
+      '</div>'
+    ).join('') : '<div class="tbl-empty">İndeks yok. Sık aranan alanlar (ör. email) için eklenebilir.</div>';
+
+    const rel = projectLinks(t.projectId).filter(l => l.fromTable === t.id || l.toTable === t.id);
+    el('tblLinks').innerHTML = rel.length
+      ? rel.map(l => {
+          const acts = [l.onDelete && ('ON DELETE ' + l.onDelete), l.onUpdate && ('ON UPDATE ' + l.onUpdate)].filter(Boolean).join(' · ');
+          return '<div class="tbl-link-row"><span>' + esc(linkLabel(l)) + (acts ? ' <span class="act">' + esc(acts) + '</span>' : '') + '</span>' +
+            '<button class="tbl-mini danger" data-ldel="' + l.id + '" title="İlişkiyi sil">&times;</button></div>';
+        }).join('')
+      : '<div class="tbl-empty">Bu tablonun ilişkisi yok. Şemada bir alanı tutup başka tablodaki alana sürükle.</div>';
+
+    if (focusFieldId) {
+      const row = [...el('tblFields').querySelectorAll('.tbl-field')].find(r => r.dataset.fid === focusFieldId);
+      const inp = row && row.querySelector('[data-k="name"]');
+      if (inp) { inp.focus(); inp.select(); }
+    }
+  }
+
+  /* Penceredeki bir öğenin (input/düğme) ait olduğu alanı / indeksi bulur. */
+  function modalField(node) {
+    const row = node.closest('[data-fid]');
+    const t = findTable(openTableId);
+    return (row && t) ? t.fields.find(f => f.id === row.dataset.fid) : null;
+  }
+  function modalIndex(node) {
+    const row = node.closest('[data-ixid]');
+    const t = findTable(openTableId);
+    return (row && t) ? t.indexes.find(ix => ix.id === row.dataset.ixid) : null;
+  }
+
+  /* Ad üretirken Türkçe harfleri sadeleştirir: ürünler -> urunler (kısıt/indeks adları için) */
+  function asciiName(s) {
+    return (s || '').replace(/ç/g,'c').replace(/Ç/g,'C').replace(/ğ/g,'g').replace(/Ğ/g,'G').replace(/ı/g,'i').replace(/İ/g,'I')
+      .replace(/ö/g,'o').replace(/Ö/g,'O').replace(/ş/g,'s').replace(/Ş/g,'S').replace(/ü/g,'u').replace(/Ü/g,'U')
+      .replace(/[^A-Za-z0-9_]/g, '_');
+  }
+
+  /* İndeksin otomatik adı: idx_tablo_alan1_alan2 */
+  function autoIndexName(t, ix) {
+    const cols = ix.cols.map(id => (t.fields.find(f => f.id === id) || {}).name).filter(Boolean);
+    return asciiName((ix.unique ? 'uq_' : 'idx_') + t.name + (cols.length ? '_' + cols.join('_') : ''));
+  }
+
+  /* Alan silinir; bağlı ilişkiler de silinir, indekslerden çıkarılır. */
+  async function deleteDbField(t, f) {
+    const rel = dbLinks.filter(l => l.fromField === f.id || l.toField === f.id);
+    if (rel.length && !confirm('"' + f.name + '" alanı ve ona bağlı ' + rel.length + ' ilişki silinsin mi?')) return;
+    tableModalTouch();
+    for (const l of rel) await deleteDbLinkStore(l.id);
+    dbLinks = dbLinks.filter(l => !rel.includes(l));
+    t.fields = t.fields.filter(x => x !== f);
+    t.indexes.forEach(ix => {
+      ix.cols = ix.cols.filter(id => id !== f.id);
+      ix.desc = (ix.desc || []).filter(id => id !== f.id);
+      if (ix.nameAuto) ix.name = autoIndexName(t, ix);
+    });
+    await saveDbTable(t);
+    renderTableModal();
+    renderSchema();
+  }
+
+  /* Pencereyi kapatır; boş bırakılan adları doldurup kaydeder. */
+  async function closeTableModal() {
+    const t = findTable(openTableId);
+    if (t) {
+      if (!t.name.trim()) t.name = 'tablo';
+      t.fields.forEach((f, i) => { if (!f.name.trim()) f.name = 'alan' + (i + 1); });
+      t.indexes.forEach(ix => { if (!ix.name.trim()) ix.name = autoIndexName(t, ix); });
+      await saveDbTable(t);
+    }
+    el('tableModal').classList.remove('open');
+    openTableId = null;
+    renderSchema();
+  }
+
+  /* ---------- KONTROL (LINT) ----------
+     SQLite'ın çalışırken vereceği hataları ve yaygın tasarım hatalarını önceden bulur.
+     lvl: 'err' = SQL çalışmaz / hata verir, 'warn' = çalışır ama muhtemelen istenmeyen durum. */
+  function lintSchema(pid) {
+    const out = [];
+    const add = (lvl, tid, msg) => out.push({ lvl: lvl, tid: tid, msg: msg });
+    const tables = projectTables(pid);
+    const names = {};
+    tables.forEach(t => {
+      const tn = t.name.trim();
+      if (!tn) add('err', t.id, 'Adı boş bir tablo var.');
+      else if (names[lower(tn)]) add('err', t.id, '"' + tn + '" adında iki tablo var (SQLite büyük/küçük harf ayırmaz).');
+      else names[lower(tn)] = true;
+      if (!t.fields.length) { add('err', t.id, tn + ': hiç alanı yok.'); return; }
+
+      const seen = {};
+      t.fields.forEach(f => {
+        const fn = f.name.trim();
+        if (!fn) add('err', t.id, tn + ': adı boş bir alan var.');
+        else if (seen[lower(fn)]) add('err', t.id, tn + ': "' + fn + '" alanı iki kez tanımlı.');
+        else seen[lower(fn)] = true;
+        if (f.check.trim() && !balancedParens(f.check)) add('err', t.id, tn + '.' + fn + ': CHECK ifadesinde parantezler dengesiz.');
+        if (f.def.trim() && !balancedParens(f.def)) add('err', t.id, tn + '.' + fn + ': varsayılan değerde parantezler dengesiz.');
+      });
+
+      const pks = t.fields.filter(f => f.pk);
+      if (!pks.length) add('warn', t.id, tn + ': PRIMARY KEY yok. Her tabloya bir "id INTEGER PRIMARY KEY" önerilir.');
+      if (pks.length === 1) {
+        const ty = pks[0].type.trim().toUpperCase();
+        if (ty !== 'INTEGER' && typeAffinity(ty) === 'INTEGER')
+          add('warn', t.id, tn + '.' + pks[0].name + ': "' + pks[0].type + ' PRIMARY KEY" SQLite\'ta kendiliğinden artmaz. Otomatik numara için tür tam olarak INTEGER olmalı.');
+      }
+      t.fields.filter(f => f.ai).forEach(f => {
+        if (!(pks.length === 1 && f.pk && f.type.trim().toUpperCase() === 'INTEGER'))
+          add('err', t.id, tn + '.' + f.name + ': AUTOINCREMENT sadece tek başına INTEGER PRIMARY KEY olan alanda kullanılabilir (çıktıya yazılmadı).');
+      });
+      t.indexes.forEach(ix => {
+        if (!ix.cols.some(id => t.fields.some(f => f.id === id)))
+          add('err', t.id, tn + ': "' + (ix.name || 'adsız') + '" indeksinde alan seçilmemiş.');
+      });
+    });
+
+    // İndeks adları tüm şemada (tablolarla birlikte) benzersiz olmalı
+    const ixNames = {};
+    tables.forEach(t => t.indexes.forEach(ix => {
+      const n = lower(ix.name);
+      if (!n) return;
+      if (ixNames[n] || names[n]) add('err', t.id, '"' + ix.name + '" adı birden fazla indeks/tabloda kullanılıyor.');
+      ixNames[n] = true;
+    }));
+
+    // Yabancı anahtarlar
+    fkGroups(pid).forEach(g => {
+      const label = g.fromT.name + '.' + g.fromF.map(f => f.name).join(',') + ' → ' + g.toT.name + '.' + g.toF.map(f => f.name).join(',');
+      const toIds = g.toF.map(f => f.id);
+      const pkIds = g.toT.fields.filter(f => f.pk).map(f => f.id);
+      const ok = sameSet(toIds, pkIds) || (toIds.length === 1 && g.toF[0].uq) ||
+                 g.toT.indexes.some(ix => ix.unique && sameSet(ix.cols, toIds));
+      if (!ok) add('err', g.fromT.id, label + ': hedef alan PRIMARY KEY ya da UNIQUE değil. SQLite veri eklerken "foreign key mismatch" hatası verir.');
+      g.fromF.forEach((f, i) => {
+        const a = typeAffinity(f.type), b = typeAffinity(g.toF[i].type);
+        if (a !== b) add('warn', g.fromT.id, label + ': türler uyumsuz (' + (f.type || 'tür yok') + ' ↔ ' + (g.toF[i].type || 'tür yok') + ').');
+      });
+      if (g.onDelete === 'SET NULL' && g.fromF.some(f => f.nn || f.pk))
+        add('warn', g.fromT.id, label + ': ON DELETE SET NULL seçili ama alan NOT NULL; ana kayıt silinemez.');
+    });
+    return out;
+  }
+
+  function balancedParens(s) {
+    let depth = 0, q = null;
+    for (const ch of s) {
+      if (q) { if (ch === q) q = null; continue; }
+      if (ch === "'" || ch === '"') q = ch;
+      else if (ch === '(') depth++;
+      else if (ch === ')' && --depth < 0) return false;
+    }
+    return depth === 0 && !q;
+  }
+
+  /* ---------- SQL ÜRETİMİ ---------- */
+
+  /* İlişkileri FOREIGN KEY gruplarına toplar (çok sütunlu FK'ler aynı "grp" değerini taşır;
+     sütun sırası "seq" ile korunur). */
+  function fkGroups(pid) {
+    const map = new Map();
+    projectLinks(pid).slice().sort((a, b) => (a.seq || 0) - (b.seq || 0)).forEach(l => {
+      const fT = findTable(l.fromTable), tT = findTable(l.toTable);
+      const fF = findField(l.fromTable, l.fromField), tF = findField(l.toTable, l.toField);
+      if (!fT || !tT || !fF || !tF) return;
+      const key = l.grp || l.id;
+      if (!map.has(key)) map.set(key, { fromT: fT, toT: tT, fromF: [], toF: [], onDelete: l.onDelete, onUpdate: l.onUpdate });
+      const g = map.get(key);
+      g.fromF.push(fF); g.toF.push(tF);
+    });
+    return [...map.values()];
+  }
+
+  /* Tabloları, bağlandıkları (ana) tablolar önce gelecek şekilde sıralar. */
+  function topoSortTables(tables, groups) {
+    const out = [], done = new Set(), visiting = new Set();
+    const visit = t => {
+      if (done.has(t.id) || visiting.has(t.id)) return;
+      visiting.add(t.id);
+      groups.filter(g => g.fromT === t && g.toT !== t).forEach(g => visit(g.toT));
+      visiting.delete(t.id);
+      done.add(t.id);
+      out.push(t);
+    };
+    tables.forEach(visit);
+    return out;
+  }
+
+  /* Tablo/alan adını SQL'de güvenli yazar: sade adlar olduğu gibi, Türkçe karakter/boşluk
+     içeren veya ayrılmış kelime olan adlar veritabanına uygun tırnakla. */
+  function sqlId(name, dialect) {
+    const n = (name || '').trim() || 'adsiz';
+    if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(n) && !SQL_RESERVED.includes(n.toLowerCase())) return n;
+    if (dialect === 'mysql') return '`' + n.replace(/`/g, '``') + '`';
+    if (dialect === 'mssql') return '[' + n.replace(/]/g, ']]') + ']';
+    return '"' + n.replace(/"/g, '""') + '"';
+  }
+
+  /* Varsayılan değeri SQL'e uygun yazar:
+       42, -1.5, NULL, CURRENT_TIMESTAMP, 'metin', (ifade) -> olduğu gibi
+       datetime('now') gibi fonksiyonlar -> (datetime('now'))   [SQLite parantez ister]
+       aktif gibi düz yazı -> 'aktif' */
+  function sqlDefault(v) {
+    const s = v.trim();
+    if (/^[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?$/.test(s)) return s;
+    if (/^'(?:[^']|'')*'$/.test(s)) return s;
+    if (/^\(.*\)$/s.test(s)) return s;
+    if (/^(NULL|TRUE|FALSE|CURRENT_TIME|CURRENT_DATE|CURRENT_TIMESTAMP)$/i.test(s)) return s.toUpperCase();
+    if (/^x'[0-9a-f]*'$/i.test(s)) return s;
+    if (/^[A-Za-z_]\w*\s*\(.*\)$/s.test(s)) return '(' + s + ')';
+    return "'" + s.replace(/'/g, "''") + "'";
+  }
+
+  /* Tek bir sütunun tanım satırı */
+  function columnSQL(t, f, inlinePk, d, q) {
+    const type = (f.type || '').trim();
+    const isPk = f.pk && inlinePk;
+    const intPk = isPk && type.toUpperCase() === 'INTEGER';
+    let s = q(f.name);
+    if (d === 'sqlite') {
+      if (type) s += ' ' + type;
+      if (isPk) {
+        s += ' PRIMARY KEY';
+        if (f.ai && intPk) s += ' AUTOINCREMENT';
+        if (!intPk) s += ' NOT NULL'; // INTEGER PRIMARY KEY zaten boş olamaz
+      } else if (f.nn || f.pk) s += ' NOT NULL';
+      if (f.uq && !isPk) s += ' UNIQUE';
+      if (f.def.trim()) s += ' DEFAULT ' + sqlDefault(f.def);
+    } else {
+      s += ' ' + (type || 'VARCHAR(255)');
+      if (f.ai && d === 'postgres') s += ' GENERATED BY DEFAULT AS IDENTITY';
+      if (f.ai && d === 'mssql') s += ' IDENTITY(1,1)';
+      if (f.nn || f.pk) s += ' NOT NULL';
+      if (f.def.trim()) s += ' DEFAULT ' + sqlDefault(f.def);
+      if (f.ai && d === 'mysql') s += ' AUTO_INCREMENT';
+      if (f.uq && !isPk) s += ' UNIQUE';
+      if (isPk) s += ' PRIMARY KEY';
+    }
+    if (f.check.trim()) s += ' CHECK (' + f.check.trim() + ')';
+    return s;
+  }
+
+  /* SQL üretir. pid = proje, o = ayarlar ({dialect, ifNotExists, dropFirst, fkIndexes, transaction, strict, extraSql}) */
+  function buildSQL(pid, o) {
+    const d = o.dialect;
+    const q = n => sqlId(n, d);
+    const p = projects.find(x => x.id === pid);
+    const groups = fkGroups(pid);
+    const tables = topoSortTables(projectTables(pid), groups);
+
+    let out = '-- ' + (p ? p.name : 'Şema') + ' — White Note şema çıktısı (' + fmtDate(Date.now()) + ')\n';
+    if (d === 'sqlite') out += "-- Not: SQLite'ta yabancı anahtar denetimi her bağlantıda PRAGMA foreign_keys = ON; ile açılmalıdır.\n";
+    out += '\n';
+    if (!tables.length) return out + '-- Henüz tablo yok.\n';
+
+    if (d === 'sqlite') out += 'PRAGMA foreign_keys = ON;\n\n';
+    const tx = o.transaction && (d === 'sqlite' || d === 'postgres');
+    if (tx) out += (d === 'sqlite' ? 'BEGIN TRANSACTION;' : 'BEGIN;') + '\n\n';
+
+    if (o.dropFirst) {
+      // Önce alt tablolar silinir ki yabancı anahtarlar engel olmasın
+      tables.slice().reverse().forEach(t => { out += 'DROP TABLE IF EXISTS ' + q(t.name) + (d === 'postgres' ? ' CASCADE' : '') + ';\n'; });
+      out += '\n';
+    }
+
+    // Kısıt (constraint) ve indeks adları benzersiz olsun
+    const used = new Set();
+    tables.forEach(t => t.indexes.forEach(ix => used.add(lower(ix.name))));
+    const uniqName = base => {
+      base = asciiName(base).slice(0, 60);
+      let n = base, k = 2;
+      while (used.has(lower(n))) n = base + '_' + (k++);
+      used.add(lower(n));
+      return n;
+    };
+    const mapAction = a => (d === 'mssql' && a === 'RESTRICT') ? 'NO ACTION' : a;
+    const fkClause = g =>
+      'CONSTRAINT ' + q(uniqName('fk_' + g.fromT.name + '_' + g.fromF.map(f => f.name).join('_'))) +
+      ' FOREIGN KEY (' + g.fromF.map(f => q(f.name)).join(', ') + ') REFERENCES ' + q(g.toT.name) +
+      ' (' + g.toF.map(f => q(f.name)).join(', ') + ')' +
+      (g.onDelete ? ' ON DELETE ' + mapAction(g.onDelete) : '') +
+      (g.onUpdate ? ' ON UPDATE ' + mapAction(g.onUpdate) : '');
+
+    const ine = (o.ifNotExists && d !== 'mssql') ? 'IF NOT EXISTS ' : '';
+    tables.forEach(t => {
+      if (!t.fields.length) { out += '-- "' + t.name + '" tablosunda alan yok, atlandı.\n\n'; return; }
+      if (t.note && t.note.trim()) out += t.note.trim().split('\n').map(s => '-- ' + s).join('\n') + '\n';
+      const pks = t.fields.filter(f => f.pk);
+      const lines = t.fields.map(f => '  ' + columnSQL(t, f, pks.length === 1, d, q));
+      if (pks.length > 1) lines.push('  PRIMARY KEY (' + pks.map(f => q(f.name)).join(', ') + ')');
+      // SQLite sonradan ALTER TABLE ile FK eklemeyi desteklemez: tablonun içine yazılır
+      if (d === 'sqlite') groups.filter(g => g.fromT === t).forEach(g => lines.push('  ' + fkClause(g)));
+      out += 'CREATE TABLE ' + ine + q(t.name) + ' (\n' + lines.join(',\n') + '\n)' + (d === 'sqlite' && o.strict ? ' STRICT' : '') + ';\n\n';
+    });
+
+    // Diğer veritabanlarında ilişkiler en sonda eklenir: tablo sırası ve döngüsel bağlar sorun olmaz
+    if (d !== 'sqlite' && groups.length) {
+      out += '-- İlişkiler (FOREIGN KEY)\n';
+      groups.forEach(g => { out += 'ALTER TABLE ' + q(g.fromT.name) + ' ADD ' + fkClause(g) + ';\n'; });
+      out += '\n';
+    }
+
+    // İndeksler: kullanıcının tanımladıkları + (seçiliyse) yabancı anahtarlar için otomatik olanlar
+    const ineIx = (o.ifNotExists && (d === 'sqlite' || d === 'postgres')) ? 'IF NOT EXISTS ' : '';
+    const idx = [];
+    tables.forEach(t => t.indexes.forEach(ix => {
+      const cols = ix.cols.map(id => t.fields.find(f => f.id === id)).filter(Boolean);
+      if (!cols.length) return;
+      const name = ix.name.trim() || uniqName(autoIndexName(t, ix));
+      const desc = ix.desc || [];
+      idx.push('CREATE ' + (ix.unique ? 'UNIQUE ' : '') + 'INDEX ' + ineIx + q(name) + ' ON ' + q(t.name) + ' (' + cols.map(f => q(f.name) + (desc.includes(f.id) ? ' DESC' : '')).join(', ') + ');');
+    }));
+    if (o.fkIndexes) groups.forEach(g => {
+      const ids = g.fromF.map(f => f.id);
+      const startsWith = arr => ids.every((id, i) => arr[i] === id);
+      const pkIds = g.fromT.fields.filter(f => f.pk).map(f => f.id);
+      const covered = startsWith(pkIds) || g.fromT.indexes.some(ix => startsWith(ix.cols)) || (ids.length === 1 && g.fromF[0].uq);
+      if (covered) return;
+      const name = uniqName('idx_' + g.fromT.name + '_' + g.fromF.map(f => f.name).join('_'));
+      idx.push('CREATE INDEX ' + ineIx + q(name) + ' ON ' + q(g.fromT.name) + ' (' + g.fromF.map(f => q(f.name)).join(', ') + ');');
+    });
+    if (idx.length) out += '-- İndeksler\n' + idx.join('\n') + '\n\n';
+
+    if (o.extraSql && o.extraSql.trim()) out += '-- Ek SQL\n' + o.extraSql.trim() + '\n\n';
+    if (tx) out += 'COMMIT;\n';
+    return out;
+  }
+
+  /* SQLite için ayarlarla birlikte SQL (konsol, doğrulama ve .sqlite indirme bunu kullanır). */
+  function buildSQLiteSQL(pid, overrides) {
+    return buildSQL(pid, Object.assign({}, schemaSettings(pid), { dialect: 'sqlite' }, overrides || {}));
+  }
+
+  /* ---------- GERÇEK SQLITE MOTORU (sql.js) ----------
+     SQLite'ın WebAssembly sürümü. İlk ihtiyaçta CDN'den yüklenir; veriler cihazdan çıkmaz. */
+  const SQLJS_VERSION = '1.14.2';
+  const SQLJS_SOURCES = [
+    'https://cdnjs.cloudflare.com/ajax/libs/sql.js/' + SQLJS_VERSION + '/',
+    'https://cdn.jsdelivr.net/npm/sql.js@' + SQLJS_VERSION + '/dist/'
+  ];
+  let sqlJsPromise = null;
+
+  function loadScriptOnce(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = () => { s.remove(); reject(new Error('yüklenemedi: ' + src)); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function loadSqlJs() {
+    if (sqlJsPromise) return sqlJsPromise;
+    sqlJsPromise = (async () => {
+      let lastErr = null;
+      for (const base of SQLJS_SOURCES) {
+        try {
+          if (!window.initSqlJs) await loadScriptOnce(base + 'sql-wasm.js');
+          return await window.initSqlJs({ locateFile: file => base + file });
+        } catch (e) { lastErr = e; }
+      }
+      throw new Error('SQLite motoru yüklenemedi. İnternet bağlantını kontrol et. (' + (lastErr ? lastErr.message : '') + ')');
+    })();
+    sqlJsPromise.catch(() => { sqlJsPromise = null; }); // başarısız olursa sonra tekrar denenebilsin
+    return sqlJsPromise;
+  }
+
+  /* Hazırlanmış sorgunun tüm satırlarını nesne olarak döndürür. */
+  function sqlRows(db, sql, params) {
+    const st = db.prepare(sql);
+    try {
+      if (params) st.bind(params);
+      const rows = [];
+      while (st.step()) rows.push(st.getAsObject());
+      return rows;
+    } finally { st.free(); }
+  }
+
+  /* ---- CREATE TABLE metninden CHECK ve COLLATE okuma ----
+     SQLite bu ikisini PRAGMA ile vermez; o yüzden tablonun orijinal SQL metni taranır.
+     Metin parçalanırken tırnak içindeki yazılar ve parantezler dikkate alınır. */
+  function stripSqlComments(s) {
+    let out = '', q = null;
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (q) { out += ch; if (ch === q) q = null; continue; }
+      if (ch === "'" || ch === '"' || ch === '`') { q = ch; out += ch; continue; }
+      if (ch === '[') { q = ']'; out += ch; continue; }
+      if (ch === '-' && s[i + 1] === '-') { while (i < s.length && s[i] !== '\n') i++; out += '\n'; continue; }
+      if (ch === '/' && s[i + 1] === '*') { const e = s.indexOf('*/', i + 2); i = e < 0 ? s.length : e + 1; out += ' '; continue; }
+      out += ch;
+    }
+    return out;
+  }
+
+  /* Tanımın içindeki her "CHECK ( ... )" ifadesini döndürür. */
+  function findChecks(part) {
+    const res = [];
+    let q = null;
+    for (let i = 0; i < part.length; i++) {
+      const ch = part[i];
+      if (q) { if (ch === q) q = null; continue; }
+      if (ch === "'" || ch === '"' || ch === '`') { q = ch; continue; }
+      if (ch === '[') { q = ']'; continue; }
+      if (/^CHECK\b/i.test(part.slice(i, i + 6)) && (i === 0 || /[\s,)]/.test(part[i - 1]))) {
+        let j = i + 5;
+        while (j < part.length && /\s/.test(part[j])) j++;
+        if (part[j] !== '(') continue;
+        let d = 0, qq = null, k = j;
+        for (; k < part.length; k++) {
+          const c = part[k];
+          if (qq) { if (c === qq) qq = null; continue; }
+          if (c === "'" || c === '"' || c === '`') { qq = c; continue; }
+          if (c === '(') d++;
+          else if (c === ')' && --d === 0) break;
+        }
+        res.push(part.slice(j + 1, k).trim());
+        i = k;
+      }
+    }
+    return res;
+  }
+
+  function unquoteIdent(s) {
+    if (/^".*"$/.test(s)) return s.slice(1, -1).replace(/""/g, '"');
+    if (/^`.*`$/.test(s)) return s.slice(1, -1).replace(/``/g, '`');
+    if (/^\[.*\]$/.test(s)) return s.slice(1, -1);
+    return s;
+  }
+
+  /* Sonuç: { checks: {alan: ['ifade', ...]}, collate: {alan: 'NOCASE'} } (alan adları küçük harf).
+     Tablo düzeyindeki CHECK'ler ifadede geçen ilk alana bağlanır; SQLite'ta bu aynı anlama gelir. */
+  function parseCreateTableExtras(createSql, fieldNames) {
+    const res = { checks: {}, collate: {} };
+    if (!createSql || !/\b(CHECK|COLLATE)\b/i.test(createSql)) return res;
+    const s = stripSqlComments(createSql);
+    const open = s.indexOf('(');
+    if (open < 0) return res;
+    // Gövdeyi üst düzey virgüllerden parçalara böl
+    const parts = [];
+    let depth = 0, q = null, cur = '';
+    for (let i = open + 1; i < s.length; i++) {
+      const ch = s[i];
+      if (q) { cur += ch; if (ch === q) q = null; continue; }
+      if (ch === "'" || ch === '"' || ch === '`') { q = ch; cur += ch; continue; }
+      if (ch === '[') { q = ']'; cur += ch; continue; }
+      if (ch === '(') depth++;
+      if (ch === ')') { if (depth === 0) { parts.push(cur); break; } depth--; }
+      if (ch === ',' && depth === 0) { parts.push(cur); cur = ''; continue; }
+      cur += ch;
+    }
+    const names = fieldNames.map(n => n.toLowerCase());
+    const escRe = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    parts.forEach(part => {
+      const p = part.trim();
+      const first = (p.match(/^("(?:[^"]|"")*"|`[^`]*`|\[[^\]]*\]|[^\s(]+)/) || [''])[0];
+      const isTableConstraint = ['CONSTRAINT', 'PRIMARY', 'FOREIGN', 'UNIQUE', 'CHECK'].includes(first.toUpperCase());
+      const exprs = findChecks(p);
+      if (isTableConstraint) {
+        exprs.forEach(ex => {
+          const exl = ex.toLowerCase();
+          const hit = names.find(n => new RegExp('(^|[^\\wğüşıöç])"?' + escRe(n) + '"?($|[^\\wğüşıöç])').test(exl)) || names[0];
+          (res.checks[hit] = res.checks[hit] || []).push(ex);
+        });
+        return;
+      }
+      const col = unquoteIdent(first).toLowerCase();
+      if (exprs.length) (res.checks[col] = res.checks[col] || []).push(...exprs);
+      const m = p.replace(/'(?:[^']|'')*'/g, "''").match(/\bCOLLATE\s+("?)([A-Za-z_]\w*)\1/i);
+      if (m && m[2].toUpperCase() !== 'BINARY') res.collate[col] = m[2].toUpperCase();
+    });
+    return res;
+  }
+
+  /* Bir SQLite veritabanının şemasını okur (PRAGMA'lar ile: SQLite'ın kendi bildiği hali). */
+  function readSchemaFromDb(db) {
+    const out = { tables: [], links: [], extra: [], notes: [] };
+    const tbls = sqlRows(db, "SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite!_%' ESCAPE '!' ORDER BY rowid");
+    for (const t of tbls) {
+      if (/^\s*CREATE\s+VIRTUAL/i.test(t.sql || '')) { out.extra.push(t.sql + ';'); out.notes.push('Sanal tablo "' + t.name + '" Ek SQL\'e kondu.'); continue; }
+      // table_xinfo, table_info'dan farklı olarak hesaplanan (generated) sütunları da verir
+      const cols = sqlRows(db, 'SELECT * FROM pragma_table_xinfo(?)', [t.name]);
+      const pkCount = cols.filter(c => c.pk > 0).length;
+      const autoinc = /\bAUTOINCREMENT\b/i.test(t.sql || '');
+      const extras = parseCreateTableExtras(t.sql, cols.map(c => c.name));
+      const fields = cols.map(c => {
+        const key = c.name.toLowerCase();
+        const checks = extras.checks[key] || [];
+        if (c.hidden === 2 || c.hidden === 3) out.notes.push('"' + t.name + '.' + c.name + '" hesaplanan (GENERATED) bir sütun; normal sütun olarak aktarıldı.');
+        return {
+          name: c.name,
+          type: (c.type || '') + (extras.collate[key] ? ' COLLATE ' + extras.collate[key] : ''),
+          pk: c.pk > 0, nn: !!c.notnull, uq: false,
+          ai: autoinc && pkCount === 1 && c.pk > 0 && (c.type || '').toUpperCase() === 'INTEGER',
+          def: c.dflt_value == null ? '' : String(c.dflt_value),
+          check: checks.length > 1 ? checks.map(x => '(' + x + ')').join(' AND ') : (checks[0] || '')
+        };
+      });
+      if (/\)\s*WITHOUT\s+ROWID/i.test(t.sql || '')) out.notes.push('"' + t.name + '" WITHOUT ROWID tablosu normal tablo olarak aktarıldı.');
+
+      // İndeksler (PRIMARY KEY'in kendi indeksi hariç)
+      const indexes = [];
+      for (const ix of sqlRows(db, 'SELECT * FROM pragma_index_list(?)', [t.name])) {
+        if (ix.origin === 'pk') continue;
+        // index_xinfo: key=1 olan satırlar indeksin sütunlarıdır; desc = azalan sıralı mı
+        const info = sqlRows(db, 'SELECT * FROM pragma_index_xinfo(?) WHERE key = 1', [ix.name]).sort((a, b) => a.seqno - b.seqno);
+        if (ix.partial || info.some(i => i.name == null)) {
+          // Kısmi (WHERE'li) ya da ifade indeksleri diyagramda gösterilemez: aynen Ek SQL'e
+          const row = sqlRows(db, "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = ?", [ix.name])[0];
+          if (row && row.sql) { out.extra.push(row.sql + ';'); out.notes.push('"' + ix.name + '" indeksi Ek SQL\'e kondu.'); }
+          continue;
+        }
+        const colNames = info.map(i => i.name);
+        if (ix.origin === 'u' && colNames.length === 1) {
+          const f = fields.find(x => lower(x.name) === lower(colNames[0]));
+          if (f) f.uq = true;
+          continue;
+        }
+        indexes.push({ name: ix.origin === 'u' ? asciiName('uq_' + t.name + '_' + colNames.join('_')) : ix.name, unique: !!ix.unique,
+                       colNames: colNames, descNames: info.filter(i => i.desc).map(i => i.name) });
+      }
+
+      // Yabancı anahtarlar (çok sütunlu olanlar aynı id ile gelir)
+      const fkMap = new Map();
+      for (const fk of sqlRows(db, 'SELECT * FROM pragma_foreign_key_list(?)', [t.name])) {
+        if (!fkMap.has(fk.id)) fkMap.set(fk.id, { fromTable: t.name, toTable: fk.table, fromCols: [], toCols: [],
+          onDelete: fk.on_delete === 'NO ACTION' ? '' : fk.on_delete, onUpdate: fk.on_update === 'NO ACTION' ? '' : fk.on_update });
+        const g = fkMap.get(fk.id);
+        g.fromCols[fk.seq] = fk.from;
+        g.toCols[fk.seq] = fk.to; // null olabilir: o zaman ana tablonun PRIMARY KEY'i kastedilir
+      }
+      fkMap.forEach(g => out.links.push(g));
+      out.tables.push({ name: t.name, fields: fields, indexes: indexes });
+    }
+    // View ve trigger'lar Ek SQL'e
+    for (const r of sqlRows(db, "SELECT type, name, sql FROM sqlite_master WHERE type IN ('view', 'trigger') AND sql IS NOT NULL ORDER BY rowid")) {
+      out.extra.push(r.sql + ';');
+    }
+    return out;
+  }
+
+  /* Okunan şemayı diyagrama yerleştirir. mode: 'replace' (yerine koy) | 'append' (ekle) */
+  async function applyImportedSchema(model, mode) {
+    const pid = activeProject;
+    erCheckpoint();
+    if (mode === 'replace') {
+      for (const l of projectLinks(pid)) await deleteDbLinkStore(l.id);
+      for (const t of projectTables(pid)) await deleteDbTableStore(t.id);
+      dbLinks = dbLinks.filter(l => l.projectId !== pid);
+      dbTables = dbTables.filter(t => t.projectId !== pid);
+    }
+    const existing = projectTables(pid);
+    const startX = existing.length ? Math.max(...existing.map(t => t.x + 360)) + 80 : 40;
+    const byName = {};
+    const newIds = new Set();
+    const now = Date.now();
+    model.tables.forEach((mt, i) => {
+      const t = {
+        id: uid(), projectId: pid, name: uniqueTableName(mt.name, pid), note: '',
+        color: COLUMN_COLORS[(existing.length + i) % COLUMN_COLORS.length], x: 0, y: 0,
+        fields: mt.fields.map(f => newField(f.name, f.type, { pk: f.pk, ai: f.ai, nn: f.nn, uq: f.uq, def: f.def, check: f.check, typeAuto: false })),
+        indexes: [], created: now + i
+      };
+      t.indexes = mt.indexes.map(ix => ({
+        id: uid(), name: ix.name, unique: ix.unique, nameAuto: false,
+        cols: ix.colNames.map(cn => (t.fields.find(f => lower(f.name) === lower(cn)) || {}).id).filter(Boolean),
+        desc: (ix.descNames || []).map(cn => (t.fields.find(f => lower(f.name) === lower(cn)) || {}).id).filter(Boolean)
+      }));
+      dbTables.push(t);
+      newIds.add(t.id);
+      byName[lower(mt.name)] = t;
+    });
+
+    let nLinks = 0, skipped = 0;
+    for (const ml of model.links) {
+      const ft = byName[lower(ml.fromTable)];
+      const tt = byName[lower(ml.toTable)] || existing.find(t => lower(t.name) === lower(ml.toTable));
+      if (!ft || !tt) { skipped++; continue; }
+      let toCols = ml.toCols;
+      if (toCols.some(c => c == null)) {
+        const pks = tt.fields.filter(f => f.pk).map(f => f.name);
+        toCols = ml.fromCols.map((_, i) => pks[i]);
+      }
+      const grp = ml.fromCols.length > 1 ? uid() : null;
+      for (let i = 0; i < ml.fromCols.length; i++) {
+        const ff = ft.fields.find(f => lower(f.name) === lower(ml.fromCols[i]));
+        const tf = tt.fields.find(f => lower(f.name) === lower(toCols[i]));
+        if (!ff || !tf) { skipped++; continue; }
+        await addLinkRecord(ft.id, ff.id, tt.id, tf.id, { onDelete: ml.onDelete || '', onUpdate: ml.onUpdate || '', grp: grp, seq: i });
+        nLinks++;
+      }
+    }
+
+    // View/trigger vb. Ek SQL'e
+    const s = schemaSettings(pid);
+    const extra = model.extra.join('\n\n');
+    if (mode === 'replace') s.extraSql = extra;
+    else if (extra) s.extraSql = (s.extraSql ? s.extraSql.trim() + '\n\n' : '') + extra;
+    await saveSchemaSettings(pid);
+
+    // Yeni tabloları önce çiz (boyutları ölçülsün), sonra ilişkilerine göre diz
+    renderSchema();
+    erAutoLayout(newIds, startX);
+    for (const t of dbTables.filter(x => newIds.has(x.id))) await saveDbTable(t);
+    renderSchema();
+    erFit();
+
+    const nIdx = model.tables.reduce((a, t) => a + t.indexes.length, 0);
+    let report = '✓ ' + model.tables.length + ' tablo, ' + nLinks + ' ilişki, ' + nIdx + ' indeks içe aktarıldı.';
+    if (model.extra.length) report += '\n' + model.extra.length + ' view/trigger/özel komut Ek SQL\'e kondu (SQL penceresinde).';
+    if (skipped) report += '\n' + skipped + ' ilişki, hedef tablo/alan bulunamadığı için atlandı.';
+    if (model.notes.length) report += '\n• ' + model.notes.join('\n• ');
+    return { report: report, hasNotes: !!(skipped || model.notes.length) };
+  }
+
+  /* .sql metnini içe aktarır: metin gerçek SQLite'ta çalıştırılır, şema oradan okunur. */
+  async function importSqlText(text, mode, label) {
+    if (!text.trim()) throw new Error('İçe aktarılacak SQL yok.');
+    const SQL = await loadSqlJs();
+    const db = new SQL.Database();
+    try { db.exec(text); }
+    catch (e) { db.close(); throw new Error('SQL çalıştırılamadı: ' + e.message); }
+    const model = readSchemaFromDb(db);
+    if (!model.tables.length) { db.close(); throw new Error('Metinde CREATE TABLE komutu bulunamadı.'); }
+    const res = await applyImportedSchema(model, mode);
+    setConsoleDb(db, label + ' (içindeki veriler dahil)', null);
+    return res;
+  }
+
+  /* Dosya içe aktarma: SQLite veritabanı mı yoksa .sql metni mi, ilk baytlara bakarak anlaşılır. */
+  async function importSchemaFile(file, mode) {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const head = new TextDecoder().decode(buf.slice(0, 15));
+    if (head === 'SQLite format 3') {
+      const SQL = await loadSqlJs();
+      let db;
+      try { db = new SQL.Database(buf); sqlRows(db, 'SELECT count(*) FROM sqlite_master'); }
+      catch (e) { if (db) db.close(); throw new Error('Veritabanı okunamadı (şifreli ya da bozuk olabilir): ' + e.message); }
+      const model = readSchemaFromDb(db);
+      const res = await applyImportedSchema(model, mode);
+      setConsoleDb(db, file.name + ' (içindeki veriler dahil)', null);
+      return res;
+    }
+    return importSqlText(new TextDecoder().decode(buf), mode, file.name);
+  }
+
+  async function runImport(getter) {
+    const msg = el('impMsg');
+    const mode = (document.querySelector('input[name="impMode"]:checked') || {}).value || 'replace';
+    if (mode === 'replace' && projectTables(activeProject).length &&
+        !confirm('Mevcut şema içe aktarılanla DEĞİŞTİRİLECEK. (Ctrl+Z ile geri alınabilir.) Devam edilsin mi?')) return;
+    msg.className = 'er-msg info';
+    msg.textContent = 'SQLite motoru yükleniyor ve şema okunuyor…';
+    try {
+      const res = await getter(mode);
+      if (res.hasNotes) { msg.className = 'er-msg ok'; msg.textContent = res.report; }
+      else { el('importModal').classList.remove('open'); erToast(res.report.split('\n')[0], 5000); }
+    } catch (e) {
+      msg.className = 'er-msg err';
+      msg.textContent = '✕ ' + e.message;
+    }
+  }
+
+  function openImportModal() {
+    el('impMsg').textContent = '';
+    el('impMsg').className = 'er-msg';
+    el('importModal').classList.add('open');
+    loadSqlJs().catch(() => {}); // motoru arka planda hazırlamaya başla
+  }
+
+  /* ---------- SQL PENCERESİ ---------- */
+
+  function openSqlModal() {
+    const s = schemaSettings();
+    el('sqlDialect').value = s.dialect;
+    el('sqlModal').querySelectorAll('[data-opt]').forEach(cb => { cb.checked = !!s[cb.dataset.opt]; });
+    el('sqlExtra').value = s.extraSql || '';
+    el('sqlMsg').textContent = '';
+    refreshSqlModal();
+    el('sqlModal').classList.add('open');
+  }
+
+  /* SQL metnini ve sorun listesini ayarlara göre yeniler. */
+  function refreshSqlModal() {
+    const s = schemaSettings();
+    el('sqlOut').value = buildSQL(activeProject, s);
+    el('optStrictWrap').classList.toggle('off', s.dialect !== 'sqlite');
+    const issues = lintSchema(activeProject);
+    const box = el('sqlIssues');
+    box.style.display = issues.length ? '' : 'none';
+    box.innerHTML = issues.map(i =>
+      '<div class="er-issue ' + i.lvl + '" data-tid="' + (i.tid || '') + '"><span class="lv">' + (i.lvl === 'err' ? 'HATA' : 'UYARI') + '</span><span>' + esc(i.msg) + '</span></div>'
+    ).join('');
+  }
+
+  /* Şemayı gerçek bir SQLite veritabanında çalıştırıp hata var mı bakar. */
+  async function validateInSqlite() {
+    const msg = el('sqlMsg');
+    msg.className = 'er-msg info';
+    msg.textContent = 'SQLite motoru yükleniyor…';
+    let db;
+    try {
+      const SQL = await loadSqlJs();
+      db = new SQL.Database();
+      db.exec(buildSQLiteSQL(activeProject, { dropFirst: false }));
+      // İlişkilerin hedefleri gerçekten anahtar mı? (foreign key mismatch kontrolü)
+      sqlRows(db, 'PRAGMA foreign_key_check');
+      const n = sqlRows(db, "SELECT type, count(*) AS n FROM sqlite_master WHERE name NOT LIKE 'sqlite!_%' ESCAPE '!' GROUP BY type");
+      const cnt = k => (n.find(r => r.type === k) || { n: 0 }).n;
+      const fk = projectTables(activeProject).reduce((a, t) => a + sqlRows(db, 'SELECT count(DISTINCT id) AS n FROM pragma_foreign_key_list(?)', [t.name])[0].n, 0);
+      msg.className = 'er-msg ok';
+      msg.textContent = '✓ SQLite şemayı hatasız kabul etti: ' + cnt('table') + ' tablo, ' + fk + ' yabancı anahtar, ' + cnt('index') + ' indeks' +
+        (cnt('view') ? ', ' + cnt('view') + ' view' : '') + (cnt('trigger') ? ', ' + cnt('trigger') + ' trigger' : '') + '.';
+    } catch (e) {
+      msg.className = 'er-msg err';
+      msg.textContent = '✕ SQLite hata verdi: ' + e.message;
+    } finally { if (db) db.close(); }
+  }
+
+  /* Şemadan boş (Ek SQL'deki örnek verilerle) bir .sqlite dosyası üretip indirir. */
+  async function downloadSqliteFromSchema() {
+    if (!projectTables(activeProject).length) { erToast('Önce bir tablo ekle.'); return; }
+    erToast('SQLite veritabanı hazırlanıyor…');
+    let db;
+    try {
+      const SQL = await loadSqlJs();
+      db = new SQL.Database();
+      db.exec(buildSQLiteSQL(activeProject, { dropFirst: false }));
+      download(db.export(), safeName('one') + '.sqlite', 'application/vnd.sqlite3');
+      erToast('✓ ' + safeName('one') + '.sqlite indirildi.');
+    } catch (e) {
+      alert('Veritabanı oluşturulamadı:\n' + e.message);
+    } finally { if (db) db.close(); }
+  }
+
+  /* ---------- SQLITE KONSOLU ---------- */
+
+  let erConsole = null; // { db, pid, source, builtSql }  (builtSql: şemadan kurulduysa kullanılan SQL)
+
+  function closeConsoleDb() {
+    if (erConsole && erConsole.db) { try { erConsole.db.close(); } catch (e) {} }
+    erConsole = null;
+  }
+  function setConsoleDb(db, source, builtSql) {
+    closeConsoleDb();
+    try { db.exec('PRAGMA foreign_keys = ON'); } catch (e) {}
+    erConsole = { db: db, pid: activeProject, source: source, builtSql: builtSql };
+  }
+
+  /* Şemadan bellekte yeni bir veritabanı kurar. Hata olursa mesajını döndürür. */
+  async function buildConsoleFromSchema() {
+    const SQL = await loadSqlJs();
+    const sql = buildSQLiteSQL(activeProject, { dropFirst: false, ifNotExists: false });
+    const db = new SQL.Database();
+    let err = null;
+    try { db.exec(sql); }
+    catch (e) { err = e.message; try { db.exec('ROLLBACK'); } catch (_) {} }
+    setConsoleDb(db, 'şemadan kuruldu', sql);
+    return err;
+  }
+
+  function conMsg(text, cls) {
+    el('conMsg').className = 'er-msg ' + (cls || 'info');
+    el('conMsg').textContent = text || '';
+  }
+
+  async function openConsole() {
+    el('consoleModal').classList.add('open');
+    const s = schemaSettings();
+    el('conSql').value = s.consoleSql || "-- Buraya SQL yaz, Ctrl+Enter ile çalıştır.\n-- Örnek: INSERT INTO musteriler (ad) VALUES ('Ali');\nSELECT name, sql FROM sqlite_master WHERE type = 'table';";
+    el('conOut').innerHTML = '';
+    if (!erConsole || erConsole.pid !== activeProject) {
+      conMsg('SQLite motoru yükleniyor…');
+      try {
+        const err = await buildConsoleFromSchema();
+        conMsg(err ? '✕ Şema kurulurken SQLite hata verdi: ' + err : '', err ? 'err' : 'info');
+      } catch (e) { conMsg('✕ ' + e.message, 'err'); return; }
+    } else conMsg('');
+    renderConsoleInfo();
+    el('conSql').focus();
+  }
+
+  /* Kaynak bilgisi, "şema değişti" uyarısı ve tablo düğmeleri (satır sayılarıyla). */
+  function renderConsoleInfo() {
+    if (!erConsole) { el('conSrc').textContent = '—'; el('conTables').innerHTML = ''; return; }
+    el('conSrc').innerHTML = 'Veritabanı: <b>' + esc(erConsole.source) + '</b> · bellekte, kaydetmek için ".sqlite indir"';
+    const stale = erConsole.builtSql && erConsole.builtSql.replace(/^--.*\n/, '') !== buildSQLiteSQL(activeProject, { dropFirst: false, ifNotExists: false }).replace(/^--.*\n/, '');
+    const st = el('conStale');
+    if (stale) { st.style.display = ''; st.textContent = 'Şema konsol kurulduktan sonra değişti. Değişiklikleri görmek için "Şemadan yeniden kur".'; }
+    else if (!erConsole.builtSql) { st.style.display = ''; st.textContent = 'Bu veritabanı içe aktarılan dosyadan geliyor; diyagramda yaptığın değişiklikler buna uygulanmaz.'; }
+    else st.style.display = 'none';
+    let names = [];
+    try { names = sqlRows(erConsole.db, "SELECT name, type FROM sqlite_master WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite!_%' ESCAPE '!' ORDER BY type, name"); } catch (e) {}
+    el('conTables').innerHTML = names.map(r => {
+      let n = '';
+      try { n = ' (' + sqlRows(erConsole.db, 'SELECT count(*) AS n FROM ' + sqlId(r.name, 'sqlite'))[0].n + ')'; } catch (e) {}
+      return '<button class="tbl-chip" data-contable="' + escAttr(r.name) + '" title="İlk 100 satırı göster">' + esc(r.name) + n + '</button>';
+    }).join('');
+  }
+
+  /* Bir değeri sonuç tablosu hücresine çevirir. */
+  function conCell(v) {
+    if (v === null || v === undefined) return '<td class="null">NULL</td>';
+    if (v instanceof Uint8Array) return '<td class="null">BLOB (' + v.length + ' bayt)</td>';
+    if (typeof v === 'number') return '<td class="num">' + v + '</td>';
+    return '<td title="' + escAttr(String(v)) + '">' + esc(String(v)) + '</td>';
+  }
+
+  /* Konsoldaki SQL'i (ya da seçili kısmını) çalıştırır; her komutun sonucunu gösterir. */
+  function runConsole(sqlOverride) {
+    if (!erConsole) return;
+    const ta = el('conSql');
+    const sel = ta.value.slice(ta.selectionStart, ta.selectionEnd);
+    const sql = sqlOverride || (sel.trim() ? sel : ta.value);
+    const db = erConsole.db;
+    const blocks = [];
+    let n = 0;
+    const t0 = performance.now();
+    try {
+      for (const st of db.iterateStatements(sql)) {
+        n++;
+        const text = st.getSQL().trim();
+        const cols = st.getColumnNames();
+        if (cols.length) {
+          const rows = [];
+          let total = 0;
+          while (st.step()) { total++; if (rows.length < 500) rows.push(st.get()); }
+          blocks.push(
+            '<div><div class="con-res-head">' + esc(text.length > 140 ? text.slice(0, 140) + '…' : text) + ' — ' + total + ' satır' + (total > 500 ? ' (ilk 500 gösteriliyor)' : '') + '</div>' +
+            '<div class="con-table-wrap"><table class="con-table"><thead><tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>' +
+            (rows.length ? rows.map(r => '<tr>' + r.map(conCell).join('') + '</tr>').join('') : '<tr><td class="null" colspan="' + cols.length + '">(boş)</td></tr>') +
+            '</tbody></table></div></div>');
+        } else {
+          st.step();
+          const changed = /^\s*(INSERT|UPDATE|DELETE|REPLACE)\b/i.test(text) ? ' — ' + db.getRowsModified() + ' satır etkilendi' : '';
+          blocks.push('<div class="con-ok">✓ ' + esc(text.length > 160 ? text.slice(0, 160) + '…' : text) + changed + '</div>');
+        }
+      }
+      if (!n) blocks.push('<div class="con-note">Çalıştırılacak komut yok.</div>');
+      conMsg(n ? n + ' komut çalıştı (' + Math.round(performance.now() - t0) + ' ms).' : '');
+    } catch (e) {
+      blocks.push('<div class="con-err">✕ ' + esc(e.message) + '</div>');
+      conMsg('');
+    }
+    el('conOut').innerHTML = blocks.join('');
+    renderConsoleInfo();
+  }
+
+  async function resetConsole() {
+    if (erConsole && !confirm('Konsoldaki veritabanı silinip şemadan yeniden kurulacak (Ek SQL\'deki örnek veriler dahil). Devam edilsin mi?')) return;
+    conMsg('Kuruluyor…');
+    try {
+      const err = await buildConsoleFromSchema();
+      conMsg(err ? '✕ Şema kurulurken SQLite hata verdi: ' + err : '✓ Veritabanı şemadan yeniden kuruldu.', err ? 'err' : 'ok');
+    } catch (e) { conMsg('✕ ' + e.message, 'err'); }
+    el('conOut').innerHTML = '';
+    renderConsoleInfo();
+  }
+
+  function downloadConsoleDb() {
+    if (!erConsole) return;
+    const bytes = erConsole.db.export();
+    try { erConsole.db.exec('PRAGMA foreign_keys = ON'); } catch (e) {} // export() bağlantıyı yeniler
+    download(bytes, safeName('one') + '.sqlite', 'application/vnd.sqlite3');
+  }
+
+  /* ---------- DİYAGRAMI RESİM OLARAK DIŞA AKTARMA ----------
+     Ekrandaki tabloların konum ve boyutlarından bağımsız bir SVG çizilir; PNG için bu SVG
+     tuvale (canvas) iki kat çözünürlükte basılır. */
+  function buildDiagramSVG() {
+    const nodes = [...el('erTables').querySelectorAll('.er-table')];
+    if (!nodes.length) return null;
+    const cs = getComputedStyle(document.body);
+    const C = n => cs.getPropertyValue(n).trim();
+    const paper = C('--paper'), ink = C('--ink'), muted = C('--muted'), line = C('--line'), bg = C('--bg'), accent = C('--accent');
+    const attr = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+    let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    const grow = (a, b, c, d) => { x1 = Math.min(x1, a); y1 = Math.min(y1, b); x2 = Math.max(x2, c); y2 = Math.max(y2, d); };
+    nodes.forEach(n => grow(n.offsetLeft, n.offsetTop, n.offsetLeft + n.offsetWidth, n.offsetTop + n.offsetHeight));
+    el('erLinks').querySelectorAll('path.er-link').forEach(p => { const b = p.getBBox(); grow(b.x, b.y, b.x + b.width, b.y + b.height); });
+    const pad = 30;
+    x1 -= pad; y1 -= pad; x2 += pad; y2 += pad;
+    const W = Math.ceil(x2 - x1), H = Math.ceil(y2 - y1);
+
+    let s = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="' + [x1, y1, W, H].join(' ') + '">' +
+      '<defs><marker id="a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="' + muted + '"/></marker>' +
+      '<marker id="d" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse"><circle cx="5" cy="5" r="3.6" fill="' + paper + '" stroke="' + muted + '" stroke-width="1.5"/></marker></defs>' +
+      '<rect x="' + x1 + '" y="' + y1 + '" width="' + W + '" height="' + H + '" fill="' + bg + '"/>';
+    el('erLinks').querySelectorAll('path.er-link').forEach(p => {
+      s += '<path d="' + p.getAttribute('d') + '" fill="none" stroke="' + muted + '" stroke-width="2" marker-start="url(#d)" marker-end="url(#a)"/>';
+    });
+    el('erLinks').querySelectorAll('text').forEach(t => {
+      s += '<text x="' + t.getAttribute('x') + '" y="' + t.getAttribute('y') + '" font-family="monospace" font-size="' + (t.classList.contains('er-act') ? 9.5 : 11) + '" font-weight="bold" fill="' + muted + '" text-anchor="middle">' + attr(t.textContent) + '</text>';
+    });
+    const BADGE = { pk: '#ca8a04', fk: '#2563eb', uq: '#0891b2' };
+    nodes.forEach(n => {
+      const t = findTable(n.dataset.tbl);
+      const x = n.offsetLeft, y = n.offsetTop, w = n.offsetWidth;
+      const addBtn = n.querySelector('.er-add-field');
+      const h = n.offsetHeight - (addBtn ? addBtn.offsetHeight : 0);
+      const hh = n.querySelector('.er-table-head').offsetHeight;
+      const color = /^#[0-9a-f]{3,8}$/i.test(t.color || '') ? t.color : accent;
+      s += '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="8" fill="' + paper + '" stroke="' + line + '"/>';
+      s += '<path d="M' + x + ',' + (y + hh) + ' V' + (y + 8) + ' Q' + x + ',' + y + ' ' + (x + 8) + ',' + y + ' H' + (x + w - 8) + ' Q' + (x + w) + ',' + y + ' ' + (x + w) + ',' + (y + 8) + ' V' + (y + hh) + ' Z" fill="' + color + '"/>';
+      s += '<text x="' + (x + 12) + '" y="' + (y + hh / 2 + 5) + '" font-family="Georgia, serif" font-size="15" font-weight="bold" fill="#fff">' + attr(t.name) + '</text>';
+      n.querySelectorAll('.er-field').forEach(fe => {
+        const top = y + n.clientTop + fe.offsetTop, cy = top + fe.offsetHeight / 2;
+        const ox = x + n.clientLeft + fe.offsetLeft;
+        fe.querySelectorAll('.er-badge').forEach(b => {
+          const k = b.classList.contains('pk') ? 'pk' : b.classList.contains('fk') ? 'fk' : 'uq';
+          const bx = ox + b.offsetLeft, bw = b.offsetWidth, bh = b.offsetHeight;
+          s += '<rect x="' + bx + '" y="' + (cy - bh / 2) + '" width="' + bw + '" height="' + bh + '" rx="3" fill="' + BADGE[k] + '"/>' +
+               '<text x="' + (bx + bw / 2) + '" y="' + (cy + 3.3) + '" font-family="monospace" font-size="9.6" fill="#fff" text-anchor="middle">' + k.toUpperCase() + '</text>';
+        });
+        const nm = fe.querySelector('.er-fname'), ty = fe.querySelector('.er-ftype');
+        s += '<text x="' + (ox + nm.offsetLeft) + '" y="' + (cy + 4.5) + '" font-family="monospace" font-size="13.6"' + (nm.classList.contains('nn') ? ' font-weight="bold"' : '') + ' fill="' + ink + '">' + attr(nm.textContent) + '</text>';
+        s += '<text x="' + (ox + ty.offsetLeft + ty.offsetWidth) + '" y="' + (cy + 4) + '" font-family="monospace" font-size="11.2" fill="' + muted + '" text-anchor="end">' + attr(ty.textContent) + '</text>';
+      });
+    });
+    return s + '</svg>';
+  }
+
+  async function exportDiagram(kind) {
+    const svg = buildDiagramSVG();
+    if (!svg) { erToast('Dışa aktarılacak tablo yok.'); return; }
+    const name = safeName('one') + '-sema';
+    if (kind === 'svg') { download(svg, name + '.svg', 'image/svg+xml'); return; }
+    const img = new Image();
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    await img.decode();
+    const k = 2; // keskin görünsün diye iki kat çözünürlük
+    const cv = document.createElement('canvas');
+    cv.width = img.width * k; cv.height = img.height * k;
+    const ctx = cv.getContext('2d');
+    ctx.scale(k, k);
+    ctx.drawImage(img, 0, 0);
+    cv.toBlob(b => download(b, name + '.png', 'image/png'), 'image/png');
+  }
+
+  /* ---------- OLAY BAĞLAMALARI ---------- */
+
+  // Araç çubuğu
+  el('erAddTable').addEventListener('click', addDbTable);
+  el('erUndo').addEventListener('click', erUndo);
+  el('erRedo').addEventListener('click', erRedo);
+  el('erLayout').addEventListener('click', erAutoLayoutCmd);
+  el('erFit').addEventListener('click', erFit);
+  el('erJump').addEventListener('change', () => { const v = el('erJump').value; el('erJump').value = ''; if (v) erJumpTo(v); });
+  el('erZoomIn').addEventListener('click', () => setErZoom(erZoom + 0.1));
+  el('erZoomOut').addEventListener('click', () => setErZoom(erZoom - 0.1));
+  el('erZoomLabel').addEventListener('click', () => setErZoom(1));
+  el('erSqlBtn').addEventListener('click', openSqlModal);
+  el('erConsoleBtn').addEventListener('click', openConsole);
+  el('erStats').addEventListener('click', e => { if (e.target.closest('[data-issues]')) openSqlModal(); });
+
+  // Dosya menüsü
+  el('erFileBtn').addEventListener('click', e => { e.stopPropagation(); el('erFileMenu').classList.toggle('open'); });
+  document.addEventListener('click', e => { if (!e.target.closest('.er-menu-wrap')) el('erFileMenu').classList.remove('open'); });
+  el('erFileMenu').addEventListener('click', e => {
+    const b = e.target.closest('[data-eract]');
+    if (!b) return;
+    el('erFileMenu').classList.remove('open');
+    const act = b.dataset.eract;
+    if (act === 'import') openImportModal();
+    else if (act === 'db') downloadSqliteFromSchema();
+    else if (act === 'sql') download(buildSQL(activeProject, schemaSettings()), safeName('one') + '.sql', 'application/sql');
+    else if (act === 'png' || act === 'svg') exportDiagram(act);
+    else if (act === 'clear') clearSchema();
+  });
+
+  // Tablolar: başlıktan tut -> taşı, alandan tut -> ilişki çiz
+  // (Tablolar her çizimde yeniden oluşturulduğu için olaylar kapsayıcıya bir kez bağlanır.)
+  el('erTables').addEventListener('pointerdown', e => {
+    if (e.target.closest('[data-tbledit], [data-addfield]')) return; // düğmeler kendi işini yapsın
+    const tableEl = e.target.closest('.er-table');
+    const t = tableEl && findTable(tableEl.dataset.tbl);
+    if (!t) return;
+    if (e.target.closest('.er-table-head')) {
+      const p = toSurface(e.clientX, e.clientY);
+      erStart(e, 'table', { tableId: t.id, tableEl: tableEl, offX: p.x - t.x, offY: p.y - t.y });
+    } else {
+      const fieldEl = e.target.closest('.er-field');
+      if (fieldEl) erStart(e, 'link', { tableId: t.id, fromField: fieldEl.dataset.field, fromEl: fieldEl });
+    }
+  });
+  el('erTables').addEventListener('click', e => {
+    const ed = e.target.closest('[data-tbledit]');
+    if (ed) { openTableModal(ed.dataset.tbledit); return; }
+    const add = e.target.closest('[data-addfield]');
+    if (add) quickAddField(add.dataset.addfield);
+  });
+  // Tabloya çift tıkla -> düzenle (alana çift tıklandıysa o alan seçili açılır)
+  el('erTables').addEventListener('dblclick', e => {
+    const tableEl = e.target.closest('.er-table');
+    if (!tableEl || e.target.closest('[data-addfield], [data-tbledit]')) return;
+    const fieldEl = e.target.closest('.er-field');
+    openTableModal(tableEl.dataset.tbl, fieldEl ? fieldEl.dataset.field : null);
+  });
+  // Fare bir tablonun üzerine gelince o tablonun ilişkileri vurgulanır
+  el('erTables').addEventListener('pointerover', e => {
+    if (erDrag.mode || e.pointerType === 'touch') return;
+    const tEl = e.target.closest('.er-table');
+    const id = tEl ? tEl.dataset.tbl : null;
+    if (id !== erHoverTable) { erHoverTable = id; drawErLinks(); }
+  });
+  el('erTables').addEventListener('pointerout', e => {
+    if (erDrag.mode || !erHoverTable) return;
+    if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest('.er-table')) { erHoverTable = null; drawErLinks(); }
+  });
+
+  // Tuvalin boş yeri: fareyle tutup kaydır (dokunmatikte tarayıcının kendi kaydırması çalışır)
+  el('erCanvas').addEventListener('pointerdown', e => {
+    if (e.target.closest('.er-table, .er-link-hit, .er-link-panel')) return;
+    if (e.pointerType !== 'mouse') return;
+    const c = el('erCanvas');
+    erStart(e, 'pan', { scrollL: c.scrollLeft, scrollT: c.scrollTop });
+  });
+  // Çizgiye tıkla -> seç (ayar kutusu açılır); boş yere tıkla -> seçimi kaldır
+  el('erCanvas').addEventListener('click', e => {
+    if (erJustDragged || e.target.closest('.er-link-panel')) return;
+    const hit = e.target.closest('.er-link-hit');
+    if (hit) { selectedLinkId = hit.dataset.link; renderLinkPanel(); drawErLinks(); return; }
+    if (!e.target.closest('.er-table') && selectedLinkId) { selectedLinkId = null; renderLinkPanel(); drawErLinks(); }
+  });
+  // İlişki ayar kutusu
+  el('erLinkPanel').addEventListener('change', e => {
+    const k = e.target.dataset.k;
+    if (selectedLinkId && (k === 'onDelete' || k === 'onUpdate')) updateLink(selectedLinkId, k, e.target.value);
+  });
+  el('erLinkPanel').addEventListener('click', e => {
+    const b = e.target.closest('[data-act]');
+    if (!b || !selectedLinkId) return;
+    if (b.dataset.act === 'del') deleteDbLink(selectedLinkId);
+    else if (b.dataset.act === 'swap') swapLink(selectedLinkId);
+  });
+  // Ctrl + fare tekerleği (veya dokunmatik yüzeyde iki parmak sıkıştırma) -> yakınlaştır
+  let erWheelAcc = 0;
+  el('erCanvas').addEventListener('wheel', e => {
+    if (!e.ctrlKey && !e.metaKey) return; // normal tekerlek = kaydırma
+    e.preventDefault();
+    erWheelAcc += e.deltaY;
+    if (Math.abs(erWheelAcc) < 40) return;
+    setErZoom(erZoom + (erWheelAcc < 0 ? 0.1 : -0.1), e.clientX, e.clientY);
+    erWheelAcc = 0;
+  }, { passive: false });
+  // Pencere boyutu değişince tuval alanını yeniden hesapla
+  window.addEventListener('resize', () => { if (currentView === 'schema') { updateErSurfaceSize(); drawErLinks(); } });
+
+  // Klavye: ESC -> pencereyi kapat / seçimi kaldır, Delete -> seçili ilişkiyi sil, Ctrl+Z / Ctrl+Y
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (el('consoleModal').classList.contains('open')) el('consoleModal').classList.remove('open');
+      else if (el('importModal').classList.contains('open')) el('importModal').classList.remove('open');
+      else if (el('tableModal').classList.contains('open')) closeTableModal();
+      else if (el('sqlModal').classList.contains('open')) el('sqlModal').classList.remove('open');
+      else if (selectedLinkId) { selectedLinkId = null; renderLinkPanel(); drawErLinks(); }
+      return;
+    }
+    if (currentView !== 'schema') return;
+    const tag = document.activeElement ? document.activeElement.tagName : '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return; // yazı yazarken karışmasın
+    if (document.querySelector('.modal-overlay.open')) return;
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && !e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); erUndo(); }
+    else if (mod && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { e.preventDefault(); erRedo(); }
+    else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedLinkId) { e.preventDefault(); deleteDbLink(selectedLinkId); }
+  });
+
+  /* ---- TABLO DÜZENLEME PENCERESİ olayları ---- */
+  el('tblClose').addEventListener('click', closeTableModal);
+  el('tblDone').addEventListener('click', closeTableModal);
+  el('tableModal').addEventListener('click', e => { if (e.target === el('tableModal')) closeTableModal(); });
+  el('tblDelete').addEventListener('click', () => { if (openTableId) deleteDbTable(openTableId); });
+
+  // Tablo adı ve açıklaması yazıldıkça şemaya yansıt
+  el('tblName').addEventListener('input', async () => {
+    const t = findTable(openTableId);
+    if (!t) return;
+    tableModalTouch();
+    t.name = el('tblName').value.trim();
+    t.indexes.forEach(ix => { if (ix.nameAuto) ix.name = autoIndexName(t, ix); });
+    await saveDbTable(t);
+    renderSchema();
+  });
+  el('tblNote').addEventListener('input', async () => {
+    const t = findTable(openTableId);
+    if (!t) return;
+    tableModalTouch();
+    t.note = el('tblNote').value;
+    await saveDbTable(t);
+  });
+  // Renk seçimi
+  el('tblColors').addEventListener('click', async e => {
+    const dot = e.target.closest('[data-tcolor]');
+    const t = findTable(openTableId);
+    if (!dot || !t) return;
+    tableModalTouch();
+    t.color = dot.dataset.tcolor;
+    await saveDbTable(t);
+    renderTableModal();
+    renderSchema();
+  });
+  // Alan adı / türü / varsayılan / CHECK yazıldıkça kaydet.
+  // Tür elle değiştirilmediyse addan otomatik tahmin edilir (musteri_id -> INTEGER).
+  el('tblFields').addEventListener('input', async e => {
+    const k = e.target.dataset.k;
+    if (!['name', 'type', 'def', 'check'].includes(k)) return;
+    const f = modalField(e.target);
+    const t = findTable(openTableId);
+    if (!f || !t) return;
+    tableModalTouch();
+    f[k] = (k === 'name' || k === 'type') ? e.target.value.trim() : e.target.value;
+    if (k === 'type') f.typeAuto = false;
+    if (k === 'name' && f.typeAuto) {
+      f.type = guessSqlType(f.name);
+      e.target.closest('[data-fid]').querySelector('[data-k="type"]').value = f.type;
+    }
+    if (k === 'name') t.indexes.forEach(ix => { if (ix.nameAuto && ix.cols.includes(f.id)) ix.name = autoIndexName(t, ix); });
+    await saveDbTable(t);
+    renderSchema();
+  });
+  // PK / AI / NN / UQ kutucukları
+  el('tblFields').addEventListener('change', async e => {
+    const k = e.target.dataset.k;
+    if (!['pk', 'ai', 'nn', 'uq'].includes(k)) return;
+    const f = modalField(e.target);
+    const t = findTable(openTableId);
+    if (!f || !t) return;
+    tableModalTouch();
+    f[k] = e.target.checked;
+    // AUTOINCREMENT işaretlenince alan INTEGER PRIMARY KEY olmalı: bunu kendimiz ayarlayalım
+    if (k === 'ai' && f.ai) { f.pk = true; f.type = 'INTEGER'; f.typeAuto = false; }
+    if (k === 'pk' && !f.pk) f.ai = false;
+    await saveDbTable(t);
+    if (k === 'ai' || k === 'pk') renderTableModal();
+    renderSchema();
+  });
+  // Alanı yukarı / aşağı taşı / sil
+  el('tblFields').addEventListener('click', async e => {
+    const b = e.target.closest('[data-act]');
+    if (!b) return;
+    const t = findTable(openTableId);
+    const f = modalField(b);
+    if (!t || !f) return;
+    if (b.dataset.act === 'del') { await deleteDbField(t, f); return; }
+    const i = t.fields.indexOf(f);
+    const j = b.dataset.act === 'up' ? i - 1 : i + 1;
+    if (j < 0 || j >= t.fields.length) return;
+    tableModalTouch();
+    t.fields[i] = t.fields[j];
+    t.fields[j] = f;
+    await saveDbTable(t);
+    renderTableModal();
+    renderSchema();
+  });
+  // Yeni alan ekle (adı seçili gelir, hemen yazılabilir)
+  el('tblAddField').addEventListener('click', async () => {
+    const t = findTable(openTableId);
+    if (!t) return;
+    tableModalTouch();
+    const f = newField(uniqueFieldName(t, 'yeni_alan'), 'TEXT');
+    t.fields.push(f);
+    await saveDbTable(t);
+    renderTableModal(f.id);
+    renderSchema();
+  });
+
+  // İndeksler
+  el('tblAddIndex').addEventListener('click', async () => {
+    const t = findTable(openTableId);
+    if (!t) return;
+    tableModalTouch();
+    const ix = { id: uid(), name: '', unique: false, nameAuto: true, cols: [] };
+    ix.name = autoIndexName(t, ix);
+    t.indexes.push(ix);
+    await saveDbTable(t);
+    renderTableModal();
+    renderSchema();
+  });
+  el('tblIndexes').addEventListener('input', async e => {
+    if (e.target.dataset.k !== 'name') return;
+    const t = findTable(openTableId), ix = modalIndex(e.target);
+    if (!t || !ix) return;
+    tableModalTouch();
+    ix.name = e.target.value.trim();
+    ix.nameAuto = false;
+    await saveDbTable(t);
+    renderSchema();
+  });
+  el('tblIndexes').addEventListener('change', async e => {
+    if (e.target.dataset.k !== 'unique') return;
+    const t = findTable(openTableId), ix = modalIndex(e.target);
+    if (!t || !ix) return;
+    tableModalTouch();
+    ix.unique = e.target.checked;
+    if (ix.nameAuto) ix.name = autoIndexName(t, ix);
+    await saveDbTable(t);
+    renderTableModal();
+    renderSchema();
+  });
+  el('tblIndexes').addEventListener('click', async e => {
+    const t = findTable(openTableId), ix = modalIndex(e.target);
+    if (!t || !ix) return;
+    const chip = e.target.closest('[data-col]');
+    const del = e.target.closest('[data-act="del"]');
+    if (!chip && !del) return;
+    tableModalTouch();
+    if (del) t.indexes = t.indexes.filter(x => x !== ix);
+    else {
+      // Alana tıklayınca indekse eklenir (tıklama sırası = indeksteki sıra); tekrar tıklayınca çıkar
+      const id = chip.dataset.col;
+      ix.cols = ix.cols.includes(id) ? ix.cols.filter(x => x !== id) : ix.cols.concat(id);
+      ix.desc = (ix.desc || []).filter(x => ix.cols.includes(x));
+      if (ix.nameAuto) ix.name = autoIndexName(t, ix);
+    }
+    await saveDbTable(t);
+    renderTableModal();
+    renderSchema();
+  });
+  // Penceredeki ilişki listesinden sil (telefonda ince çizgiye tıklamaktan kolay)
+  el('tblLinks').addEventListener('click', e => {
+    const b = e.target.closest('[data-ldel]');
+    if (b) deleteDbLink(b.dataset.ldel);
+  });
+
+  /* ---- SQL PENCERESİ olayları ---- */
+  el('sqlClose').addEventListener('click', () => el('sqlModal').classList.remove('open'));
+  el('sqlModal').addEventListener('click', e => { if (e.target === el('sqlModal')) el('sqlModal').classList.remove('open'); });
+  el('sqlDialect').addEventListener('change', async () => {
+    schemaSettings().dialect = el('sqlDialect').value;
+    await saveSchemaSettings();
+    refreshSqlModal();
+  });
+  el('sqlModal').querySelectorAll('[data-opt]').forEach(cb => cb.addEventListener('change', async () => {
+    schemaSettings()[cb.dataset.opt] = cb.checked;
+    await saveSchemaSettings();
+    refreshSqlModal();
+  }));
+  el('sqlExtra').addEventListener('input', async () => {
+    schemaSettings().extraSql = el('sqlExtra').value;
+    await saveSchemaSettings();
+    el('sqlOut').value = buildSQL(activeProject, schemaSettings());
+  });
+  // Sorun listesindeki bir satıra tıklayınca o tabloya git
+  el('sqlIssues').addEventListener('click', e => {
+    const row = e.target.closest('[data-tid]');
+    if (!row || !row.dataset.tid) return;
+    el('sqlModal').classList.remove('open');
+    erJumpTo(row.dataset.tid);
+  });
+  el('sqlValidate').addEventListener('click', validateInSqlite);
+  el('sqlDownloadDb').addEventListener('click', downloadSqliteFromSchema);
+  el('sqlCopy').addEventListener('click', async () => {
+    const txt = el('sqlOut').value;
+    let ok = false;
+    try { await navigator.clipboard.writeText(txt); ok = true; }
+    catch (err) {
+      // Pano API'si yoksa (eski tarayıcı) eski yöntemle kopyala
+      el('sqlOut').select();
+      try { ok = document.execCommand('copy'); } catch (_) {}
+    }
+    el('sqlCopy').textContent = ok ? 'Kopyalandı ✓' : 'Kopyalanamadı';
+    setTimeout(() => { el('sqlCopy').textContent = 'Kopyala'; }, 1600);
+  });
+  el('sqlDownload').addEventListener('click', () => download(el('sqlOut').value, safeName('one') + '.sql', 'application/sql'));
+
+  /* ---- İÇE AKTARMA PENCERESİ olayları ---- */
+  el('impClose').addEventListener('click', () => el('importModal').classList.remove('open'));
+  el('importModal').addEventListener('click', e => { if (e.target === el('importModal')) el('importModal').classList.remove('open'); });
+  el('impFileBtn').addEventListener('click', () => el('impFile').click());
+  el('impFile').addEventListener('change', e => {
+    const f = e.target.files[0];
+    e.target.value = ''; // aynı dosya tekrar seçilebilsin
+    if (f) runImport(mode => importSchemaFile(f, mode));
+  });
+  el('impTextBtn').addEventListener('click', () => {
+    const text = el('impText').value;
+    runImport(mode => importSqlText(text, mode, 'yapıştırılan SQL'));
+  });
+
+  /* ---- KONSOL olayları ---- */
+  el('conClose').addEventListener('click', () => el('consoleModal').classList.remove('open'));
+  el('consoleModal').addEventListener('click', e => { if (e.target === el('consoleModal')) el('consoleModal').classList.remove('open'); });
+  el('conRun').addEventListener('click', () => runConsole());
+  el('conReset').addEventListener('click', resetConsole);
+  el('conDownload').addEventListener('click', downloadConsoleDb);
+  el('conSql').addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runConsole(); }
+  });
+  // Yazılan sorgular proje başına hatırlansın
+  let conSaveTimer = null;
+  el('conSql').addEventListener('input', () => {
+    clearTimeout(conSaveTimer);
+    conSaveTimer = setTimeout(() => { schemaSettings().consoleSql = el('conSql').value; saveSchemaSettings(); }, 400);
+  });
+  // Tablo düğmesi: ilk 100 satırı göster
+  el('conTables').addEventListener('click', e => {
+    const b = e.target.closest('[data-contable]');
+    if (b) runConsole('SELECT * FROM ' + sqlId(b.dataset.contable, 'sqlite') + ' LIMIT 100;');
+  });
 
   /* ===================================================================
      DIŞA / İÇE AKTARMA
@@ -1693,7 +4647,9 @@
         out += '## Notlar\n';
         notes.forEach(n => { out += '\n### ' + n.title + '\n' + n.body + '\n' + (n.tags.length?n.tags.map(x=>'#'+x).join(' ')+'\n':''); });
       }
-      if (!mine.length) out += '_Boş._\n';
+      const hasSchema = projectTables(p.id).length > 0;
+      if (hasSchema) out += '\n## Veritabanı şeması (SQLite)\n\n```sql\n' + buildSQLiteSQL(p.id) + '```\n';
+      if (!mine.length && !hasSchema) out += '_Boş._\n';
     });
     return out;
   }
@@ -1716,7 +4672,9 @@
         out += 'NOTLAR\n';
         notes.forEach(n => { out += '\n  ' + n.title + '\n' + (n.body?'  '+n.body.replace(/\n/g,'\n  ')+'\n':'') + (n.tags.length?'  Etiketler: '+n.tags.join(', ')+'\n':''); });
       }
-      if (!mine.length) out += '(Boş)\n';
+      const hasSchema = projectTables(p.id).length > 0;
+      if (hasSchema) out += '\nVERİTABANI ŞEMASI (SQLite)\n\n' + buildSQLiteSQL(p.id);
+      if (!mine.length && !hasSchema) out += '(Boş)\n';
     });
     return out;
   }
@@ -1769,7 +4727,9 @@
         b += '<h2>Notlar</h2>';
         notes.forEach(n => { b += '<h3>' + esc(n.title) + '</h3>' + (n.body?'<div>'+esc(n.body).replace(/\n/g,'<br>')+'</div>':'') + (n.tags.length?'<div>'+n.tags.map(x=>'<span class="tag">#'+esc(x)+'</span>').join('')+'</div>':''); });
       }
-      if (!mine.length) b += '<p><em>Boş.</em></p>';
+      const hasSchema = projectTables(p.id).length > 0;
+      if (hasSchema) b += '<h2>Veritabanı şeması (SQLite)</h2><pre style="font-size:.78rem;white-space:pre-wrap;background:#f4f1ea;padding:.8rem;border-radius:6px;">' + esc(buildSQLiteSQL(p.id)) + '</pre>';
+      if (!mine.length && !hasSchema) b += '<p><em>Boş.</em></p>';
     });
     b += '</body></html>';
     const w = window.open('', '_blank');
@@ -1785,7 +4745,8 @@
   function exportJSON() {
     // O anki tema: body'de "dark" sınıfı varsa karanlık, yoksa açık
     const theme = document.body.classList.contains('dark') ? 'dark' : 'light';
-    const data = { version: 2, exported: Date.now(), theme: theme, projects: projects, columns: columns, items: items };
+    const data = { version: 3, exported: Date.now(), theme: theme, projects: projects, columns: columns, items: items,
+                   dbTables: dbTables, dbLinks: dbLinks, dbSettings: Object.values(dbSettings) };
     download(JSON.stringify(data, null, 2), 'notlar-yedek-' + new Date().toISOString().slice(0,10) + '.json', 'application/json');
   }
 
@@ -1804,18 +4765,30 @@
         for (const p of projects) await sDel('proj:' + p.id);
         for (const i of items) await sDel('item:' + i.id);
         for (const c of columns) await sDel('col:' + c.id);
+        for (const t of dbTables) await sDel('tbl:' + t.id);
+        for (const l of dbLinks) await sDel('rel:' + l.id);
+        for (const pid in dbSettings) await sDel('sch:' + pid);
       }
+      closeConsoleDb();
       // Yedekteki veriyi belleğe al
       projects = data.projects;
       items = data.items;
       // Eski yedeklerde (version 1) sütun olmayabilir; o zaman boş başlar ve
       // aşağıda ensureColumns + migrateItemsToColumns ile otomatik oluşturulur.
       columns = Array.isArray(data.columns) ? data.columns : [];
+      // Şema verisi version 3 ile geldi; eski yedeklerde yoksa boş başlar.
+      dbTables = normalizeDbTables(Array.isArray(data.dbTables) ? data.dbTables : []);
+      dbLinks = normalizeDbLinks(Array.isArray(data.dbLinks) ? data.dbLinks : []);
+      dbSettings = {};
+      (Array.isArray(data.dbSettings) ? data.dbSettings : []).forEach(s => { if (s && s.projectId) dbSettings[s.projectId] = s; });
       // Depoya yaz
       if (storageOK) {
         for (const p of projects) await sSet('proj:' + p.id, JSON.stringify(p));
         for (const i of items) await sSet('item:' + i.id, JSON.stringify(i));
         for (const c of columns) await sSet('col:' + c.id, JSON.stringify(c));
+        for (const t of dbTables) await sSet('tbl:' + t.id, JSON.stringify(t));
+        for (const l of dbLinks) await sSet('rel:' + l.id, JSON.stringify(l));
+        for (const pid in dbSettings) await sSet('sch:' + pid, JSON.stringify(dbSettings[pid]));
       }
       activeProject = projects.length ? projects[0].id : null;
       if (!activeProject) await createProject('Genel');
@@ -1832,7 +4805,7 @@
         if (storageOK) await sSet('pref:theme', data.theme);
       }
 
-      renderProjects(); renderMain(); renderBoard();
+      renderProjects(); renderMain(); renderBoard(); renderSchema();
       el('status').textContent = 'Yedek yüklendi.';
     } catch(e) {
       alert('Geçersiz yedek dosyası.');
@@ -1867,6 +4840,8 @@
      Örn. biri başlığa <script> yazsa bile bu kod onu zararlı çalıştırmaz,
      sadece düz yazı olarak gösterir. (XSS denen saldırıyı engeller.) */
   function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+  /* esc() + çift tırnak: value="..." gibi HTML niteliklerinin içine yazarken kullanılır. */
+  function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
 
   /* ---- MOBİL ÇEKMECE (sol panel) aç/kapa ---- */
   function openDrawer(){ el('app').classList.add('drawer-open'); }
@@ -1903,9 +4878,10 @@
   // Arama kutusuna her yazıldığında listeyi süz (pano da güncellenir)
   el('search').addEventListener('input', () => { renderMain(); renderBoard(); });
 
-  /* ---- GÖRÜNÜM DÜĞMELERİ (Liste / Pano) ---- */
+  /* ---- GÖRÜNÜM DÜĞMELERİ (Liste / Pano / Şema) ---- */
   el('viewList').addEventListener('click', () => setView('list'));
   el('viewBoard').addEventListener('click', () => setView('board'));
+  el('viewSchema').addEventListener('click', () => setView('schema'));
 
   /* ---- KART DETAY PENCERESİ olayları ---- */
   // Kapat / Bitti -> kaydet ve kapat
@@ -2010,11 +4986,11 @@
     applyTheme(dark);
   }
 
-  /* Kayıtlı görünüm tercihini (liste/pano) yükler; yoksa liste açılır. */
+  /* Kayıtlı görünüm tercihini (liste/pano/şema) yükler; yoksa liste açılır. */
   async function loadView() {
     let view = 'list';
     const saved = await sGet('pref:view');
-    if (saved && (saved.value === 'board' || saved.value === 'list')) {
+    if (saved && (saved.value === 'board' || saved.value === 'list' || saved.value === 'schema')) {
       view = saved.value;
     }
     await setView(view);
