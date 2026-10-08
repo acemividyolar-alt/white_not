@@ -18,6 +18,11 @@
 <meta charset="UTF-8">                                   <!-- Türkçe karakterlerin (ş,ğ,ı...) doğru görünmesi için -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Telefonda doğru ölçeklenmesi için -->
 <title>White Note</title>                                 <!-- Tarayıcı sekmesinde görünen başlık -->
+<meta name="description" content="Not, görev, Trello tarzı pano ve SQLite veritabanı şema tasarımcısı. Tek dosya, tarayıcıda çalışır, veriler cihazda kalır.">
+<!-- Sekmedeki simge (ayrı dosya gerekmesin diye SVG olarak buraya gömülü) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='5' y='3' width='22' height='26' rx='4' fill='%23c2410c'/%3E%3Cpath d='M10 11h12M10 16h12M10 21h8' stroke='%23fffdf7' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<!-- Telefonda tarayıcı çubuğunun rengi (tema değişince JS günceller) -->
+<meta name="theme-color" id="themeColor" content="#f4f1ea">
 
 <style>
   /* ===================================================================
@@ -737,6 +742,12 @@
   }
   .tbl-chip.sel { background: var(--accent); border-color: var(--accent); color: #fff; }
   .tbl-chip b { margin-right: 0.2rem; }
+  .tbl-chip-grp { display: inline-flex; align-items: stretch; }
+  .tbl-chip-grp .tbl-chip { border-radius: 12px 0 0 12px; }
+  .tbl-chip-dir {
+    font-size: 0.75rem; border: 1px solid var(--accent); border-left: none; background: var(--accent-soft); color: var(--accent);
+    border-radius: 0 12px 12px 0; padding: 0 0.45rem; cursor: pointer; font-weight: bold;
+  }
   .tbl-link-row {
     display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
     font-family: monospace; font-size: 0.8rem; padding: 0.3rem 0; border-bottom: 1px dashed var(--line);
@@ -3459,7 +3470,12 @@
         '</div>' +
         '<div class="tbl-chips">' + fields.map(f => {
           const pos = ix.cols.indexOf(f.id);
-          return '<button class="tbl-chip' + (pos >= 0 ? ' sel' : '') + '" data-col="' + f.id + '">' + (pos >= 0 ? '<b>' + (pos + 1) + '</b>' : '') + esc(f.name || '(adsız)') + '</button>';
+          const chip = '<button class="tbl-chip' + (pos >= 0 ? ' sel' : '') + '" data-col="' + f.id + '">' + (pos >= 0 ? '<b>' + (pos + 1) + '</b>' : '') + esc(f.name || '(adsız)') + '</button>';
+          if (pos < 0) return chip;
+          // Seçili alanın yanında sıralama yönü: ↑ artan (ASC), ↓ azalan (DESC)
+          const desc = (ix.desc || []).includes(f.id);
+          return '<span class="tbl-chip-grp">' + chip +
+            '<button class="tbl-chip-dir" data-dir="' + f.id + '" title="Sıralama yönü: ' + (desc ? 'azalan (DESC)' : 'artan (ASC)') + ' — değiştirmek için tıkla">' + (desc ? '&darr;' : '&uarr;') + '</button></span>';
         }).join('') + '</div>' +
       '</div>'
     ).join('') : '<div class="tbl-empty">İndeks yok. Sık aranan alanlar (ör. email) için eklenebilir.</div>';
@@ -4686,10 +4702,15 @@
     if (!t || !ix) return;
     const chip = e.target.closest('[data-col]');
     const del = e.target.closest('[data-act="del"]');
-    if (!chip && !del) return;
+    const dir = e.target.closest('[data-dir]');
+    if (!chip && !del && !dir) return;
     tableModalTouch();
     if (del) t.indexes = t.indexes.filter(x => x !== ix);
-    else {
+    else if (dir) {
+      // Artan <-> azalan (ör. "en yeni kayıtlar önce" sorguları için tarih DESC)
+      const id = dir.dataset.dir;
+      ix.desc = (ix.desc || []).includes(id) ? ix.desc.filter(x => x !== id) : (ix.desc || []).concat(id);
+    } else {
       // Alana tıklayınca indekse eklenir (tıklama sırası = indeksteki sıra); tekrar tıklayınca çıkar
       const id = chip.dataset.col;
       ix.cols = ix.cols.includes(id) ? ix.cols.filter(x => x !== id) : ix.cols.concat(id);
@@ -4819,7 +4840,7 @@
       }
       if (notes.length) {
         out += '## Notlar\n';
-        notes.forEach(n => { out += '\n### ' + n.title + '\n' + n.body + '\n' + (n.tags.length?n.tags.map(x=>'#'+x).join(' ')+'\n':''); });
+        notes.forEach(n => { out += '\n### ' + (n.title || '(başlıksız)') + '\n' + (n.body ? n.body + '\n' : '') + (n.tags.length?n.tags.map(x=>'#'+x).join(' ')+'\n':''); });
       }
       const hasSchema = projectTables(p.id).length > 0;
       if (hasSchema) out += '\n## Veritabanı şeması (SQLite)\n\n```sql\n' + buildSQLiteSQL(p.id) + '```\n';
@@ -4844,7 +4865,7 @@
       }
       if (notes.length) {
         out += 'NOTLAR\n';
-        notes.forEach(n => { out += '\n  ' + n.title + '\n' + (n.body?'  '+n.body.replace(/\n/g,'\n  ')+'\n':'') + (n.tags.length?'  Etiketler: '+n.tags.join(', ')+'\n':''); });
+        notes.forEach(n => { out += '\n  ' + (n.title || '(başlıksız)') + '\n' + (n.body?'  '+n.body.replace(/\n/g,'\n  ')+'\n':'') + (n.tags.length?'  Etiketler: '+n.tags.join(', ')+'\n':''); });
       }
       const hasSchema = projectTables(p.id).length > 0;
       if (hasSchema) out += '\nVERİTABANI ŞEMASI (SQLite)\n\n' + buildSQLiteSQL(p.id);
@@ -4899,7 +4920,7 @@
       }
       if (notes.length){
         b += '<h2>Notlar</h2>';
-        notes.forEach(n => { b += '<h3>' + esc(n.title) + '</h3>' + (n.body?'<div>'+esc(n.body).replace(/\n/g,'<br>')+'</div>':'') + (n.tags.length?'<div>'+n.tags.map(x=>'<span class="tag">#'+esc(x)+'</span>').join('')+'</div>':''); });
+        notes.forEach(n => { b += '<h3>' + esc(n.title || '(başlıksız)') + '</h3>' + (n.body?'<div>'+esc(n.body).replace(/\n/g,'<br>')+'</div>':'') + (n.tags.length?'<div>'+n.tags.map(x=>'<span class="tag">#'+esc(x)+'</span>').join('')+'</div>':''); });
       }
       const hasSchema = projectTables(p.id).length > 0;
       if (hasSchema) b += '<h2>Veritabanı şeması (SQLite)</h2><pre style="font-size:.78rem;white-space:pre-wrap;background:#f4f1ea;padding:.8rem;border-radius:6px;">' + esc(buildSQLiteSQL(p.id)) + '</pre>';
@@ -4980,7 +5001,8 @@
       }
       closeConsoleDb();
       // Yedekteki veriyi belleğe al
-      projects = data.projects.filter(p => p && p.id).map(p => Object.assign(p, { name: String(p.name || 'Proje'), created: +p.created || Date.now() }));
+      projects = data.projects.filter(p => p && p.id).map(p => Object.assign(p, { name: String(p.name || 'Proje'), created: +p.created || Date.now() }))
+        .sort((a, b) => a.created - b.created); // açılıştaki gibi oluşturulma sırasına göre
       items = normalizeItems(data.items);
       // Eski yedeklerde (version 1) sütun olmayabilir; o zaman boş başlar ve
       // aşağıda ensureColumns + migrateItemsToColumns ile otomatik oluşturulur.
@@ -5237,6 +5259,7 @@
     document.body.classList.toggle('dark', dark);
     // Karanlıkta güneş (açığa dön), açıkta ay (karanlığa geç) ikonu göster
     el('themeBtn').innerHTML = dark ? '&#9728;' : '&#9789;'; // ☀ / ☾
+    el('themeColor').setAttribute('content', dark ? '#1a1816' : '#f4f1ea'); // telefonda tarayıcı çubuğu rengi
   }
 
   async function toggleTheme() {
