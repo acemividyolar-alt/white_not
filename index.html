@@ -975,7 +975,8 @@
                 <button data-eract="import">SQLite / SQL dosyası aç&hellip;</button>
                 <div class="sep"></div>
                 <div class="menu-group-label">Dışa aktar</div>
-                <button data-eract="db">SQLite veritabanı (.sqlite)</button>
+                <button data-eract="db">SQLite veritabanı (.db)</button>
+                <button data-eract="sqlite">SQLite veritabanı (.sqlite)</button>
                 <button data-eract="sql">SQL betiği (.sql)</button>
                 <button data-eract="png">Diyagram resmi (.png)</button>
                 <button data-eract="svg">Diyagram vektör (.svg)</button>
@@ -1122,7 +1123,8 @@
       <div class="modal-actions">
         <button class="modal-btn" id="sqlValidate" title="Şemayı tarayıcıda gerçek bir SQLite veritabanında çalıştırıp hata var mı bak">SQLite'ta dene</button>
         <div class="modal-actions-right">
-          <button class="modal-btn" id="sqlDownloadDb" title="Bu şemayla hazır, boş bir SQLite veritabanı dosyası indir">.sqlite indir</button>
+          <button class="modal-btn" id="sqlDownloadDb" title="Bu şemayla hazır, boş bir SQLite veritabanı dosyası indir (.db)">.db indir</button>
+          <button class="modal-btn" id="sqlDownloadSqlite" title="Bu şemayla hazır, boş bir SQLite veritabanı dosyası indir (.sqlite)">.sqlite indir</button>
           <button class="modal-btn" id="sqlDownload">.sql indir</button>
           <button class="modal-btn primary" id="sqlCopy">Kopyala</button>
         </div>
@@ -1179,7 +1181,8 @@
         <span class="con-src" id="conSrc">&mdash;</span>
         <div class="con-bar-btns">
           <button class="modal-btn" id="conReset" title="Şemadan boş bir veritabanı kur (Ek SQL'deki örnek veriler de çalışır)">Şemadan yeniden kur</button>
-          <button class="modal-btn" id="conDownload" title="Konsoldaki veritabanını verileriyle birlikte indir">.sqlite indir</button>
+          <button class="modal-btn" id="conDownloadDb" title="Konsoldaki veritabanını verileriyle birlikte indir (.db)">.db indir</button>
+          <button class="modal-btn" id="conDownload" title="Konsoldaki veritabanını verileriyle birlikte indir (.sqlite)">.sqlite indir</button>
         </div>
       </div>
       <div class="con-stale" id="conStale" style="display:none"></div>
@@ -2494,7 +2497,7 @@
        • Çizgiye tıklayınca ayar kutusu açılır: ON DELETE / ON UPDATE, yön çevirme, silme
        • "SQL" şemayı CREATE TABLE + FOREIGN KEY + INDEX komutlarına çevirir
        • "Konsol" şemayı tarayıcıda gerçek bir SQLite veritabanında çalıştırır
-       • Dosya menüsü: .db/.sql içe aktarma, .sqlite/.sql/.png/.svg dışa aktarma
+       • Dosya menüsü: .db/.sql içe aktarma, .db/.sqlite/.sql/.png/.svg dışa aktarma
      Konumlar "yüzey" (surface) koordinatında tutulur; yakınlaştırma bunu sadece ölçekler.
      Gerçek SQLite motoru (sql.js) sadece gerektiğinde, ilk kullanımda CDN'den yüklenir.
      =================================================================== */
@@ -4179,8 +4182,10 @@
     } finally { if (db) db.close(); }
   }
 
-  /* Şemadan boş (Ek SQL'deki örnek verilerle) bir .sqlite dosyası üretip indirir. */
-  async function downloadSqliteFromSchema() {
+  /* Şemadan boş (Ek SQL'deki örnek verilerle) bir SQLite veritabanı dosyası üretip indirir.
+     ext: '.db' ya da '.sqlite' — ikisi de aynı SQLite dosyasıdır, sadece uzantı farklı. */
+  async function downloadSqliteFromSchema(ext) {
+    ext = ext || '.sqlite';
     if (!projectTables(activeProject).length) { erToast('Önce bir tablo ekle.'); return; }
     erToast('SQLite veritabanı hazırlanıyor…');
     let db;
@@ -4188,8 +4193,8 @@
       const SQL = await loadSqlJs();
       db = new SQL.Database();
       db.exec(buildSQLiteSQL(activeProject, { dropFirst: false }));
-      download(db.export(), safeName('one') + '.sqlite', 'application/vnd.sqlite3');
-      erToast('✓ ' + safeName('one') + '.sqlite indirildi.');
+      download(db.export(), safeName('one') + ext, 'application/vnd.sqlite3');
+      erToast('✓ ' + safeName('one') + ext + ' indirildi.');
     } catch (e) {
       alert('Veritabanı oluşturulamadı:\n' + e.message);
     } finally { if (db) db.close(); }
@@ -4245,7 +4250,7 @@
   /* Kaynak bilgisi, "şema değişti" uyarısı ve tablo düğmeleri (satır sayılarıyla). */
   function renderConsoleInfo() {
     if (!erConsole) { el('conSrc').textContent = '—'; el('conTables').innerHTML = ''; return; }
-    el('conSrc').innerHTML = 'Veritabanı: <b>' + esc(erConsole.source) + '</b> · bellekte, kaydetmek için ".sqlite indir"';
+    el('conSrc').innerHTML = 'Veritabanı: <b>' + esc(erConsole.source) + '</b> · bellekte, kaydetmek için ".db indir" ya da ".sqlite indir"';
     const stale = erConsole.builtSql && erConsole.builtSql.replace(/^--.*\n/, '') !== buildSQLiteSQL(activeProject, { dropFirst: false, ifNotExists: false }).replace(/^--.*\n/, '');
     const st = el('conStale');
     if (stale) { st.style.display = ''; st.textContent = 'Şema konsol kurulduktan sonra değişti. Değişiklikleri görmek için "Şemadan yeniden kur".'; }
@@ -4319,11 +4324,11 @@
     renderConsoleInfo();
   }
 
-  function downloadConsoleDb() {
+  function downloadConsoleDb(ext) {
     if (!erConsole) return;
     const bytes = erConsole.db.export();
     try { erConsole.db.exec('PRAGMA foreign_keys = ON'); } catch (e) {} // export() bağlantıyı yeniler
-    download(bytes, safeName('one') + '.sqlite', 'application/vnd.sqlite3');
+    download(bytes, safeName('one') + (ext || '.sqlite'), 'application/vnd.sqlite3');
   }
 
   /* ---------- DİYAGRAMI RESİM OLARAK DIŞA AKTARMA ----------
@@ -4425,7 +4430,8 @@
     el('erFileMenu').classList.remove('open');
     const act = b.dataset.eract;
     if (act === 'import') openImportModal();
-    else if (act === 'db') downloadSqliteFromSchema();
+    else if (act === 'db') downloadSqliteFromSchema('.db');
+    else if (act === 'sqlite') downloadSqliteFromSchema('.sqlite');
     else if (act === 'sql') download(buildSQL(activeProject, schemaSettings()), safeName('one') + '.sql', 'application/sql');
     else if (act === 'png' || act === 'svg') exportDiagram(act);
     else if (act === 'clear') clearSchema();
@@ -4726,7 +4732,8 @@
     erJumpTo(row.dataset.tid);
   });
   el('sqlValidate').addEventListener('click', validateInSqlite);
-  el('sqlDownloadDb').addEventListener('click', downloadSqliteFromSchema);
+  el('sqlDownloadDb').addEventListener('click', () => downloadSqliteFromSchema('.db'));
+  el('sqlDownloadSqlite').addEventListener('click', () => downloadSqliteFromSchema('.sqlite'));
   el('sqlCopy').addEventListener('click', async () => {
     const txt = el('sqlOut').value;
     let ok = false;
@@ -4769,7 +4776,8 @@
   el('consoleModal').addEventListener('click', e => { if (e.target === el('consoleModal')) el('consoleModal').classList.remove('open'); });
   el('conRun').addEventListener('click', () => runConsole());
   el('conReset').addEventListener('click', resetConsole);
-  el('conDownload').addEventListener('click', downloadConsoleDb);
+  el('conDownloadDb').addEventListener('click', () => downloadConsoleDb('.db'));
+  el('conDownload').addEventListener('click', () => downloadConsoleDb('.sqlite'));
   el('conSql').addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runConsole(); }
   });
