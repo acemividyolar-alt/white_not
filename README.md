@@ -1,6 +1,7 @@
 # White Note
 
-Not, görev, Trello tarzı pano ve **SQLite veritabanı şema tasarımcısı** bir arada.
+Not, görev, Trello tarzı pano, **SQLite veritabanı şema tasarımcısı** ve **algoritma / akış şeması
+tasarımcısı** bir arada.
 Tek bir `index.html` dosyasından oluşur; kurulum gerektirmez, tarayıcıda çalışır.
 
 **Canlı sürüm:** https://acemividyolar-alt.github.io/white_not/
@@ -38,13 +39,39 @@ Tek bir `index.html` dosyasından oluşur; kurulum gerektirmez, tarayıcıda ça
 - Geri al / yinele (Ctrl+Z / Ctrl+Y), otomatik yerleştir, ekrana sığdır, tabloya git
 - Diyagramı PNG / SVG olarak indirme
 
+### Akış (algoritma / akış şeması)
+- Standart şekiller: Başla/Bitir (oval), Giriş ve Çıkış (paralelkenar), İşlem (dikdörtgen),
+  Karar (eşkenar dörtgen, Evet/Hayır çıkışlı), Döngü (altıgen, `i = 1 .. 10` gibi sayaçlı)
+- **Hızlı kurma:** bir şekli seç, paletten yenisine tıkla — altına eklenir ve okla bağlanır
+  (karar şeklinde ilk çıkış Evet, ikincisi Hayır olur ve sağa yerleşir)
+- Şekli tutup taşı; kenarındaki noktadan tutup başka şekle bırakarak ok çiz; oka tıklayıp
+  Evet/Hayır, çıktığı kenar, yön ve silme ayarlanır. Oklar dik açılı ve kendiliğinden yönlenir
+- **Algoritmadan şema:** algoritmayı yaz, akış şeması kendiliğinden çizilsin. Anlaşılan yazım:
+  - `Oku a, b` · `toplam = a + b` · `Yaz "Toplam:", toplam`
+  - `Eğer a > b ise` … `Değilse` … (girintiyle ya da `Eğer sonu` ile), `Değilse eğer`
+  - `İken i <= n` · `İçin i = 1 .. n` (`i = 1'den 10'a kadar adım 2`) · `5 kez tekrarla`
+  - `Tekrarla` … `tahmin = gizli olana kadar`
+  - Numaralı biçim: `Adım 4: Eğer x > 0 ise Adım 6'ya git` · `Adım 7: Adım 3'e git`
+  - İngilizce anahtar kelimeler de olur (`IF / ELSE / WHILE / FOR / INPUT / PRINT`)
+- **Şemadan algoritma:** şema "Adım 1: Başla …" biçiminde numaralı adımlara çevrilir
+  (kopyala / .txt indir); bu metin tekrar şemaya çevrilebilir
+- **Çalıştır:** şema adım adım yürütülür; sıradaki şekil ve geçilen ok yeşil gösterilir,
+  değişkenler ve ekran çıktısı izlenir, Giriş şeklinde değer sorulur. Hız seçilebilir,
+  sonsuz döngüye karşı adım sınırı vardır. İfadeler güvenli bir ayrıştırıcıyla hesaplanır
+  (`+ - * / mod ^`, `= <> < > <= >=`, `ve veya değil`, `karekök() mutlak() yuvarla() tam() rastgele(a, b)`)
+- Hata kontrolü: Başla yok, kararın iki çıkışı yok, bağlanmamış adım, ulaşılamayan adım…
+- Otomatik yerleştir, ekrana sığdır, geri al / yinele, PNG / SVG indirme
+- Hazır örnekler: toplam, büyük olanı bul, not harfi, faktöriyel, asal sayı, sayı tahmin oyunu
+  ve bu uygulamanın kendi çalışma akışı
+
 ## Veriler nerede?
 
 - Her şey bu cihazın tarayıcısında (`localStorage`) saklanır; hiçbir sunucuya gönderilmez.
 - Tarayıcılar bu alana sınır koyar (çoğunda yaklaşık 5 MB). Kapak resimleri bu yüzden
   otomatik küçültülür; kullanılan alan liste görünümünün altında görünür.
 - Başka cihaza taşımak ya da yedeklemek için: **Dışa / İçe aktar → JSON yedeği indir / yükle**.
-- Notlar ayrıca Markdown, düz metin ve PDF olarak dışa aktarılabilir (şema SQL'i dahil).
+- Notlar ayrıca Markdown, düz metin ve PDF olarak dışa aktarılabilir (şema SQL'i ve akış
+  şemasının algoritma adımları dahil).
 
 ## Notlar
 
@@ -59,7 +86,10 @@ Tek bir `index.html` dosyasından oluşur; kurulum gerektirmez, tarayıcıda ça
 | --- | --- | --- |
 | Ctrl+Enter | Ekleme kutusu | Not/görev ekle |
 | Ctrl+Enter | SQL konsolu | Çalıştır (seçili kısım varsa sadece o) |
-| Ctrl+Z / Ctrl+Y | Şema | Geri al / yinele |
+| Ctrl+Z / Ctrl+Y | Şema, Akış | Geri al / yinele |
 | Delete | Şema | Seçili ilişkiyi sil |
-| Ctrl + tekerlek | Şema | Yakınlaştır / uzaklaştır |
+| Delete | Akış | Seçili şekli / oku sil |
+| Enter / çift tık | Akış | Seçili şekli düzenle |
+| Ctrl+Enter | Algoritma kutusu | Akış şemasını oluştur |
+| Ctrl + tekerlek | Şema, Akış | Yakınlaştır / uzaklaştır |
 | Esc | Her yerde | Açık pencereyi kapat |
