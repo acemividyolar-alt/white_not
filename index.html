@@ -18,7 +18,7 @@
 <meta charset="UTF-8">                                   <!-- Türkçe karakterlerin (ş,ğ,ı...) doğru görünmesi için -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Telefonda doğru ölçeklenmesi için -->
 <title>White Note</title>                                 <!-- Tarayıcı sekmesinde görünen başlık -->
-<meta name="description" content="Not, görev, Trello tarzı pano ve SQLite veritabanı şema tasarımcısı. Tek dosya, tarayıcıda çalışır, veriler cihazda kalır.">
+<meta name="description" content="Not, görev, Trello tarzı pano, SQLite veritabanı şema tasarımcısı ve algoritma / akış şeması tasarımcısı. Tek dosya, tarayıcıda çalışır, veriler cihazda kalır.">
 <!-- Sekmedeki simge (ayrı dosya gerekmesin diye SVG olarak buraya gömülü) -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='5' y='3' width='22' height='26' rx='4' fill='%23c2410c'/%3E%3Cpath d='M10 11h12M10 16h12M10 21h8' stroke='%23fffdf7' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <!-- Telefonda tarayıcı çubuğunun rengi (tema değişince JS günceller) -->
@@ -43,6 +43,12 @@
     --green: #4d7c4d;       /* İlerleme çubuğu ve onay rengi (yeşil) */
     --sidebar-bg: #efe9de;  /* Kenar çubuğu arka planı */
     --proj-hover: #e6dfd2;  /* Proje üzerine gelince */
+    /* Akış şeması şekil renkleri (zemin / kenar) */
+    --fl-term-bg: #fbe3d4;  --fl-term-bd: #c2410c;   /* Başla / Bitir */
+    --fl-io-bg: #dfe9fb;    --fl-io-bd: #2563eb;     /* Giriş / Çıkış */
+    --fl-proc-bg: #fffdf7;  --fl-proc-bd: #6b645a;   /* İşlem */
+    --fl-dec-bg: #fbefc8;   --fl-dec-bd: #ca8a04;    /* Karar */
+    --fl-loop-bg: #ebe4fb;  --fl-loop-bd: #7c3aed;   /* Döngü */
   }
 
   /* KARANLIK TEMA: body'ye "dark" sınıfı eklenince bu değerler geçerli olur.
@@ -58,6 +64,11 @@
     --green: #6fa36f;       /* Yeşil (karanlıkta daha açık) */
     --sidebar-bg: #211e1b;  /* Kenar çubuğu arka planı */
     --proj-hover: #2e2a25;  /* Proje üzerine gelince */
+    --fl-term-bg: #3d2619;  --fl-term-bd: #e2632c;
+    --fl-io-bg: #1d2a42;    --fl-io-bd: #6b9cf5;
+    --fl-proc-bg: #262320;  --fl-proc-bd: #a39a8d;
+    --fl-dec-bg: #3a311a;   --fl-dec-bd: #e0b252;
+    --fl-loop-bg: #2c2340;  --fl-loop-bd: #a98bf2;
   }
 
   /* "*" tüm öğeleri seçer. Tarayıcıların varsayılan boşluklarını sıfırlıyoruz
@@ -800,6 +811,161 @@
   .con-table td.null { color: var(--muted); font-style: italic; }
   .con-table td.num { text-align: right; }
 
+  /* ===================================================================
+     AKIŞ GÖRÜNÜMÜ (algoritma / akış şeması tasarımcısı)
+     Şema görünümünün araç çubuğu, tuval ve durum satırı stillerini (er-*) kullanır;
+     şekiller ve oklar tek bir SVG içine çizilir.
+     =================================================================== */
+  body.view-flow .content, body.view-flow .search { display: none; }
+  body.view-flow .progress-wrap { display: none !important; }
+  body:not(.view-flow) .fl-wrap { display: none; }
+  body.view-flow .main { overflow: hidden; display: flex; flex-direction: column; }
+  body.view-flow .max { display: flex; flex-direction: column; flex: 1; min-height: 0; max-width: none; }
+  .fl-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+
+  /* Şekil paleti: her düğme küçük bir şekil simgesi + adı */
+  .fl-shape-btn { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .fl-shape-btn svg { width: 22px; height: 14px; flex-shrink: 0; overflow: visible; }
+  .fl-ico { stroke-width: 1.4; }
+  .fl-ico.k-start, .fl-ico.k-end { fill: var(--fl-term-bg); stroke: var(--fl-term-bd); }
+  .fl-ico.k-input, .fl-ico.k-output { fill: var(--fl-io-bg); stroke: var(--fl-io-bd); }
+  .fl-ico.k-process { fill: var(--fl-proc-bg); stroke: var(--fl-proc-bd); }
+  .fl-ico.k-decision { fill: var(--fl-dec-bg); stroke: var(--fl-dec-bd); }
+  .fl-ico.k-loop { fill: var(--fl-loop-bg); stroke: var(--fl-loop-bd); }
+
+  /* Çizim alanı: SVG'nin kendisi; yakınlaştırmada width/height büyür, viewBox sabit kalır */
+  .fl-svg {
+    display: block; touch-action: pan-x pan-y;
+    background-image: radial-gradient(circle, var(--line) 1.2px, transparent 1.4px);
+    background-size: 24px 24px;
+  }
+  .fl-node { cursor: grab; touch-action: none; }
+  .fl-shape { stroke-width: 1.6; transition: stroke 0.12s; }
+  .fl-node.k-start .fl-shape, .fl-node.k-end .fl-shape { fill: var(--fl-term-bg); stroke: var(--fl-term-bd); }
+  .fl-node.k-input .fl-shape, .fl-node.k-output .fl-shape { fill: var(--fl-io-bg); stroke: var(--fl-io-bd); }
+  .fl-node.k-process .fl-shape { fill: var(--fl-proc-bg); stroke: var(--fl-proc-bd); }
+  .fl-node.k-decision .fl-shape { fill: var(--fl-dec-bg); stroke: var(--fl-dec-bd); }
+  .fl-node.k-loop .fl-shape { fill: var(--fl-loop-bg); stroke: var(--fl-loop-bd); }
+  .fl-text { fill: var(--ink); font-family: Georgia, 'Times New Roman', serif; font-size: 14px; pointer-events: none; }
+  .fl-text.empty { fill: var(--muted); font-style: italic; }
+  .fl-kind { fill: var(--muted); font-family: monospace; font-size: 9px; pointer-events: none; text-transform: uppercase; letter-spacing: 0.04em; }
+  .fl-node:hover .fl-shape { stroke-width: 2.2; }
+  .fl-node.sel .fl-shape { stroke: var(--accent); stroke-width: 2.6; }
+  .fl-node.has-err .fl-shape { stroke: #c0392b; stroke-dasharray: 5 3; }
+  .fl-node.link-target .fl-shape { stroke: var(--accent); stroke-width: 3; stroke-dasharray: 6 4; }
+  .fl-node.moving { cursor: grabbing; }
+  .fl-node.moving .fl-shape { filter: drop-shadow(0 8px 14px rgba(0,0,0,0.25)); }
+  /* Çalıştırırken sıradaki adım */
+  .fl-node.run .fl-shape { stroke: var(--green); stroke-width: 3.4; }
+  .fl-node.done-run .fl-shape { stroke-width: 2.4; }
+  .fl-flash .fl-shape { animation: flFlash 1.2s ease; }
+  @keyframes flFlash { 0%, 60% { stroke: var(--accent); stroke-width: 5; } }
+  .fl-badge { fill: #c0392b; }
+  .fl-badge.warn { fill: #b7791f; }
+  .fl-badge-t { fill: #fff; font: bold 11px monospace; text-anchor: middle; pointer-events: none; }
+  /* Bağlantı noktaları: üzerine gelince / seçiliyken görünür; buradan tutup başka şekle sürükle */
+  .fl-port { fill: var(--paper); stroke: var(--accent); stroke-width: 2; opacity: 0; cursor: crosshair; transition: opacity 0.12s; }
+  .fl-node:hover .fl-port, .fl-node.sel .fl-port { opacity: 1; }
+  .fl-node.k-end .fl-port { display: none; } /* Bitir'den ok çıkmaz */
+  @media (hover: none) { .fl-node.sel .fl-port { opacity: 1; } }
+
+  .fl-edge { fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linejoin: round; pointer-events: none; }
+  .fl-edge.sel { stroke: var(--accent); stroke-width: 2.6; }
+  .fl-edge.run { stroke: var(--green); stroke-width: 2.8; }
+  .fl-edge.temp { stroke: var(--accent); stroke-dasharray: 6 5; }
+  .fl-edge-hit { fill: none; stroke: transparent; stroke-width: 14; cursor: pointer; pointer-events: stroke; }
+  .fl-edge-hit:hover + .fl-edge:not(.sel):not(.run) { stroke: var(--ink); }
+  .fl-arrow { fill: var(--muted); }
+  .fl-arrow.sel { fill: var(--accent); }
+  .fl-arrow.run { fill: var(--green); }
+  .fl-elabel { font-family: monospace; font-size: 11.5px; font-weight: bold; fill: var(--muted); paint-order: stroke; stroke: var(--paper); stroke-width: 4px; pointer-events: none; }
+  .fl-elabel.yes { fill: var(--green); }
+  .fl-elabel.no { fill: #c0392b; }
+  body.dark .fl-elabel.no { fill: #e57373; }
+  .fl-elabel.sel { fill: var(--accent); }
+  body.fl-moving, body.fl-moving * { cursor: grabbing !important; }
+  body.fl-linking, body.fl-linking * { cursor: crosshair !important; }
+  body.fl-moving, body.fl-linking { user-select: none; -webkit-user-select: none; }
+  .fl-empty-btns { margin-top: 0.9rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; pointer-events: auto; font-style: normal; }
+
+  /* Çalıştırma (izleme) paneli: tuvalin altında, tuval görünür kalsın diye pencere değil */
+  .fl-run {
+    border: 1px solid var(--line); border-radius: 10px; background: var(--paper);
+    padding: 0.55rem 0.7rem; display: flex; flex-direction: column; gap: 0.45rem;
+    max-height: 40vh; min-height: 0; overflow-y: auto; flex-shrink: 0;
+  }
+  .fl-run-bar { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+  .fl-run-state { flex: 1; min-width: 10rem; font-size: 0.82rem; color: var(--muted); }
+  .fl-run-state b { color: var(--ink); }
+  .fl-run-state.err { color: #c0392b; }
+  body.dark .fl-run-state.err { color: #e57373; }
+  .fl-run-state.ok { color: var(--green); }
+  .fl-run-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 0.6rem; }
+  .fl-run-label { font-size: 0.68rem; color: var(--muted); font-family: monospace; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; }
+  .fl-vars { width: 100%; border-collapse: collapse; font-family: monospace; font-size: 0.8rem; }
+  .fl-vars td { border-bottom: 1px solid var(--line); padding: 0.2rem 0.35rem; word-break: break-all; }
+  .fl-vars td:first-child { color: var(--muted); width: 40%; }
+  .fl-vars tr.changed td { background: var(--accent-soft); color: var(--accent); }
+  .fl-out {
+    font-family: monospace; font-size: 0.8rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 0.35rem 0.5rem;
+    min-height: 2.4rem; max-height: 9rem; overflow-y: auto;
+  }
+  .fl-out .in { color: var(--muted); }
+  .fl-out .err { color: #c0392b; }
+  body.dark .fl-out .err { color: #e57373; }
+  .fl-ask { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; font-size: 0.85rem; }
+  .fl-ask input {
+    flex: 1; min-width: 8rem; font-family: monospace; font-size: 0.9rem; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--accent); border-radius: 5px; padding: 0.35rem 0.5rem; outline: none;
+  }
+  .fl-none { font-size: 0.8rem; color: var(--muted); font-style: italic; }
+
+  /* Adım düzenleme penceresi: şekil seçimi */
+  .fl-kinds { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .fl-kind-chip {
+    display: inline-flex; align-items: center; gap: 0.35rem; font-family: inherit; font-size: 0.85rem;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 16px;
+    padding: 0.3rem 0.7rem 0.3rem 0.5rem; cursor: pointer;
+  }
+  .fl-kind-chip svg { width: 22px; height: 14px; overflow: visible; }
+  .fl-kind-chip.sel { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .fl-text-in { font-family: monospace; font-size: 0.95rem; min-height: 70px; }
+  .fl-help { font-size: 0.82rem; color: var(--muted); line-height: 1.55; margin-top: 0.4rem; }
+  .fl-help code, .fl-syntax code { font-family: monospace; background: var(--bg); border: 1px solid var(--line); border-radius: 3px; padding: 0 0.25rem; color: var(--ink); }
+
+  /* "?" yardım düğmesi ve "Şekiller ne işe yarar?" penceresi */
+  .er-btn.fl-help-btn { font-weight: bold; font-family: Georgia, serif; border-radius: 50%; min-width: 2.1rem; }
+  .fl-legend { display: flex; flex-direction: column; }
+  .fl-leg-row {
+    display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 0.75rem; align-items: center;
+    padding: 0.55rem 0.1rem; border-bottom: 1px dashed var(--line);
+  }
+  .fl-leg-row:last-child { border-bottom: none; }
+  .fl-leg-row > svg { width: 66px; height: 36px; overflow: visible; justify-self: center; }
+  .fl-leg-row .fl-ico { stroke-width: 1.6; }
+  .fl-leg-arrow { stroke: var(--muted); stroke-width: 1.8; fill: none; }
+  .fl-leg-arrow-head { fill: var(--muted); }
+  .fl-leg-name { font-weight: bold; font-size: 0.98rem; }
+  .fl-leg-what { font-size: 0.86rem; color: var(--muted); line-height: 1.45; margin-top: 0.1rem; }
+  .fl-leg-ex { font-family: monospace; font-size: 0.78rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 3px; padding: 0 0.3rem; white-space: nowrap; }
+  .fl-leg-add { font-size: 0.78rem; padding: 0.3rem 0.55rem; }
+  .fl-leg-tips { border-top: 1px solid var(--line); padding-top: 0.7rem; margin-top: 0.3rem; }
+
+  /* Algoritma penceresi: iki sekme (şemadan algoritma / algoritmadan şema) */
+  .fl-tabs { display: flex; gap: 0.3rem; border-bottom: 1px solid var(--line); margin-bottom: 0.8rem; flex-wrap: wrap; }
+  .fl-tab {
+    font-family: inherit; font-size: 0.9rem; background: transparent; border: none; color: var(--muted);
+    padding: 0.45rem 0.8rem; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .fl-tab.sel { color: var(--ink); border-bottom-color: var(--accent); font-weight: bold; }
+  .fl-algo-out { font-family: monospace; font-size: 0.85rem; line-height: 1.6; min-height: 240px; white-space: pre-wrap; }
+  .fl-syntax { font-size: 0.82rem; color: var(--muted); line-height: 1.6; margin: 0.6rem 0; }
+  .fl-syntax summary { cursor: pointer; color: var(--ink); }
+  .fl-syntax table { border-collapse: collapse; margin-top: 0.4rem; width: 100%; }
+  .fl-syntax td { border-bottom: 1px dashed var(--line); padding: 0.25rem 0.4rem; vertical-align: top; }
+  .fl-syntax td:first-child { white-space: nowrap; color: var(--ink); }
+
   /* GENİŞ EKRAN (1100px üstü): iki sütunlu yerleşim.
      Sol sütun ekleme kutusu (yapışkan), sağ sütun liste. */
   .content { width: 100%; }
@@ -855,6 +1021,13 @@
     .tbl-line .tbl-fname { flex: 1 1 55%; }
     .tbl-line .tbl-ftype { flex: 1 1 35%; }
     .tbl-line.sub .tbl-in { flex: 1 1 100%; }
+    /* Akış: şekil düğmelerinde sadece simge kalsın, çalıştırma paneli tek sütun olsun */
+    .fl-shape-btn .lbl { display: none; }
+    .fl-shape-btn { padding: 0.4rem 0.45rem; }
+    .fl-run-body { grid-template-columns: 1fr; }
+    .fl-leg-row { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 0.5rem; }
+    .fl-leg-row > svg { width: 54px; }
+    .fl-run { max-height: 45vh; }
   }
 </style>
 </head>
@@ -897,6 +1070,7 @@
             <button id="viewList" class="sel">Liste</button>
             <button id="viewBoard">Pano</button>
             <button id="viewSchema" title="SQL tabloları ve ilişkileri">Şema</button>
+            <button id="viewFlow" title="Algoritma / akış şeması">Akış</button>
           </div>
           <!-- Tema değiştirme düğmesi (açık/karanlık) -->
           <button class="theme-btn" id="themeBtn" aria-label="Tema değiştir" title="Tema değiştir">&#9789;</button>
@@ -1013,6 +1187,102 @@
         <div class="er-status">
           <span class="er-hint" id="erHint">Tabloyu renkli başlığından tutup taşı · Bir alanı tutup başka tablodaki alana (ya da tablonun kendisine) bırakarak ilişki kur · Çift tık = düzenle</span>
           <span class="er-stats" id="erStats"></span>
+        </div>
+      </div>
+
+      <!-- AKIŞ GÖRÜNÜMÜ: algoritma / akış şeması (serbest tuval).
+           Şekiller ve oklar JS ile tek bir SVG'ye (#flSvg) çizilir.
+           Diğer görünümlerdeyken CSS ile gizlidir. -->
+      <div class="fl-wrap" id="flWrap">
+        <div class="er-toolbar">
+          <div class="er-group" id="flPalette">
+            <!-- data-addkind: tıklanınca o şekil eklenir (simgeleri JS çizer) -->
+            <button class="er-btn fl-shape-btn" data-addkind="start" title="Başla — algoritmanın başlangıcı"><span class="lbl">Başla</span></button>
+            <button class="er-btn fl-shape-btn" data-addkind="input" title="Giriş — kullanıcıdan veri al (Oku a, b)"><span class="lbl">Giriş</span></button>
+            <button class="er-btn fl-shape-btn" data-addkind="process" title="İşlem — hesaplama / atama (toplam = a + b)"><span class="lbl">İşlem</span></button>
+            <button class="er-btn fl-shape-btn" data-addkind="decision" title="Karar — koşul (a > b ?), Evet / Hayır çıkışı"><span class="lbl">Karar</span></button>
+            <button class="er-btn fl-shape-btn" data-addkind="loop" title="Döngü — sayaçlı tekrar (i = 1 .. 10)"><span class="lbl">Döngü</span></button>
+            <button class="er-btn fl-shape-btn" data-addkind="output" title="Çıkış — ekrana yaz (Yaz toplam)"><span class="lbl">Çıkış</span></button>
+            <button class="er-btn fl-shape-btn" data-addkind="end" title="Bitir — algoritmanın sonu"><span class="lbl">Bitir</span></button>
+            <span class="er-sep"></span>
+            <button class="er-btn icon" id="flUndo" title="Geri al (Ctrl+Z)" disabled>&#8630;</button>
+            <button class="er-btn icon" id="flRedo" title="Yinele (Ctrl+Y)" disabled>&#8631;</button>
+            <button class="er-btn" id="flLayout" title="Şekilleri akışa göre otomatik diz">Yerleştir</button>
+            <button class="er-btn" id="flFit" title="Tüm şemayı ekrana sığdır">Sığdır</button>
+          </div>
+          <div class="er-group">
+            <button class="er-btn icon" id="flZoomOut" title="Uzaklaştır">&minus;</button>
+            <span class="er-zoom" id="flZoomLabel" title="%100'e dön">100%</span>
+            <button class="er-btn icon" id="flZoomIn" title="Yakınlaştır">+</button>
+            <span class="er-sep"></span>
+            <div class="er-menu-wrap">
+              <button class="er-btn" id="flFileBtn">Dosya &#9662;</button>
+              <div class="menu" id="flFileMenu">
+                <div class="menu-group-label">Oluştur</div>
+                <button data-flact="fromtext">Yazılı algoritmadan oluştur&hellip;</button>
+                <button data-flact="example">Örnek şema aç&hellip;</button>
+                <div class="sep"></div>
+                <div class="menu-group-label">Dışa aktar</div>
+                <button data-flact="png">Akış şeması resmi (.png)</button>
+                <button data-flact="svg">Akış şeması vektör (.svg)</button>
+                <button data-flact="txt">Algoritma adımları (.txt)</button>
+                <div class="sep"></div>
+                <button data-flact="clear" class="danger">Şemayı temizle&hellip;</button>
+              </div>
+            </div>
+            <button class="er-btn" id="flRunBtn" title="Algoritmayı adım adım çalıştır: değişkenleri ve çıktıyı izle">&#9654; Çalıştır</button>
+            <button class="er-btn dark" id="flAlgoBtn" title="Şemayı numaralı algoritma adımlarına çevir ya da yazılı algoritmadan şema oluştur">Algoritma</button>
+            <button class="er-btn icon fl-help-btn" id="flHelpBtn" title="Hangi şekil ne işe yarar?" aria-label="Yardım: şekillerin anlamı">?</button>
+          </div>
+        </div>
+        <div class="er-canvas" id="flCanvas">
+          <div class="er-sizer" id="flSizer">
+            <svg class="fl-svg" id="flSvg" xmlns="http://www.w3.org/2000/svg">
+              <g id="flEdges"></g>
+              <g id="flNodes"></g>
+              <g id="flTemp"></g>
+            </svg>
+            <!-- Seçili okun ayar kutusu (yakınlaştırmadan etkilenmesin diye SVG'nin dışında) -->
+            <div class="er-link-panel" id="flEdgePanel" style="display:none"></div>
+          </div>
+          <div class="er-empty" id="flEmpty">
+            <div>Henüz adım yok.<br>Üstteki şekillerle tek tek ekle (önce bir şekli seçersen yenisi altına eklenip bağlanır)<br>ya da algoritmanı yaz, akış şeması kendiliğinden çizilsin.
+              <div class="fl-empty-btns">
+                <button class="er-btn primary" data-flact="fromtext">Algoritmadan oluştur</button>
+                <button class="er-btn" data-flact="example">Örnek aç</button>
+                <button class="er-btn" data-flact="help">? Şekiller ne işe yarar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Çalıştırma paneli: değişkenler, çıktı ve kullanıcı girişi -->
+        <div class="fl-run" id="flRun" style="display:none">
+          <div class="fl-run-bar">
+            <button class="er-btn primary" id="flRunPlay" title="Sonuna kadar (ya da bir giriş istenene kadar) çalıştır">&#9654; Oynat</button>
+            <button class="er-btn" id="flRunStep" title="Sadece bir adım ilerle">Adım &rsaquo;</button>
+            <button class="er-btn" id="flRunReset" title="Değişkenleri silip baştan başla">&#8634; Baştan</button>
+            <select class="er-select" id="flRunSpeed" title="Oynatma hızı">
+              <option value="700">Yavaş</option>
+              <option value="300" selected>Normal</option>
+              <option value="60">Hızlı</option>
+              <option value="0">Anında</option>
+            </select>
+            <span class="fl-run-state" id="flRunState"></span>
+            <button class="er-btn icon" id="flRunClose" title="Paneli kapat">&times;</button>
+          </div>
+          <div class="fl-ask" id="flAsk" style="display:none">
+            <label for="flAskIn" id="flAskLabel"></label>
+            <input id="flAskIn" type="text" autocomplete="off" spellcheck="false" enterkeyhint="done">
+            <button class="er-btn primary" id="flAskBtn">Gir</button>
+          </div>
+          <div class="fl-run-body">
+            <div><div class="fl-run-label">Değişkenler</div><div id="flVars"></div></div>
+            <div><div class="fl-run-label">Ekran (çıktı)</div><div class="fl-out" id="flOut"></div></div>
+          </div>
+        </div>
+        <div class="er-status">
+          <span class="er-hint" id="flHint">Şekli tutup taşı · Kenarındaki noktadan tutup başka şekle bırakarak ok çiz · Çift tık = düzenle · Oka tıkla = Evet/Hayır, sil</span>
+          <span class="er-stats" id="flStats"></span>
         </div>
       </div>
     </div>
@@ -1209,6 +1479,123 @@
   </div>
 </div>
 
+<!-- ===================================================================
+     ADIM DÜZENLEME PENCERESİ (Akış görünümü)
+     Bir şekle çift tıklanınca açılır: şekil türü ve içindeki yazı değiştirilir.
+     =================================================================== -->
+<div class="modal-overlay" id="flNodeModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-heading">Adımı düzenle</div>
+      <button class="modal-close" id="flNodeClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section-label">Şekil</div>
+      <div class="fl-kinds" id="flNodeKinds"></div>
+      <div class="modal-section-label">Yazı</div>
+      <textarea class="modal-desc fl-text-in" id="flNodeText" spellcheck="false"></textarea>
+      <div class="fl-help" id="flNodeHelp"></div>
+      <div class="modal-actions">
+        <button class="modal-btn danger" id="flNodeDelete">Adımı sil</button>
+        <button class="modal-btn primary" id="flNodeDone">Bitti</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     ŞEKİLLER NE İŞE YARAR? (Akış görünümü, "?" düğmesi)
+     Her akış şeması şeklinin anlamını kısa bir örnekle hatırlatır.
+     İçerik JS ile (FL_KINDS'tan) çizilir; satırdaki "+ Ekle" o şekli şemaya ekler.
+     =================================================================== -->
+<div class="modal-overlay" id="flHelpModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-heading">Şekiller ne işe yarar?</div>
+      <button class="modal-close" id="flHelpClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="fl-legend" id="flLegend"></div>
+      <div class="fl-help fl-leg-tips">
+        <b>Okuma sırası:</b> Başla'dan başlanır, okları izleyerek ilerlenir, Bitir'de durulur.<br>
+        <b>Kısa yollar:</b> şekle çift tık = düzenle · seçiliyken <code>Delete</code> = sil · <code>Ctrl+Z</code> = geri al ·
+        şekil seçiliyken paletten yenisine tıklarsan altına eklenip bağlanır.
+      </div>
+      <div class="modal-actions">
+        <span></span>
+        <button class="modal-btn primary" id="flHelpDone">Tamam</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     ALGORİTMA PENCERESİ (Akış görünümü)
+     1. sekme: şema -> numaralı algoritma adımları (+ şemadaki hatalar)
+     2. sekme: yazılı algoritma -> akış şeması
+     =================================================================== -->
+<div class="modal-overlay" id="flAlgoModal">
+  <div class="modal wide">
+    <div class="modal-head">
+      <div class="modal-heading">Algoritma</div>
+      <button class="modal-close" id="flAlgoClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="fl-tabs">
+        <button class="fl-tab sel" data-fltab="steps">Şemadan algoritma</button>
+        <button class="fl-tab" data-fltab="parse">Algoritmadan şema</button>
+      </div>
+
+      <div id="flTabSteps">
+        <div class="er-issues" id="flIssues"></div>
+        <textarea class="modal-desc fl-algo-out" id="flAlgoOut" readonly spellcheck="false"></textarea>
+        <div class="modal-actions">
+          <button class="modal-btn" id="flAlgoEdit" title="Bu adımları düzenleyip şemayı yeniden oluştur">Düzenle &rarr;</button>
+          <div class="modal-actions-right">
+            <button class="modal-btn" id="flAlgoDownload">.txt indir</button>
+            <button class="modal-btn primary" id="flAlgoCopy">Kopyala</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="flTabParse" style="display:none">
+        <p class="modal-note">Algoritmanı her satıra bir adım gelecek şekilde yaz; akış şeması kendiliğinden çizilir. Hem girintili yapı (Eğer / Değilse / İken / İçin) hem de numaralı "Adım 5'e git" biçimi anlaşılır.</p>
+        <div class="modal-row" style="margin-bottom:0.5rem">
+          <select class="modal-select" id="flExample">
+            <option value="">Örnek seç&hellip;</option>
+          </select>
+        </div>
+        <textarea class="modal-desc sql-in fl-text-in" id="flSource" spellcheck="false" style="min-height:220px"></textarea>
+        <details class="fl-syntax">
+          <summary>Yazım kuralları</summary>
+          <table>
+            <tr><td><code>Başla</code> · <code>Bitir</code></td><td>Başlangıç ve bitiş (yazılmazsa eklenir)</td></tr>
+            <tr><td><code>Oku a, b</code></td><td>Giriş: kullanıcıdan değer al (Gir, Al da olur)</td></tr>
+            <tr><td><code>Yaz "Toplam:", t</code></td><td>Çıkış: ekrana yaz (Yazdır, Göster da olur)</td></tr>
+            <tr><td><code>t = a + b</code> · <code>i &larr; i + 1</code></td><td>İşlem (atama, hesaplama)</td></tr>
+            <tr><td><code>Eğer a &gt; b ise</code> &hellip; <code>Değilse</code> &hellip;</td><td>Karar; içindeki satırları girintile (ya da <code>Eğer sonu</code> ile kapat)</td></tr>
+            <tr><td><code>İken i &lt;= n</code></td><td>Koşullu döngü (koşul doğru oldukça tekrarla)</td></tr>
+            <tr><td><code>İçin i = 1 .. n</code></td><td>Sayaçlı döngü (<code>i = 1'den 10'a kadar</code>, <code>adım 2</code> da olur)</td></tr>
+            <tr><td><code>Tekrarla</code> &hellip; <code>i &gt; 10 olana kadar</code></td><td>Sonda kontrollü döngü · <code>5 kez tekrarla</code></td></tr>
+            <tr><td><code>Adım 4: Eğer x &gt; 0 ise Adım 6'ya git</code></td><td>Numaralı (git'li) algoritma biçimi</td></tr>
+            <tr><td><code># not</code></td><td>Yorum satırı (şemaya girmez)</td></tr>
+          </table>
+          İfadelerde <code>+ - * / mod ^</code>, <code>= &lt;&gt; &lt; &gt; &lt;= &gt;=</code>, <code>ve veya değil</code>, <code>karekök( )</code> <code>mutlak( )</code> <code>yuvarla( )</code> <code>tam( )</code> kullanılabilir.
+        </details>
+        <div class="modal-row">
+          <label class="opt"><input type="radio" name="flMode" value="replace" checked> Mevcut şemanın yerine koy (geri alınabilir)</label>
+          <label class="opt"><input type="radio" name="flMode" value="append"> Mevcut şemanın yanına ekle</label>
+        </div>
+        <div class="er-msg" id="flParseMsg"></div>
+        <div class="modal-actions">
+          <span></span>
+          <button class="modal-btn primary" id="flParseBtn">Akış şemasını oluştur</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   /* ===================================================================
      JAVASCRIPT BÖLÜMÜ - Uygulamanın TÜM İŞLEYİŞİ burada.
@@ -1240,6 +1627,15 @@
   let openTableId = null;    // Tablo düzenleme penceresinde açık olan tablonun id'si
   let selectedLinkId = null; // Şemada tıklanıp seçilmiş (silinebilir) ilişkinin id'si
   let dbSettings = {};       // Proje başına SQL ayarları: {projectId, dialect, ifNotExists, dropFirst, fkIndexes, transaction, strict, extraSql, consoleSql}
+
+  /* AKIŞ ŞEMASI verisi — her adım (şekil) ve ok bir projeye aittir. */
+  let flowNodes = [];        // Şekiller. Her biri: {id, projectId, kind, text, x, y, created}
+                             //   kind: start | end | input | output | process | decision | loop
+                             //   x, y: şeklin MERKEZİ (tuval koordinatında)
+  let flowEdges = [];        // Oklar. Her biri: {id, projectId, from, to, label, fromSide, created}
+                             //   label: '' | 'Evet' | 'Hayır' (karar/döngü çıkışları)
+                             //   fromSide: okun çıktığı kenar ('top'|'right'|'bottom'|'left'), boşsa otomatik
+  let flSettings = {};       // Proje başına: {projectId, source} (son yazılan algoritma metni)
 
   /* Sütunlara verilebilecek hazır renkler (Trello tarzı). İlk değer "renksiz" sayılır. */
   const COLUMN_COLORS = ['#c2410c', '#4d7c4d', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#ca8a04', '#64748b'];
@@ -1398,6 +1794,19 @@
           const it = await sGet(k);
           if (it && it.value) { try { const s = JSON.parse(it.value); if (s.projectId) dbSettings[s.projectId] = s; } catch(e){} }
         }
+
+        // 'fln:' = akış şeması adımları, 'fle:' = oklar, 'fls:' = proje başına akış ayarları
+        const readAll = async prefix => {
+          const out = [];
+          for (const k of (await sList(prefix) || [])) {
+            const it = await sGet(k);
+            if (it && it.value) { try { out.push(JSON.parse(it.value)); } catch(e){} }
+          }
+          return out;
+        };
+        flowNodes = normalizeFlowNodes(await readAll('fln:'));
+        flowEdges = normalizeFlowEdges(await readAll('fle:'), flowNodes);
+        (await readAll('fls:')).forEach(s => { if (s && s.projectId) flSettings[s.projectId] = s; });
       }
     }
 
@@ -1437,6 +1846,10 @@
   async function deleteDbTableStore(id) { if (storageOK) await sDel('tbl:' + id); }
   async function saveDbLink(l) { if (storageOK) await sSet('rel:' + l.id, JSON.stringify(l)); }
   async function deleteDbLinkStore(id) { if (storageOK) await sDel('rel:' + id); }
+  async function saveFlowNode(n) { if (storageOK) await sSet('fln:' + n.id, JSON.stringify(n)); }
+  async function deleteFlowNodeStore(id) { if (storageOK) await sDel('fln:' + id); }
+  async function saveFlowEdge(e) { if (storageOK) await sSet('fle:' + e.id, JSON.stringify(e)); }
+  async function deleteFlowEdgeStore(id) { if (storageOK) await sDel('fle:' + id); }
 
   /* Benzersiz kimlik (ID) üretir: zaman + rastgele harfler.
      Her not, görev ve projenin birbirinden ayırt edilmesi için gerekir. */
@@ -1466,6 +1879,7 @@
     renderMain();
     renderBoard();
     renderSchema();
+    renderFlow();
     return p;
   }
 
@@ -1508,7 +1922,9 @@
     const p = projects.find(x => x.id === id);
     const cnt = items.filter(i => i.projectId === id).length; // bu projedeki öğe sayısı
     const tcnt = dbTables.filter(t => t.projectId === id).length; // şema tablosu sayısı
-    if (!confirm('"' + p.name + '" projesi ve içindeki ' + cnt + ' öğe' + (tcnt ? ' ve ' + tcnt + ' şema tablosu' : '') + ' silinsin mi?\nBu işlem geri alınamaz.')) return;
+    const fcnt = flowNodes.filter(n => n.projectId === id).length; // akış şeması adım sayısı
+    if (!confirm('"' + p.name + '" projesi ve içindeki ' + cnt + ' öğe' + (tcnt ? ', ' + tcnt + ' şema tablosu' : '') +
+                 (fcnt ? ', ' + fcnt + ' akış şeması adımı' : '') + ' silinsin mi?\nBu işlem geri alınamaz.')) return;
 
     // Projenin tüm öğelerini sil
     for (const i of items.filter(x => x.projectId === id)) { await deleteItemStore(i.id); }
@@ -1528,6 +1944,16 @@
     await sDel('sch:' + id);
     if (erConsole && erConsole.pid === id) closeConsoleDb();
 
+    // Projenin akış şemasını sil
+    for (const n of flowNodes.filter(x => x.projectId === id)) await deleteFlowNodeStore(n.id);
+    flowNodes = flowNodes.filter(n => n.projectId !== id);
+    for (const e of flowEdges.filter(x => x.projectId === id)) await deleteFlowEdgeStore(e.id);
+    flowEdges = flowEdges.filter(e => e.projectId !== id);
+    delete flSettings[id];
+    delete flHistory[id];
+    await sDel('fls:' + id);
+    if (flRun && flRun.pid === id) flCloseRun();
+
     await sDel('proj:' + id);
     projects = projects.filter(x => x.id !== id);
 
@@ -1537,6 +1963,7 @@
     renderMain();
     renderBoard();
     renderSchema();
+    renderFlow();
   }
 
   /* ---- SOL PROJE LİSTESİNİ ÇİZ ----
@@ -1561,7 +1988,8 @@
         activeProject = d.dataset.id;   // değilse o projeyi aç
         el('search').value = '';        // aramayı temizle
         closeDrawer();                  // mobilde çekmeceyi kapat
-        renderProjects(); renderMain(); renderBoard(); renderSchema();
+        flCloseRun();
+        renderProjects(); renderMain(); renderBoard(); renderSchema(); renderFlow();
       });
     });
   }
@@ -2479,21 +2907,26 @@
   }
 
   /* ===================================================================
-     GÖRÜNÜM GEÇİŞİ — Liste / Pano / Şema
-     body'ye "view-board" veya "view-schema" sınıfı eklenince CSS ilgili görünümü gösterir.
+     GÖRÜNÜM GEÇİŞİ — Liste / Pano / Şema / Akış
+     body'ye "view-board", "view-schema" veya "view-flow" sınıfı eklenince CSS ilgili görünümü gösterir.
      Tercih localStorage'a kaydedilir, böylece sonraki açılışta hatırlanır.
      =================================================================== */
   async function setView(view) {
     currentView = view;
     const board = (view === 'board');
     const schema = (view === 'schema');
+    const flow = (view === 'flow');
     document.body.classList.toggle('view-board', board);
     document.body.classList.toggle('view-schema', schema);
+    document.body.classList.toggle('view-flow', flow);
     el('viewList').classList.toggle('sel', view === 'list');
     el('viewBoard').classList.toggle('sel', board);
     el('viewSchema').classList.toggle('sel', schema);
+    el('viewFlow').classList.toggle('sel', flow);
     if (board) renderBoard();
     if (schema) renderSchema();
+    if (flow) renderFlow();
+    else flStopRun(); // görünümden çıkınca oynatma dursun
     if (storageOK) await sSet('pref:view', view);
   }
 
@@ -4815,6 +5248,2314 @@
   });
 
   /* ===================================================================
+     AKIŞ GÖRÜNÜMÜ — Algoritma / akış şeması tasarımcısı
+     Şema görünümüyle aynı mantık (serbest tuval, sürükle-bırak, geri al, PNG/SVG) ama
+     tablo yerine akış şeması şekilleri vardır:
+       Başla/Bitir (oval) · Giriş/Çıkış (paralelkenar) · İşlem (dikdörtgen)
+       Karar (eşkenar dörtgen, Evet/Hayır çıkışlı) · Döngü (altıgen, sayaçlı tekrar)
+     • Şekil tutulup taşınır; kenarındaki noktadan tutup başka şekle bırakınca ok çizilir
+     • Bir şekil seçiliyken paletten yeni şekil eklenirse altına konup otomatik bağlanır
+     • "Algoritma" penceresi: şema <-> numaralı algoritma adımları (iki yönlü)
+     • "Çalıştır": şema adım adım yürütülür; değişkenler ve ekran çıktısı izlenir
+     Konumlar tuval koordinatındadır (x, y = şeklin merkezi); yakınlaştırma sadece ölçekler.
+     Şekiller tek bir SVG'ye çizilir; yazı genişliği canvas ile ölçülüp satırlara bölünür.
+     =================================================================== */
+
+  /* ---------- SABİTLER ---------- */
+
+  /* Şekil türleri: adı, yeni eklenince sorulacak soru, örnek yazı ve düzenleme ipucu */
+  const FL_KINDS = {
+    start:    { name: 'Başla',  def: 'Başla', ask: null,
+                help: 'Algoritmanın başladığı yer. Bir şemada bir tane olur; içine genelde sadece <code>Başla</code> yazılır.' },
+    input:    { name: 'Giriş',  def: 'Oku a', ask: 'Giriş — kullanıcıdan hangi değerler alınsın?',
+                help: 'Kullanıcıdan değer alır. <code>Oku a, b</code> · <code>Gir yas</code> — çalıştırınca her değişken için değer sorulur.' },
+    process:  { name: 'İşlem',  def: 'x = 0', ask: 'İşlem — ne hesaplansın / atansın?',
+                help: 'Hesaplama ya da atama. <code>toplam = a + b</code> · <code>i &larr; i + 1</code> · birden fazlası için <code>;</code> ile ayır: <code>a = 1; b = 2</code>' },
+    decision: { name: 'Karar',  def: 'a > b', ask: 'Karar — koşul nedir? (doğruysa Evet, yanlışsa Hayır yoluna gidilir)',
+                help: 'Koşul yaz: <code>a &gt; b</code> · <code>sayi mod 2 = 0</code> · <code>x &gt;= 0 ve x &lt;= 100</code>. İki ok çıkar: <b>Evet</b> (koşul doğru) ve <b>Hayır</b>.' },
+    loop:     { name: 'Döngü',  def: 'i = 1 .. 10', ask: 'Döngü — sayaç nereden nereye? (ör. i = 1 .. 10)',
+                help: 'Sayaçlı tekrar: <code>i = 1 .. 10</code> · <code>i = 1, n, 2</code> (başlangıç, bitiş, artış) · <code>i = 10 .. 1 adım -1</code>. <b>Evet</b> oku döngünün içine gider, içteki son adım buraya geri bağlanır; sayaç bitince <b>Hayır</b> okundan çıkılır.' },
+    output:   { name: 'Çıkış',  def: 'Yaz x', ask: 'Çıkış — ekrana ne yazılsın?',
+                help: 'Ekrana yazar. <code>Yaz toplam</code> · <code>Yaz "Sonuç:", toplam</code> — tırnak içindeki yazı olduğu gibi, diğerleri değer olarak yazılır.' },
+    end:      { name: 'Bitir',  def: 'Bitir', ask: null,
+                help: 'Algoritmanın bittiği yer. Birden fazla olabilir (ör. hata durumunda erken bitiş).' }
+  };
+  const FL_KIND_ORDER = ['start', 'input', 'process', 'decision', 'loop', 'output', 'end'];
+  const FL_SIDES = ['top', 'right', 'bottom', 'left'];
+  const FL_DIR = { top: [0, -1], right: [1, 0], bottom: [0, 1], left: [-1, 0] };
+  const FL_FONT = '14px Georgia, "Times New Roman", serif';
+  const FL_LINE_H = 18;   // satır yüksekliği (px)
+  const FL_SLANT = 18;    // paralelkenarın eğikliği
+  const FL_HEX = 16;      // altıgenin uç payı
+  const FL_HINT = el('flHint').textContent;
+
+  /* ---------- KÜÇÜK YARDIMCILAR ---------- */
+
+  function projectFlowNodes(pid) { return flowNodes.filter(n => n.projectId === pid).sort((a, b) => a.created - b.created); }
+  function projectFlowEdges(pid) { return flowEdges.filter(e => e.projectId === pid).sort((a, b) => a.created - b.created); }
+  function findFlowNode(id) { return flowNodes.find(n => n.id === id); }
+  function flOut(id) { return projectFlowEdges(activeProject).filter(e => e.from === id); }
+  function flBranches(n) { return n.kind === 'decision' || n.kind === 'loop'; }
+
+  /* Bozuk/eksik kayıtlarda çökmemek için düğüm ve okları tamamlar (yedekten gelen veriye karşı da). */
+  function normalizeFlowNodes(list) {
+    return list.filter(n => n && typeof n === 'object' && n.id && n.projectId).map(n => {
+      n.kind = FL_KINDS[n.kind] ? n.kind : 'process';
+      n.text = typeof n.text === 'string' ? n.text.slice(0, 500) : '';
+      n.x = Number.isFinite(+n.x) ? Math.max(0, +n.x) : 120;
+      n.y = Number.isFinite(+n.y) ? Math.max(0, +n.y) : 80;
+      n.created = +n.created || Date.now();
+      return n;
+    });
+  }
+  function normalizeFlowEdges(list, nodes) {
+    const ids = new Set(nodes.map(n => n.id));
+    return list.filter(e => e && typeof e === 'object' && e.id && ids.has(e.from) && ids.has(e.to)).map(e => {
+      e.label = (e.label === 'Evet' || e.label === 'Hayır') ? e.label : '';
+      e.fromSide = FL_SIDES.includes(e.fromSide) ? e.fromSide : '';
+      e.created = +e.created || Date.now();
+      return e;
+    });
+  }
+
+  /* Proje başına akış ayarları (son yazılan algoritma metni) */
+  function flowSettings(pid) {
+    pid = pid || activeProject;
+    return flSettings[pid] || (flSettings[pid] = { projectId: pid, source: '' });
+  }
+  async function saveFlowSettings(pid) {
+    pid = pid || activeProject;
+    if (storageOK) await sSet('fls:' + pid, JSON.stringify(flowSettings(pid)));
+  }
+
+  /* Alt durum satırında kısa bir mesaj gösterir, sonra eski ipucuna döner. */
+  let flToastTimer = null;
+  function flToast(msg, ms) {
+    const h = el('flHint');
+    h.textContent = msg;
+    h.classList.add('flash');
+    clearTimeout(flToastTimer);
+    flToastTimer = setTimeout(() => { h.textContent = FL_HINT; h.classList.remove('flash'); }, ms || 3000);
+  }
+
+  /* Türkçe sayıdan sonra yönelme eki: 1'e, 2'ye, 6'ya, 9'a, 10'a, 20'ye ... ("Adım 6'ya git") */
+  function trDative(n) {
+    const u = n % 10, t = Math.floor(n / 10) % 10;
+    const unit = ['', "'e", "'ye", "'e", "'e", "'e", "'ya", "'ye", "'e", "'a"];
+    const ten  = ["'e", "'a", "'ye", "'a", "'a", "'ye", "'a", "'e", "'e", "'a"];
+    if (u) return n + unit[u];
+    if (t) return n + ten[t];
+    return n + "'e"; // 100'e, 1000'e
+  }
+
+  /* ---------- GERİ AL / YİNELE (şemadaki gibi; proje başına 60 adım, sadece bu oturumda) ---------- */
+  const flHistory = {};
+  function flHist(pid) { return flHistory[pid] || (flHistory[pid] = { undo: [], redo: [] }); }
+  function flSnapshot(pid) {
+    return JSON.stringify({ nodes: flowNodes.filter(n => n.projectId === pid), edges: flowEdges.filter(e => e.projectId === pid) });
+  }
+  function flCheckpoint() {
+    const h = flHist(activeProject);
+    h.undo.push(flSnapshot(activeProject));
+    if (h.undo.length > 60) h.undo.shift();
+    h.redo = [];
+    updateFlUndoButtons();
+  }
+  async function flRestore(snap) {
+    const data = JSON.parse(snap);
+    const pid = activeProject;
+    const keepN = new Set(data.nodes.map(n => n.id)), keepE = new Set(data.edges.map(e => e.id));
+    for (const n of flowNodes.filter(x => x.projectId === pid && !keepN.has(x.id))) await deleteFlowNodeStore(n.id);
+    for (const e of flowEdges.filter(x => x.projectId === pid && !keepE.has(x.id))) await deleteFlowEdgeStore(e.id);
+    flowNodes = flowNodes.filter(n => n.projectId !== pid).concat(data.nodes);
+    flowEdges = flowEdges.filter(e => e.projectId !== pid).concat(data.edges);
+    for (const n of data.nodes) await saveFlowNode(n);
+    for (const e of data.edges) await saveFlowEdge(e);
+    flSel = null;
+    renderFlow();
+  }
+  async function flUndo() {
+    const h = flHist(activeProject);
+    if (!h.undo.length) return;
+    h.redo.push(flSnapshot(activeProject));
+    await flRestore(h.undo.pop());
+    flToast('Geri alındı.');
+  }
+  async function flRedo() {
+    const h = flHist(activeProject);
+    if (!h.redo.length) return;
+    h.undo.push(flSnapshot(activeProject));
+    await flRestore(h.redo.pop());
+    flToast('Yinelendi.');
+  }
+  function updateFlUndoButtons() {
+    const h = flHist(activeProject);
+    el('flUndo').disabled = !h.undo.length;
+    el('flRedo').disabled = !h.redo.length;
+  }
+
+  /* ---------- YAZI ÖLÇME VE ŞEKİL BOYUTU ----------
+     SVG yazıyı kendiliğinden satıra bölmez. Bu yüzden yazı genişliği gizli bir canvas ile
+     ölçülür, kelimelerden satırlar kurulur ve şeklin boyutu yazıya göre hesaplanır. */
+  let flMeasureCtx = null;
+  const flWidthCache = new Map();
+  function flTextWidth(s) {
+    let w = flWidthCache.get(s);
+    if (w != null) return w;
+    if (!flMeasureCtx) flMeasureCtx = document.createElement('canvas').getContext('2d');
+    flMeasureCtx.font = FL_FONT;
+    w = flMeasureCtx.measureText(s).width;
+    if (flWidthCache.size > 5000) flWidthCache.clear();
+    flWidthCache.set(s, w);
+    return w;
+  }
+
+  /* Yazıyı en fazla maxW genişlikte satırlara böler (elle yazılan alt satırlar korunur). */
+  function flWrap(text, maxW) {
+    const out = [];
+    String(text).split('\n').forEach(par => {
+      const words = par.split(/\s+/).filter(Boolean);
+      let line = '';
+      words.forEach(w => {
+        // Tek başına sığmayan çok uzun kelime (ör. boşluksuz formül) harf harf bölünür
+        while (flTextWidth(w) > maxW && w.length > 1) {
+          let k = w.length - 1;
+          while (k > 1 && flTextWidth(w.slice(0, k)) > maxW) k--;
+          if (line) { out.push(line); line = ''; }
+          out.push(w.slice(0, k));
+          w = w.slice(k);
+        }
+        const t = line ? line + ' ' + w : w;
+        if (line && flTextWidth(t) > maxW) { out.push(line); line = w; } else line = t;
+      });
+      out.push(line);
+    });
+    while (out.length > 1 && !out[out.length - 1]) out.pop();
+    return out.length ? out : [''];
+  }
+
+  /* Bir şeklin boyutu ve satırları. Aynı tür+yazı için sonuç saklanır (her çizimde yeniden ölçülmesin). */
+  const flGeomCache = new Map();
+  function flGeom(n) {
+    const key = n.kind + '\u0001' + n.text;
+    let g = flGeomCache.get(key);
+    if (g) return g;
+    const shown = n.text.trim() || FL_KINDS[n.kind].name;
+    const maxW = { decision: 170, loop: 190, start: 160, end: 160 }[n.kind] || 220;
+    const lines = flWrap(shown, maxW);
+    const tw = Math.max(20, ...lines.map(flTextWidth));
+    const th = lines.length * FL_LINE_H;
+    const tag = (n.kind === 'input' || n.kind === 'output') ? 9 : 0; // "GİRİŞ / ÇIKIŞ" etiketi payı
+    let w, h;
+    if (n.kind === 'start' || n.kind === 'end') { h = Math.max(40, th + 16); w = Math.max(110, tw + 28 + h / 2); }
+    else if (n.kind === 'input' || n.kind === 'output') { h = Math.max(48, th + 22 + tag); w = Math.max(130, tw + 36 + FL_SLANT); }
+    else if (n.kind === 'decision') {
+      // Eşkenar dörtgenin içine yazı kutusu sığsın: tw/(2a) + th/(2b) <= 1, b = a / 1.8
+      const a = Math.max(80, (tw + 1.8 * th) / 2 + 16);
+      w = 2 * a; h = Math.max(72, 2 * a / 1.8);
+    }
+    else if (n.kind === 'loop') { h = Math.max(46, th + 20); w = Math.max(140, tw + 36 + 2 * FL_HEX); }
+    else { h = Math.max(44, th + 20); w = Math.max(130, tw + 32); }
+    g = { w: Math.round(w), h: Math.round(h), lines: lines, th: th, tag: tag, empty: !n.text.trim() };
+    if (flGeomCache.size > 2000) flGeomCache.clear();
+    flGeomCache.set(key, g);
+    return g;
+  }
+
+  /* Şeklin kapladığı dikdörtgen (tuval koordinatı) */
+  function flBox(n) {
+    const g = flGeom(n);
+    return { l: n.x - g.w / 2, t: n.y - g.h / 2, r: n.x + g.w / 2, b: n.y + g.h / 2, w: g.w, h: g.h };
+  }
+
+  /* Şeklin çizgisi (merkez 0,0). s = paralelkenar eğikliği, k = altıgen uç payı (simgelerde küçük). */
+  function flShapePath(kind, w, h, s, k) {
+    const x = w / 2, y = h / 2;
+    s = s == null ? FL_SLANT : s; k = k == null ? FL_HEX : k;
+    const f = v => Math.round(v * 10) / 10;
+    if (kind === 'start' || kind === 'end') {
+      const r = y;
+      return 'M' + f(-x + r) + ',' + f(-y) + ' H' + f(x - r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x - r) + ',' + f(y) +
+             ' H' + f(-x + r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(-x + r) + ',' + f(-y) + ' Z';
+    }
+    if (kind === 'input' || kind === 'output') return 'M' + f(-x + s) + ',' + f(-y) + ' H' + f(x) + ' L' + f(x - s) + ',' + f(y) + ' H' + f(-x) + ' Z';
+    if (kind === 'decision') return 'M0,' + f(-y) + ' L' + f(x) + ',0 L0,' + f(y) + ' L' + f(-x) + ',0 Z';
+    if (kind === 'loop') return 'M' + f(-x + k) + ',' + f(-y) + ' H' + f(x - k) + ' L' + f(x) + ',0 L' + f(x - k) + ',' + f(y) + ' H' + f(-x + k) + ' L' + f(-x) + ',0 Z';
+    return 'M' + f(-x) + ',' + f(-y) + ' H' + f(x) + ' V' + f(y) + ' H' + f(-x) + ' Z';
+  }
+
+  /* Bağlantı noktasının yeri: kenarın ortası (paralelkenarda eğik kenarın ortası) */
+  function flPort(n, side) {
+    const g = flGeom(n);
+    const io = (n.kind === 'input' || n.kind === 'output') ? FL_SLANT / 2 : 0;
+    if (side === 'top') return { x: n.x, y: n.y - g.h / 2 };
+    if (side === 'bottom') return { x: n.x, y: n.y + g.h / 2 };
+    if (side === 'left') return { x: n.x - g.w / 2 + io, y: n.y };
+    return { x: n.x + g.w / 2 - io, y: n.y };
+  }
+
+  /* Paletteki ve penceredeki küçük şekil simgesi */
+  function flIconSVG(kind) {
+    return '<svg viewBox="-11 -7 22 14" aria-hidden="true"><path class="fl-ico k-' + kind + '" d="' + flShapePath(kind, 20, 12, 5, 4) + '"/></svg>';
+  }
+
+  /* ---------- OKLARIN YOLU ----------
+     Oklar dik açılı çizilir. Her ok için olası yollar üretilir (hangi kenardan çıkıp hangi
+     kenardan gireceği × aradaki dikey/yatay kanal) ve en "ucuz" olan seçilir:
+     kısa, az kıvrımlı, başka şeklin içinden geçmeyen ve alışılmış yönde akan yol.
+     Karar şeklinde Evet aşağıdan, Hayır sağdan çıkmayı tercih eder (ders kitaplarındaki gibi). */
+  const FL_STUB = 16; // ok şekilden önce bu kadar dümdüz çıkar / girer
+
+  /* Kenar tercihleri: sağ taraf Hayır kollarına bırakılır; geri dönüş okları soldan dolaşır. */
+  function flSideCost(side, src, label, isFrom) {
+    if (!isFrom) return { top: 0, left: 14, right: 22, bottom: 70 }[side];
+    if (flBranches(src)) {
+      if (label === 'Hayır') return { right: 0, left: 14, bottom: 26, top: 90 }[side];
+      return { bottom: 0, left: 14, right: 30, top: 90 }[side];
+    }
+    return { bottom: 0, left: 20, right: 26, top: 70 }[side];
+  }
+
+  /* Ardışık aynı noktaları ve aynı doğrultudaki ara noktaları atar. */
+  function flSimplify(pts) {
+    const out = [];
+    pts.forEach(p => {
+      const q = out[out.length - 1];
+      if (q && Math.abs(q.x - p.x) < 0.5 && Math.abs(q.y - p.y) < 0.5) return;
+      out.push({ x: p.x, y: p.y });
+    });
+    for (let i = out.length - 2; i > 0; i--) {
+      const a = out[i - 1], b = out[i], c = out[i + 1];
+      if ((Math.abs(a.x - b.x) < 0.5 && Math.abs(b.x - c.x) < 0.5) || (Math.abs(a.y - b.y) < 0.5 && Math.abs(b.y - c.y) < 0.5)) out.splice(i, 1);
+    }
+    return out;
+  }
+
+  /* Dik (yatay/dikey) bir parça, şeklin çevresindeki kutuyu kesiyor mu? */
+  function flSegHits(a, b, box) {
+    if (Math.abs(a.y - b.y) < 0.5) return a.y > box.t && a.y < box.b && Math.max(a.x, b.x) > box.l && Math.min(a.x, b.x) < box.r;
+    return a.x > box.l && a.x < box.r && Math.max(a.y, b.y) > box.t && Math.min(a.y, b.y) < box.b;
+  }
+
+  /* placed: daha önce çizilen okların parçaları. Başka bir okla aynı çizgi üzerinden gitmek
+     (üst üste binmek) pahalıdır; aynı hedefe giren oklar birleşebilir. */
+  function flRouteCost(pts, A, B, obs, placed, e) {
+    let cost = (pts.length - 2) * 28; // her kıvrım
+    const n = pts.length - 1;
+    for (let i = 0; i < n; i++) {
+      const a = pts[i], b = pts[i + 1];
+      cost += Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+      if (placed) {
+        const vert = Math.abs(a.x - b.x) < 0.5;
+        for (const q of placed) {
+          if (q.to === B.id || (q.from === A.id && i === 0)) continue;
+          const qv = Math.abs(q.a.x - q.b.x) < 0.5;
+          if (vert && qv) {
+            if (Math.abs(a.x - q.a.x) < 5 && Math.min(Math.max(a.y, b.y), Math.max(q.a.y, q.b.y)) - Math.max(Math.min(a.y, b.y), Math.min(q.a.y, q.b.y)) > 2) cost += 160;
+          } else if (!vert && !qv) {
+            if (Math.abs(a.y - q.a.y) < 5 && Math.min(Math.max(a.x, b.x), Math.max(q.a.x, q.b.x)) - Math.max(Math.min(a.x, b.x), Math.min(q.a.x, q.b.x)) > 2) cost += 160;
+          } else {
+            const v = vert ? [a, b] : [q.a, q.b], h = vert ? [q.a, q.b] : [a, b];
+            if (v[0].x > Math.min(h[0].x, h[1].x) && v[0].x < Math.max(h[0].x, h[1].x) &&
+                h[0].y > Math.min(v[0].y, v[1].y) && h[0].y < Math.max(v[0].y, v[1].y)) cost += 8; // kesişme
+          }
+        }
+      }
+      if (i > 0) {
+        // Geri dönen (180°) kıvrım: çizgi kendi üstüne biner
+        const p = pts[i - 1];
+        const d1x = Math.sign(a.x - p.x), d1y = Math.sign(a.y - p.y), d2x = Math.sign(b.x - a.x), d2y = Math.sign(b.y - a.y);
+        if (d1x === -d2x && d1y === -d2y) cost += 10000;
+      }
+      for (const o of obs) {
+        if (i === 0 && o.id === A.id) continue;       // ilk parça kaynaktan çıkıyor
+        if (i === n - 1 && o.id === B.id) continue;   // son parça hedefe giriyor
+        if (flSegHits(a, b, o.box)) cost += (o.id === A.id || o.id === B.id) ? 3000 : 600;
+      }
+    }
+    return cost;
+  }
+
+  /* A şeklinden B şekline giden okun en iyi yolu: { pts, sa (çıkış kenarı), sb, cost } */
+  function flRoute(A, B, e, obs, placed) {
+    const ga = flBox(A), gb = flBox(B);
+    const fromSides = e && e.fromSide ? [e.fromSide] : FL_SIDES;
+    const label = e ? e.label : '';
+    const L = Math.min(ga.l, gb.l), R = Math.max(ga.r, gb.r), Tp = Math.min(ga.t, gb.t), Bt = Math.max(ga.b, gb.b);
+    let best = null;
+    for (const sa of fromSides) for (const sb of FL_SIDES) {
+      const p0 = flPort(A, sa), p3 = flPort(B, sb);
+      const da = FL_DIR[sa], db = FL_DIR[sb];
+      const S = { x: p0.x + da[0] * FL_STUB, y: p0.y + da[1] * FL_STUB };
+      const T = { x: p3.x + db[0] * FL_STUB, y: p3.y + db[1] * FL_STUB };
+      // Ara kanallar: doğrudan, ortadan ve iki şeklin dışından (dolu ise biraz daha dıştan)
+      const xs = [S.x, T.x, (S.x + T.x) / 2, L - 28, L - 44, L - 60, R + 28, R + 44, R + 60];
+      const ys = [S.y, T.y, (S.y + T.y) / 2, Tp - 28, Tp - 44, Bt + 28, Bt + 44];
+      const side = flSideCost(sa, A, label, true) + flSideCost(sb, B, label, false);
+      const mids = xs.map(x => [{ x: x, y: S.y }, { x: x, y: T.y }]).concat(ys.map(y => [{ x: S.x, y: y }, { x: T.x, y: y }]));
+      for (const m of mids) {
+        const pts = flSimplify([p0, S, m[0], m[1], T, p3]);
+        const c = flRouteCost(pts, A, B, obs, placed, e) + side;
+        if (!best || c < best.cost) best = { cost: c, pts: pts, sa: sa, sb: sb };
+      }
+    }
+    return best;
+  }
+
+  /* Bir projenin tüm oklarını sırayla yönlendirir: önce ana akış (Evet / etiketsiz, kısa oklar),
+     sonra Hayır kolları, en son geri dönüşler; her ok öncekilerin üstüne binmemeye çalışır. */
+  function flRouteAll(nodes, edges) {
+    const byId = {};
+    nodes.forEach(n => { byId[n.id] = n; });
+    const obs = nodes.map(n => { const b = flBox(n); return { id: n.id, box: { l: b.l - 6, t: b.t - 6, r: b.r + 6, b: b.b + 6 } }; });
+    const ok = edges.filter(e => byId[e.from] && byId[e.to]);
+    const backOf = e => byId[e.to].y < byId[e.from].y - 4 ? 1 : 0;
+    const span = e => Math.abs(byId[e.to].y - byId[e.from].y) + Math.abs(byId[e.to].x - byId[e.from].x);
+    const group = e => backOf(e) ? 1 : (e.label === 'Hayır' ? 2 : 0);
+    ok.sort((a, b) => group(a) - group(b) || flLabelRank(a.label) - flLabelRank(b.label) || span(a) - span(b));
+    const placed = [], routes = {};
+    ok.forEach(e => {
+      const r = flRoute(byId[e.from], byId[e.to], e, obs, placed);
+      routes[e.id] = r;
+      for (let i = 0; i < r.pts.length - 1; i++) placed.push({ a: r.pts[i], b: r.pts[i + 1], from: e.from, to: e.to });
+    });
+    return { routes: routes, obs: obs };
+  }
+
+  /* Çizgi noktalarından SVG yolu; köşeler hafifçe yuvarlatılır. */
+  function flPathD(pts) {
+    const f = v => Math.round(v * 10) / 10;
+    let d = 'M' + f(pts[0].x) + ',' + f(pts[0].y);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const a = pts[i - 1], p = pts[i], b = pts[i + 1];
+      const la = Math.hypot(p.x - a.x, p.y - a.y), lb = Math.hypot(b.x - p.x, b.y - p.y);
+      const r = Math.min(7, la / 2, lb / 2);
+      const p1 = { x: p.x + (a.x - p.x) / la * r, y: p.y + (a.y - p.y) / la * r };
+      const p2 = { x: p.x + (b.x - p.x) / lb * r, y: p.y + (b.y - p.y) / lb * r };
+      d += ' L' + f(p1.x) + ',' + f(p1.y) + ' Q' + f(p.x) + ',' + f(p.y) + ' ' + f(p2.x) + ',' + f(p2.y);
+    }
+    const z = pts[pts.length - 1];
+    return d + ' L' + f(z.x) + ',' + f(z.y);
+  }
+
+  /* Çizginin uzunluğa göre orta noktası (ayar kutusu buraya açılır) */
+  function flMidPoint(pts) {
+    let total = 0;
+    for (let i = 1; i < pts.length; i++) total += Math.abs(pts[i].x - pts[i - 1].x) + Math.abs(pts[i].y - pts[i - 1].y);
+    let left = total / 2;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i], l = Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+      if (left <= l) return { x: a.x + Math.sign(b.x - a.x) * left, y: a.y + Math.sign(b.y - a.y) * left };
+      left -= l;
+    }
+    return pts[0];
+  }
+
+  /* Karar / döngü çıkışındaki "Evet" / "Hayır" yazısının yeri (okun çıktığı noktanın yanı) */
+  function flLabelPos(r) {
+    const p = r.pts[0];
+    if (r.sa === 'bottom') return { x: p.x + 7, y: p.y + 14, a: 'start' };
+    if (r.sa === 'top') return { x: p.x + 7, y: p.y - 7, a: 'start' };
+    if (r.sa === 'right') return { x: p.x + 6, y: p.y - 7, a: 'start' };
+    return { x: p.x - 6, y: p.y - 7, a: 'end' };
+  }
+
+  /* ---------- ÇİZİM ---------- */
+
+  let flZoom = 1;
+  let flSel = null;       // seçili öğe: { type: 'node' | 'edge', id }
+  let flIssueMap = {};    // şekil id -> o şekildeki hata/uyarılar (son çizimden)
+  let flRoutes = {};      // ok id -> son hesaplanan yol
+
+  const FL_DEFS =
+    '<defs>' +
+      '<marker id="flArrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto"><path class="fl-arrow" d="M0,0 L10,5 L0,10 z"/></marker>' +
+      '<marker id="flArrowSel" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto"><path class="fl-arrow sel" d="M0,0 L10,5 L0,10 z"/></marker>' +
+      '<marker id="flArrowRun" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto"><path class="fl-arrow run" d="M0,0 L10,5 L0,10 z"/></marker>' +
+    '</defs>';
+
+  /* Şeklin içindeki yazı (satır satır). GİRİŞ / ÇIKIŞ şekillerinde küçük tür etiketi de var. */
+  function flTextSVG(n, g, paint) {
+    const P = paint || {};
+    const top = -g.th / 2 + g.tag / 2;
+    let s = '';
+    if (g.tag) {
+      s += '<text class="fl-kind" x="' + (-g.w / 2 + FL_SLANT + 6) + '" y="' + (-g.h / 2 + 11) + '"' +
+           (paint ? ' font-family="monospace" font-size="9" fill="' + P.muted + '"' : '') + '>' + (n.kind === 'input' ? 'GİRİŞ' : 'ÇIKIŞ') + '</text>';
+    }
+    s += '<text class="fl-text' + (g.empty ? ' empty' : '') + '" text-anchor="middle"' +
+         (paint ? ' font-family="Georgia, serif" font-size="14" fill="' + (g.empty ? P.muted : P.ink) + '"' : '') + '>' +
+         g.lines.map((l, i) => '<tspan x="0" y="' + Math.round((top + 13 + i * FL_LINE_H) * 10) / 10 + '">' + esc(l) + '</tspan>').join('') +
+         '</text>';
+    return s;
+  }
+
+  /* Tek bir şeklin SVG'si (ekrandaki hali: bağlantı noktaları ve hata rozetiyle) */
+  function flNodeSVG(n) {
+    const g = flGeom(n);
+    const iss = flIssueMap[n.id] || [];
+    const err = iss.some(i => i.lvl === 'err');
+    const sel = flSel && flSel.type === 'node' && flSel.id === n.id;
+    const tip = FL_KINDS[n.kind].name + (n.text.trim() ? ': ' + n.text : '') +
+      (iss.length ? '\n' + iss.map(i => (i.lvl === 'err' ? 'HATA: ' : 'Uyarı: ') + i.msg).join('\n') : '') +
+      '\nTaşımak için sürükle · düzenlemek için çift tıkla';
+    let s = '<g class="fl-node k-' + n.kind + (sel ? ' sel' : '') + (err ? ' has-err' : '') + '" data-node="' + n.id + '" transform="translate(' + n.x + ',' + n.y + ')">' +
+      '<title>' + esc(tip) + '</title>' +
+      '<path class="fl-shape" d="' + flShapePath(n.kind, g.w, g.h) + '"/>' + flTextSVG(n, g);
+    if (iss.length) {
+      const bx = n.kind === 'decision' ? g.w / 4 + 8 : g.w / 2 - 9, by = n.kind === 'decision' ? -g.h / 4 - 8 : -g.h / 2 + 9;
+      s += '<circle class="fl-badge' + (err ? '' : ' warn') + '" cx="' + bx + '" cy="' + by + '" r="8"/><text class="fl-badge-t" x="' + bx + '" y="' + (by + 4) + '">!</text>';
+    }
+    FL_SIDES.forEach(side => {
+      const p = flPort(n, side);
+      s += '<circle class="fl-port" data-port="' + side + '" cx="' + (p.x - n.x) + '" cy="' + (p.y - n.y) + '" r="6"><title>Buradan tutup başka şekle sürükle: ok çiz</title></circle>';
+    });
+    return s + '</g>';
+  }
+
+  /* Akış görünümünü baştan çizer: şekiller, oklar, durum satırı. */
+  function renderFlow() {
+    if (currentView !== 'flow') return; // gizliyken tuval ölçülemez; görünüm açılınca çizilir
+    const nodes = projectFlowNodes(activeProject);
+    const edges = projectFlowEdges(activeProject);
+    if (flSel && !(flSel.type === 'node' ? nodes.some(n => n.id === flSel.id) : edges.some(e => e.id === flSel.id))) flSel = null;
+
+    const issues = lintFlow(activeProject);
+    flIssueMap = {};
+    issues.forEach(i => { if (i.nid) (flIssueMap[i.nid] = flIssueMap[i.nid] || []).push(i); });
+
+    el('flNodes').innerHTML = nodes.map(flNodeSVG).join('');
+    el('flEmpty').style.display = nodes.length ? 'none' : '';
+    el('flZoomLabel').textContent = Math.round(flZoom * 100) + '%';
+    updateFlSurfaceSize();
+    renderFlEdgePanel();
+    drawFlEdges();
+    flApplyRunMarks();
+
+    const nErr = issues.filter(i => i.lvl === 'err').length, nWarn = issues.length - nErr;
+    let stats = nodes.length + ' adım · ' + edges.length + ' ok';
+    if (nErr) stats += ' <button class="er-issue-btn err" data-flissues>' + nErr + ' hata</button>';
+    if (nWarn) stats += ' <button class="er-issue-btn warn" data-flissues>' + nWarn + ' uyarı</button>';
+    el('flStats').innerHTML = stats;
+    updateFlUndoButtons();
+  }
+
+  /* Tuvali en uzaktaki şeklin biraz ötesine kadar büyütür ve yakınlaştırmayı uygular. */
+  function updateFlSurfaceSize() {
+    const c = el('flCanvas');
+    let w = 0, h = 0;
+    projectFlowNodes(activeProject).forEach(n => { const b = flBox(n); w = Math.max(w, b.r); h = Math.max(h, b.b); });
+    const W = Math.max(Math.ceil(w) + 400, Math.floor(c.clientWidth / flZoom));
+    const H = Math.max(Math.ceil(h) + 400, Math.floor(c.clientHeight / flZoom));
+    const svg = el('flSvg');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('width', Math.floor(W * flZoom));
+    svg.setAttribute('height', Math.floor(H * flZoom));
+    svg.style.backgroundSize = (24 * flZoom) + 'px ' + (24 * flZoom) + 'px';
+    el('flSizer').style.width = Math.floor(W * flZoom) + 'px';
+    el('flSizer').style.height = Math.floor(H * flZoom) + 'px';
+  }
+
+  /* Ekrandaki (imleç) koordinatını tuval koordinatına çevirir. */
+  function toFlSurface(cx, cy) {
+    const r = el('flSvg').getBoundingClientRect();
+    return { x: (cx - r.left) / flZoom, y: (cy - r.top) / flZoom };
+  }
+
+  /* Tüm okları çizer. temp verilirse (ok çizerken) kesikli geçici çizgiyi de ekler. */
+  function drawFlEdges(temp) {
+    const nodes = projectFlowNodes(activeProject);
+    const byId = {};
+    nodes.forEach(n => { byId[n.id] = n; });
+    let paths = '', labels = '', selMid = null;
+    flRoutes = flRouteAll(nodes, projectFlowEdges(activeProject)).routes;
+    projectFlowEdges(activeProject).forEach(e => {
+      const A = byId[e.from], B = byId[e.to], r = flRoutes[e.id];
+      if (!A || !B || !r) return;
+      const sel = flSel && flSel.type === 'edge' && flSel.id === e.id;
+      const run = flRun && flRun.lastEdge === e.id;
+      const cls = sel ? ' sel' : (run ? ' run' : '');
+      const d = flPathD(r.pts);
+      const name = n => (n.text.trim() || FL_KINDS[n.kind].name).replace(/\s+/g, ' ');
+      paths += '<path class="fl-edge-hit" data-edge="' + e.id + '" d="' + d + '"><title>' + esc(name(A) + ' → ' + name(B) + (e.label ? ' (' + e.label + ')' : '')) + '</title></path>' +
+               '<path class="fl-edge' + cls + '" d="' + d + '" marker-end="url(#flArrow' + (sel ? 'Sel' : (run ? 'Run' : '')) + ')"/>';
+      if (flBranches(A) && e.label) {
+        const lp = flLabelPos(r);
+        labels += '<text class="fl-elabel ' + (e.label === 'Evet' ? 'yes' : 'no') + (sel ? ' sel' : '') + '" x="' + lp.x + '" y="' + lp.y + '" text-anchor="' + lp.a + '">' + e.label + '</text>';
+      }
+      if (sel) selMid = flMidPoint(r.pts);
+    });
+    if (temp) paths += '<path class="fl-edge temp" d="' + flPathD(temp) + '" marker-end="url(#flArrowSel)"/>';
+    el('flEdges').innerHTML = FL_DEFS + paths + labels;
+    positionFlEdgePanel(selMid);
+  }
+
+  /* ---------- SEÇİLİ OKUN AYAR KUTUSU ---------- */
+
+  function renderFlEdgePanel() {
+    const p = el('flEdgePanel');
+    const e = flSel && flSel.type === 'edge' ? flowEdges.find(x => x.id === flSel.id) : null;
+    if (!e) { p.style.display = 'none'; p.innerHTML = ''; return; }
+    const A = findFlowNode(e.from), B = findFlowNode(e.to);
+    const name = n => n ? (n.text.trim() || FL_KINDS[n.kind].name) : '?';
+    const opt = (v, t, cur) => '<option value="' + v + '"' + (v === cur ? ' selected' : '') + '>' + t + '</option>';
+    p.innerHTML =
+      '<div class="elp-title">' + esc(name(A) + ' → ' + name(B)) + '</div>' +
+      (A && flBranches(A)
+        ? '<label class="elp-row">Çıkış <select data-k="label">' + opt('Evet', 'Evet (koşul doğru)', e.label) + opt('Hayır', 'Hayır (koşul yanlış)', e.label) + opt('', '— (etiketsiz)', e.label) + '</select></label>'
+        : '') +
+      '<label class="elp-row">Çıktığı kenar <select data-k="fromSide">' + opt('', 'Otomatik', e.fromSide) + opt('top', 'Üst', e.fromSide) +
+        opt('right', 'Sağ', e.fromSide) + opt('bottom', 'Alt', e.fromSide) + opt('left', 'Sol', e.fromSide) + '</select></label>' +
+      '<div class="elp-actions">' +
+        '<button class="elp-btn" data-act="swap" title="Okun yönünü ters çevir">&#8644; Yönü çevir</button>' +
+        '<button class="elp-btn danger" data-act="del">Oku sil</button>' +
+      '</div>';
+  }
+
+  function positionFlEdgePanel(mid) {
+    const p = el('flEdgePanel');
+    if (!mid || !flSel || flSel.type !== 'edge') { p.style.display = 'none'; return; }
+    p.style.display = '';
+    const half = p.offsetWidth / 2 + 6;
+    const maxX = Math.max(half, el('flSizer').offsetWidth - half);
+    p.style.left = Math.min(Math.max(mid.x * flZoom, half), maxX) + 'px';
+    p.style.top = (mid.y * flZoom + 12) + 'px';
+  }
+
+  /* Seçimi değiştirir (şekilleri yeniden çizmeden; çift tıklama bozulmasın diye) */
+  function flSelect(sel) {
+    flSel = sel;
+    el('flNodes').querySelectorAll('.fl-node').forEach(g => g.classList.toggle('sel', !!(sel && sel.type === 'node' && sel.id === g.dataset.node)));
+    renderFlEdgePanel();
+    drawFlEdges();
+  }
+
+  /* ---------- YAKINLAŞTIRMA, SIĞDIRMA, ŞEKLE GİT ---------- */
+
+  /* (cx, cy) ekrandaki sabit kalacak nokta; verilmezse tuvalin ortası. */
+  function setFlZoom(z, cx, cy) {
+    z = Math.min(2, Math.max(0.25, Math.round(z * 20) / 20));
+    if (z === flZoom) return;
+    const c = el('flCanvas');
+    const r = c.getBoundingClientRect();
+    if (cx == null) { cx = r.left + c.clientWidth / 2; cy = r.top + c.clientHeight / 2; }
+    const p = toFlSurface(cx, cy);
+    flZoom = z;
+    updateFlSurfaceSize();
+    c.scrollLeft = p.x * z - (cx - r.left);
+    c.scrollTop = p.y * z - (cy - r.top);
+    el('flZoomLabel').textContent = Math.round(z * 100) + '%';
+    drawFlEdges();
+  }
+
+  /* Şeklin ve oklarının kapladığı alan */
+  function flBounds(pid) {
+    let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    projectFlowNodes(pid).forEach(n => { const b = flBox(n); x1 = Math.min(x1, b.l); y1 = Math.min(y1, b.t); x2 = Math.max(x2, b.r); y2 = Math.max(y2, b.b); });
+    Object.values(flRoutes).forEach(r => r.pts.forEach(p => { x1 = Math.min(x1, p.x); y1 = Math.min(y1, p.y); x2 = Math.max(x2, p.x); y2 = Math.max(y2, p.y); }));
+    return x1 === Infinity ? null : { x1: x1, y1: y1, x2: x2, y2: y2 };
+  }
+
+  /* Tüm şemayı ekrana sığacak şekilde yakınlaştırır ve kaydırır.
+     minZ verilirse yazılar okunamayacak kadar küçülmez (uzun şemada aşağı kaydırılır). */
+  function flFit(minZ) {
+    const c = el('flCanvas');
+    const b = flBounds(activeProject);
+    if (!b) { setFlZoom(1); c.scrollTo(0, 0); return; }
+    const pad = 40;
+    let z = Math.min(1, (c.clientWidth - pad) / (b.x2 - b.x1 + pad), (c.clientHeight - pad) / (b.y2 - b.y1 + pad));
+    z = Math.max(minZ || 0.25, Math.floor(z * 20) / 20);
+    if (z !== flZoom) setFlZoom(z);
+    c.scrollLeft = Math.max(0, b.x1 * flZoom - pad / 2);
+    c.scrollTop = Math.max(0, b.y1 * flZoom - pad / 2);
+  }
+
+  /* Bir şekli görünür alana getirir (gerekirse kısa süre parlatır). */
+  function flJumpTo(id, flash, onlyIfHidden) {
+    const n = findFlowNode(id);
+    if (!n) return;
+    const c = el('flCanvas');
+    const b = flBox(n);
+    const inView = b.l * flZoom >= c.scrollLeft && b.r * flZoom <= c.scrollLeft + c.clientWidth &&
+                   b.t * flZoom >= c.scrollTop && b.b * flZoom <= c.scrollTop + c.clientHeight;
+    if (!(onlyIfHidden && inView)) {
+      c.scrollLeft = n.x * flZoom - c.clientWidth / 2;
+      c.scrollTop = n.y * flZoom - c.clientHeight / 2;
+    }
+    if (flash) {
+      const g = el('flNodes').querySelector('[data-node="' + id + '"]');
+      if (g) { g.classList.remove('fl-flash'); void g.getBoundingClientRect(); g.classList.add('fl-flash'); }
+    }
+  }
+
+  /* ---------- SÜRÜKLEME MOTORU (Pointer Events: fare + dokunmatik) ----------
+     'node' -> şekli taşıma · 'link' -> bağlantı noktasından ok çizme · 'pan' -> tuvali kaydırma.
+     Eşik aşılmadan bırakılırsa bu bir dokunuştur: şekil seçilir, iki kez dokunulursa düzenlenir.
+     (Çift tıklamayı kendimiz sayıyoruz; telefonda dblclick olayı güvenilir değil.) */
+  const flDrag = { mode: null, active: false, startX: 0, startY: 0, lastX: 0, lastY: 0, autoTimer: null, autoDir: null };
+  let flJustDragged = false;
+  let flLastTap = { id: null, t: 0 };
+
+  function flStart(e, mode, extra) {
+    if (e.button != null && e.button !== 0) return;
+    if (flDrag.mode) return;
+    Object.assign(flDrag, { mode: mode, active: false, target: null, startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY }, extra);
+    document.addEventListener('pointermove', flOnMove, { passive: false });
+    document.addEventListener('pointerup', flOnUp);
+    document.addEventListener('pointercancel', flOnUp);
+  }
+
+  function flOnMove(e) {
+    if (!flDrag.mode) return;
+    flDrag.lastX = e.clientX;
+    flDrag.lastY = e.clientY;
+    if (!flDrag.active) {
+      if (Math.hypot(e.clientX - flDrag.startX, e.clientY - flDrag.startY) < 4) return;
+      flDrag.active = true;
+      if (flDrag.mode === 'node') {
+        flCheckpoint(); // taşımadan önceki konum geri alınabilsin
+        flDrag.el.classList.add('moving');
+        flDrag.el.parentNode.appendChild(flDrag.el); // en üstte çizilsin
+        document.body.classList.add('fl-moving');
+      } else if (flDrag.mode === 'link') {
+        document.body.classList.add('fl-linking');
+      } else if (flDrag.mode === 'pan') {
+        el('flCanvas').classList.add('panning');
+      }
+    }
+    e.preventDefault();
+    flApply();
+    if (flDrag.mode !== 'pan') flAutoScroll();
+  }
+
+  /* İmlecin son konumunu sürükleme türüne göre uygular. */
+  function flApply() {
+    const p = toFlSurface(flDrag.lastX, flDrag.lastY);
+    if (flDrag.mode === 'node') {
+      const n = findFlowNode(flDrag.id);
+      if (!n) return;
+      const g = flGeom(n);
+      let x = p.x - flDrag.offX, y = p.y - flDrag.offY;
+      // Hizalama: başka bir şeklin merkezine 8 px'ten yakınsa ona otur (düz oklar için)
+      let bx = 9, by = 9, sx = null, sy = null;
+      projectFlowNodes(activeProject).forEach(o => {
+        if (o.id === n.id) return;
+        if (Math.abs(o.x - x) < bx) { bx = Math.abs(o.x - x); sx = o.x; }
+        if (Math.abs(o.y - y) < by) { by = Math.abs(o.y - y); sy = o.y; }
+      });
+      n.x = Math.max(g.w / 2 + 4, Math.round(sx != null ? sx : x));
+      n.y = Math.max(g.h / 2 + 4, Math.round(sy != null ? sy : y));
+      flDrag.el.setAttribute('transform', 'translate(' + n.x + ',' + n.y + ')');
+      updateFlSurfaceSize();
+      drawFlEdges();
+    } else if (flDrag.mode === 'link') {
+      const src = findFlowNode(flDrag.id);
+      if (!src) return;
+      const under = document.elementFromPoint(flDrag.lastX, flDrag.lastY);
+      const tEl = under && under.closest ? under.closest('.fl-node') : null;
+      const target = tEl && tEl.dataset.node !== src.id ? tEl : null;
+      if (target !== flDrag.target) {
+        if (flDrag.target) flDrag.target.classList.remove('link-target');
+        if (target) target.classList.add('link-target');
+        flDrag.target = target;
+      }
+      let pts;
+      if (target) {
+        const obs = projectFlowNodes(activeProject).map(n => { const b = flBox(n); return { id: n.id, box: { l: b.l - 6, t: b.t - 6, r: b.r + 6, b: b.b + 6 } }; });
+        pts = flRoute(src, findFlowNode(target.dataset.node), { fromSide: flDrag.side, label: '' }, obs).pts;
+      } else {
+        pts = [flPort(src, flDrag.side), p];
+      }
+      drawFlEdges(pts);
+    } else if (flDrag.mode === 'pan') {
+      const c = el('flCanvas');
+      c.scrollLeft = flDrag.scrollL - (flDrag.lastX - flDrag.startX);
+      c.scrollTop = flDrag.scrollT - (flDrag.lastY - flDrag.startY);
+    }
+  }
+
+  /* Tuvalin kenarına yaklaşınca otomatik kaydırır. */
+  function flAutoScroll() {
+    const c = el('flCanvas');
+    const r = c.getBoundingClientRect();
+    const edge = 36;
+    const dx = flDrag.lastX < r.left + edge ? -1 : (flDrag.lastX > r.right - edge ? 1 : 0);
+    const dy = flDrag.lastY < r.top + edge ? -1 : (flDrag.lastY > r.bottom - edge ? 1 : 0);
+    flDrag.autoDir = (dx || dy) ? { dx: dx, dy: dy } : null;
+    if (!flDrag.autoDir || flDrag.autoTimer) return;
+    const step = () => {
+      if (!flDrag.active || !flDrag.autoDir) { flDrag.autoTimer = null; return; }
+      c.scrollLeft += flDrag.autoDir.dx * 12;
+      c.scrollTop += flDrag.autoDir.dy * 12;
+      flApply();
+      flDrag.autoTimer = requestAnimationFrame(step);
+    };
+    flDrag.autoTimer = requestAnimationFrame(step);
+  }
+
+  async function flOnUp(e) {
+    document.removeEventListener('pointermove', flOnMove);
+    document.removeEventListener('pointerup', flOnUp);
+    document.removeEventListener('pointercancel', flOnUp);
+    if (flDrag.autoTimer) { cancelAnimationFrame(flDrag.autoTimer); flDrag.autoTimer = null; }
+    const d = Object.assign({}, flDrag);
+    flDrag.mode = null; flDrag.active = false; flDrag.autoDir = null;
+    document.body.classList.remove('fl-moving', 'fl-linking');
+    el('flCanvas').classList.remove('panning');
+
+    if (!d.active) {
+      // Dokunuş / tıklama: şekli seç; aynı şekle kısa sürede ikinci kez dokunulduysa düzenle
+      if ((d.mode === 'node' || d.mode === 'link') && e.type !== 'pointercancel') {
+        const now = Date.now();
+        if (flLastTap.id === d.id && now - flLastTap.t < 450) { flLastTap = { id: null, t: 0 }; openFlNodeModal(d.id); }
+        else { flLastTap = { id: d.id, t: now }; flSelect({ type: 'node', id: d.id }); }
+        flJustDragged = true; // ardından gelen click seçimi kaldırmasın
+        setTimeout(() => { flJustDragged = false; }, 60);
+      }
+      return;
+    }
+    flJustDragged = true;
+    setTimeout(() => { flJustDragged = false; }, 60);
+
+    if (d.mode === 'node') {
+      d.el.classList.remove('moving');
+      const n = findFlowNode(d.id);
+      if (n) await saveFlowNode(n);
+      renderFlow();
+    } else if (d.mode === 'link') {
+      if (d.target) d.target.classList.remove('link-target');
+      if (d.target && e.type !== 'pointercancel') await flConnect(d.id, d.target.dataset.node, d.side);
+      renderFlow();
+    }
+  }
+
+  /* ---------- VERİ İŞLEMLERİ ---------- */
+
+  /* İki kutu (aralarında gap kadar boşlukla) çakışıyor mu? */
+  function flOverlaps(b, gap, exceptId) {
+    return projectFlowNodes(activeProject).some(o => {
+      if (o.id === exceptId) return false;
+      const c = flBox(o);
+      return b.l < c.r + gap && b.r > c.l - gap && b.t < c.b + gap && b.b > c.t - gap;
+    });
+  }
+
+  /* Yeni şekil için görünen alanda boş bir yer bulur. */
+  function flFreeSpot(w, h) {
+    const c = el('flCanvas');
+    const left0 = Math.round(c.scrollLeft / flZoom) + 40 + w / 2;
+    const top0 = Math.round(c.scrollTop / flZoom) + 40 + h / 2;
+    const maxX = left0 + Math.max(w, c.clientWidth / flZoom - w - 80);
+    let x = left0, y = top0;
+    for (let i = 0; i < 400; i++) {
+      if (!flOverlaps({ l: x - w / 2, t: y - h / 2, r: x + w / 2, b: y + h / 2 }, 24)) return { x: x, y: y };
+      x += 60;
+      if (x > maxX) { x = left0; y += 50; }
+    }
+    return { x: left0, y: top0 };
+  }
+
+  /* Karar/döngü şeklinden çıkan yeni oka verilecek etiket: önce Evet, sonra Hayır */
+  function flNextLabel(src) {
+    const used = flOut(src.id).map(e => e.label);
+    return used.includes('Evet') ? (used.includes('Hayır') ? '' : 'Hayır') : 'Evet';
+  }
+
+  async function flAddEdgeRecord(from, to, label, fromSide) {
+    const e = { id: uid(), projectId: activeProject, from: from, to: to, label: label || '', fromSide: fromSide || '', created: Date.now() + Math.random() };
+    flowEdges.push(e);
+    await saveFlowEdge(e);
+    return e;
+  }
+
+  /* ---- ŞEKİL EKLE (palet) ----
+     Bir şekil seçiliyse ve boş çıkışı varsa: yeni şekil onun altına (Hayır çıkışıysa sağına)
+     konur ve otomatik bağlanır. Böylece şema art arda tıklayarak hızla kurulur. */
+  async function flAddNode(kind) {
+    const K = FL_KINDS[kind];
+    let text = K.def;
+    if (K.ask) {
+      const t = prompt(K.ask + '\n(ör. ' + K.def + ')', '');
+      if (t === null) return;
+      text = t.trim() || K.def;
+    }
+    flCheckpoint();
+    const n = { id: uid(), projectId: activeProject, kind: kind, text: text, x: 0, y: 0, created: Date.now() };
+    const g = flGeom(n);
+    const src = flSel && flSel.type === 'node' ? findFlowNode(flSel.id) : null;
+    let from = null, label = '';
+    if (src && src.kind !== 'end' && kind !== 'start') {
+      const outs = flOut(src.id);
+      if (flBranches(src) ? outs.length < 2 : !outs.length) { from = src; label = flBranches(src) ? flNextLabel(src) : ''; }
+    }
+    if (from) {
+      const sg = flGeom(from);
+      if (label === 'Hayır') { n.x = Math.round(from.x + sg.w / 2 + 50 + g.w / 2); n.y = from.y; }
+      else { n.x = from.x; n.y = Math.round(from.y + sg.h / 2 + 46 + g.h / 2); }
+      // Altta/yanda başka şekil varsa çakışmayana kadar kaydır
+      for (let i = 0; i < 60 && flOverlaps({ l: n.x - g.w / 2, t: n.y - g.h / 2, r: n.x + g.w / 2, b: n.y + g.h / 2 }, 16); i++) {
+        if (label === 'Hayır') n.x += 30; else n.y += 30;
+      }
+    } else {
+      const p = flFreeSpot(g.w, g.h);
+      n.x = Math.round(p.x); n.y = Math.round(p.y);
+    }
+    flowNodes.push(n);
+    await saveFlowNode(n);
+    if (from) await flAddEdgeRecord(from.id, n.id, label);
+    flSel = { type: 'node', id: n.id }; // yeni şekil seçili kalsın: sıradaki şekil buna bağlanır
+    renderFlow();
+    flJumpTo(n.id, false, true);
+    if (!from && src && src.kind !== 'end') flToast('Seçili şeklin boş çıkışı yoktu; yeni şekil bağlanmadan eklendi.');
+  }
+
+  /* ---- OK ÇİZ ----
+     a'dan b'ye ok. Karar/döngü şekline Evet/Hayır etiketi verilir; sıradan bir şeklin
+     zaten çıkışı varsa eski ok kaldırılır (bir işlemden sonra tek bir yol olur). */
+  async function flConnect(a, b, side) {
+    const A = findFlowNode(a), B = findFlowNode(b);
+    if (!A || !B || a === b) return;
+    if (A.kind === 'end') { flToast('Bitir şeklinden ok çıkmaz.'); return; }
+    if (B.kind === 'start') { flToast('Başla şekline ok girmez.'); return; }
+    const outs = flOut(a);
+    if (outs.some(e => e.to === b)) { flToast('Bu iki şekil zaten bağlı.'); return; }
+    if (flBranches(A) && outs.length >= 2) { flToast(FL_KINDS[A.kind].name + ' şeklinin iki çıkışı (Evet / Hayır) zaten var. Önce birini sil.', 4000); return; }
+    flCheckpoint();
+    if (!flBranches(A) && outs.length) {
+      for (const e of outs) await deleteFlowEdgeStore(e.id);
+      flowEdges = flowEdges.filter(e => !outs.includes(e));
+      flToast('Eski ok kaldırıldı: bir adımdan sonra tek bir yol olur (dallanma için Karar kullan).', 4000);
+    }
+    const e = await flAddEdgeRecord(a, b, flBranches(A) ? flNextLabel(A) : '', side);
+    flSel = { type: 'edge', id: e.id };
+  }
+
+  async function flDeleteNode(id) {
+    const n = findFlowNode(id);
+    if (!n) return;
+    flCheckpoint();
+    const rel = flowEdges.filter(e => e.from === id || e.to === id);
+    for (const e of rel) await deleteFlowEdgeStore(e.id);
+    flowEdges = flowEdges.filter(e => !rel.includes(e));
+    flowNodes = flowNodes.filter(x => x.id !== id);
+    await deleteFlowNodeStore(id);
+    if (flSel && flSel.id === id) flSel = null;
+    renderFlow();
+    flToast('Adım silindi (geri almak için Ctrl+Z).');
+  }
+
+  async function flDeleteEdge(id) {
+    if (!flowEdges.some(e => e.id === id)) return;
+    flCheckpoint();
+    flowEdges = flowEdges.filter(e => e.id !== id);
+    await deleteFlowEdgeStore(id);
+    if (flSel && flSel.id === id) flSel = null;
+    renderFlow();
+  }
+
+  async function flUpdateEdge(id, key, value) {
+    const e = flowEdges.find(x => x.id === id);
+    if (!e) return;
+    flCheckpoint();
+    e[key] = value;
+    // Karar şeklinde bir ok Evet olunca diğeri kendiliğinden Hayır olsun (tersi de)
+    if (key === 'label' && value) {
+      const other = flowEdges.find(x => x.from === e.from && x.id !== e.id);
+      if (other && flowEdges.filter(x => x.from === e.from).length === 2) { other.label = value === 'Evet' ? 'Hayır' : 'Evet'; await saveFlowEdge(other); }
+    }
+    await saveFlowEdge(e);
+    renderFlow();
+  }
+
+  async function flSwapEdge(id) {
+    const e = flowEdges.find(x => x.id === id);
+    if (!e) return;
+    const A = findFlowNode(e.to), B = findFlowNode(e.from);
+    if (A.kind === 'end' || B.kind === 'start') { flToast('Bu ok ters çevrilemez (Bitir\'den çıkamaz, Başla\'ya giremez).'); return; }
+    flCheckpoint();
+    e.from = A.id; e.to = B.id; e.fromSide = ''; e.label = '';
+    e.label = flBranches(A) ? flNextLabel(A) : '';
+    await saveFlowEdge(e);
+    renderFlow();
+  }
+
+  /* Projenin tüm akış şemasını siler (onay ister; geri alınabilir). */
+  async function flClear(ask) {
+    const nodes = projectFlowNodes(activeProject);
+    if (!nodes.length) return true;
+    if (ask && !confirm('Bu projedeki akış şeması (' + nodes.length + ' adım) silinsin mi?\n(Ctrl+Z ile geri alınabilir.)')) return false;
+    if (ask) flCheckpoint();
+    for (const e of projectFlowEdges(activeProject)) await deleteFlowEdgeStore(e.id);
+    for (const n of nodes) await deleteFlowNodeStore(n.id);
+    flowEdges = flowEdges.filter(e => e.projectId !== activeProject);
+    flowNodes = flowNodes.filter(n => n.projectId !== activeProject);
+    flSel = null;
+    flCloseRun();
+    renderFlow();
+    return true;
+  }
+
+  /* ---------- ADIM DÜZENLEME PENCERESİ ---------- */
+
+  let flOpenNode = null;
+  let flNodeTouched = false; // pencerede yapılan tüm değişiklik tek Ctrl+Z ile geri alınsın
+  function flNodeTouch() { if (!flNodeTouched) { flCheckpoint(); flNodeTouched = true; } }
+
+  function openFlNodeModal(id) {
+    const n = findFlowNode(id);
+    if (!n) return;
+    flOpenNode = id;
+    flNodeTouched = false;
+    el('flNodeText').value = n.text;
+    renderFlNodeModal();
+    el('flNodeModal').classList.add('open');
+    const ta = el('flNodeText');
+    setTimeout(() => { ta.focus(); ta.select(); }, 30);
+  }
+
+  function renderFlNodeModal() {
+    const n = findFlowNode(flOpenNode);
+    if (!n) return;
+    el('flNodeKinds').innerHTML = FL_KIND_ORDER.map(k =>
+      '<button class="fl-kind-chip' + (k === n.kind ? ' sel' : '') + '" data-flkind="' + k + '">' + flIconSVG(k) + FL_KINDS[k].name + '</button>').join('');
+    el('flNodeHelp').innerHTML = FL_KINDS[n.kind].help;
+    el('flNodeText').placeholder = FL_KINDS[n.kind].def;
+  }
+
+  async function closeFlNodeModal() {
+    el('flNodeModal').classList.remove('open');
+    const n = findFlowNode(flOpenNode);
+    flOpenNode = null;
+    if (n) await saveFlowNode(n);
+    renderFlow();
+  }
+
+  /* ---------- RESİM OLARAK DIŞA AKTARMA (PNG / SVG) ----------
+     Ekrandaki SVG'den bağımsız, renkleri içine yazılmış bir SVG üretilir; PNG için bu
+     SVG tuvale iki kat çözünürlükte basılır (şema görünümündeki gibi). */
+  function buildFlowSVG(pid) {
+    const nodes = projectFlowNodes(pid);
+    if (!nodes.length) return null;
+    const cs = getComputedStyle(document.body);
+    const C = k => cs.getPropertyValue(k).trim();
+    const P = { ink: C('--ink'), muted: C('--muted'), paper: C('--paper'), bg: C('--bg'), green: C('--green') };
+    const fill = { start: 'term', end: 'term', input: 'io', output: 'io', process: 'proc', decision: 'dec', loop: 'loop' };
+    const routes = flRouteAll(nodes, projectFlowEdges(pid)).routes;
+    const byId = {};
+    nodes.forEach(n => { byId[n.id] = n; });
+    let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    const grow = (a, b, c, d) => { x1 = Math.min(x1, a); y1 = Math.min(y1, b); x2 = Math.max(x2, c); y2 = Math.max(y2, d); };
+    let body = '';
+    projectFlowEdges(pid).forEach(e => {
+      const A = byId[e.from], B = byId[e.to], r = routes[e.id];
+      if (!A || !B || !r) return;
+      r.pts.forEach(p => grow(p.x - 4, p.y - 4, p.x + 4, p.y + 4));
+      body += '<path d="' + flPathD(r.pts) + '" fill="none" stroke="' + P.muted + '" stroke-width="1.8" stroke-linejoin="round" marker-end="url(#a)"/>';
+      if (flBranches(A) && e.label) {
+        const lp = flLabelPos(r);
+        body += '<text x="' + lp.x + '" y="' + lp.y + '" text-anchor="' + lp.a + '" font-family="monospace" font-size="11.5" font-weight="bold" fill="' +
+                (e.label === 'Evet' ? P.green : '#c0392b') + '">' + e.label + '</text>';
+        grow(lp.x - 40, lp.y - 12, lp.x + 40, lp.y + 4);
+      }
+    });
+    nodes.forEach(n => {
+      const g = flGeom(n), b = flBox(n);
+      grow(b.l, b.t, b.r, b.b);
+      body += '<g transform="translate(' + n.x + ',' + n.y + ')"><path d="' + flShapePath(n.kind, g.w, g.h) + '" fill="' + C('--fl-' + fill[n.kind] + '-bg') +
+              '" stroke="' + C('--fl-' + fill[n.kind] + '-bd') + '" stroke-width="1.6"/>' + flTextSVG(n, g, P) + '</g>';
+    });
+    const pad = 24;
+    x1 -= pad; y1 -= pad; x2 += pad; y2 += pad;
+    const W = Math.ceil(x2 - x1), H = Math.ceil(y2 - y1);
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="' + [Math.floor(x1), Math.floor(y1), W, H].join(' ') + '">' +
+      '<defs><marker id="a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="' + P.muted + '"/></marker></defs>' +
+      '<rect x="' + Math.floor(x1) + '" y="' + Math.floor(y1) + '" width="' + W + '" height="' + H + '" fill="' + P.bg + '"/>' + body + '</svg>';
+  }
+
+  async function exportFlowImage(kind) {
+    const svg = buildFlowSVG(activeProject);
+    if (!svg) { flToast('Dışa aktarılacak adım yok.'); return; }
+    const name = safeName('one') + '-akis-semasi';
+    if (kind === 'svg') { download(svg, name + '.svg', 'image/svg+xml'); return; }
+    const img = new Image();
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    await img.decode();
+    const k = 2;
+    const cv = document.createElement('canvas');
+    cv.width = img.width * k; cv.height = img.height * k;
+    const ctx = cv.getContext('2d');
+    ctx.scale(k, k);
+    ctx.drawImage(img, 0, 0);
+    cv.toBlob(b => download(b, name + '.png', 'image/png'), 'image/png');
+  }
+
+  /* ---------- KONTROL (LINT) ----------
+     Çalıştırınca takılacak ya da yanlış anlaşılacak durumları önceden bulur.
+     lvl: 'err' = şema bu haliyle çalışmaz, 'warn' = çalışır ama muhtemelen eksik/yanlış. */
+  function flName(n) {
+    const t = (n.text.trim() || FL_KINDS[n.kind].name).replace(/\s+/g, ' ');
+    return '"' + (t.length > 32 ? t.slice(0, 30) + '…' : t) + '"';
+  }
+
+  function lintFlow(pid) {
+    const out = [];
+    const add = (lvl, nid, msg) => out.push({ lvl: lvl, nid: nid, msg: msg });
+    const nodes = projectFlowNodes(pid), edges = projectFlowEdges(pid);
+    if (!nodes.length) return out;
+    const starts = nodes.filter(n => n.kind === 'start');
+    if (!starts.length) add('err', null, 'Başla şekli yok: algoritmanın nereden başlayacağı belli değil.');
+    starts.slice(1).forEach(n => add('warn', n.id, 'Birden fazla Başla var; çalıştırma ilkinden başlar.'));
+    if (!nodes.some(n => n.kind === 'end')) add('warn', null, 'Bitir şekli yok.');
+
+    nodes.forEach(n => {
+      const outs = edges.filter(e => e.from === n.id), ins = edges.filter(e => e.to === n.id);
+      const nm = flName(n), kn = FL_KINDS[n.kind].name;
+      if (n.kind !== 'start' && n.kind !== 'end' && !n.text.trim()) add('warn', n.id, kn + ' şeklinin içi boş (çift tıklayıp yaz).');
+      if (n.kind === 'start' && ins.length) add('warn', n.id, 'Başla şekline ok girmemeli.');
+      if (n.kind === 'end') {
+        if (outs.length) add('err', n.id, 'Bitir şeklinden ok çıkmamalı.');
+      } else if (flBranches(n)) {
+        if (outs.length < 2) add('err', n.id, nm + ': ' + kn + ' şeklinin iki çıkışı olmalı (Evet ve Hayır); şu an ' + outs.length + '.');
+        else if (outs.length > 2) add('err', n.id, nm + ': ' + kn + ' şeklinin en fazla iki çıkışı olur.');
+        else if (!(outs.some(e => e.label === 'Evet') && outs.some(e => e.label === 'Hayır')))
+          add('warn', n.id, nm + ': çıkışlardan biri Evet, diğeri Hayır olmalı (oka tıklayıp seç).');
+        if (n.kind === 'loop' && n.text.trim() && !parseLoopHeader(n.text))
+          add('err', n.id, nm + ': döngü yazısı anlaşılamadı. Örnek: i = 1 .. 10  ya da  i = 1, n, 2');
+      } else {
+        if (!outs.length) add('warn', n.id, nm + ': devamı yok — bir sonraki adıma ok çiz ya da Bitir ekle.');
+        if (outs.length > 1) add('err', n.id, nm + ': birden fazla çıkışı var; hangi yoldan gidileceği belirsiz (dallanma için Karar kullan).');
+      }
+    });
+
+    // Başla'dan ulaşılamayan adımlar
+    if (starts.length) {
+      const seen = new Set([starts[0].id]), q = [starts[0].id];
+      while (q.length) {
+        const id = q.shift();
+        edges.forEach(e => { if (e.from === id && !seen.has(e.to)) { seen.add(e.to); q.push(e.to); } });
+      }
+      nodes.forEach(n => { if (!seen.has(n.id) && n !== starts[0]) add('warn', n.id, flName(n) + ': Başla\'dan bu adıma ulaşılamıyor (bağlı değil).'); });
+    }
+    return out;
+  }
+
+  /* ---------- ŞEMADAN NUMARALI ALGORİTMA ----------
+     Şekiller okuma sırasına dizilir (Evet kolu önce, birleşme noktaları iki koldan sonra),
+     her biri "Adım N: ..." olur. Sıradaki adım bir sonraki satır değilse "Adım N'e git"
+     yazılır — Türkçe ders kitaplarındaki algoritma biçimi. */
+  function flLabelRank(l) { return l === 'Evet' ? 0 : (l === 'Hayır' ? 2 : 1); }
+
+  function flowOrder(pid) {
+    const nodes = projectFlowNodes(pid), edges = projectFlowEdges(pid);
+    const byId = {};
+    nodes.forEach(n => { byId[n.id] = n; });
+    const outs = {};
+    edges.forEach(e => { (outs[e.from] = outs[e.from] || []).push(e); });
+    Object.values(outs).forEach(l => l.sort((a, b) => flLabelRank(a.label) - flLabelRank(b.label)));
+    // Ters sonradan-sıra (reverse postorder): birleşme noktası, oraya gelen tüm kollardan sonra gelir.
+    // Çocuklar ters tercih sırasıyla (Hayır, ..., Evet) gezilir ki sonuçta Evet kolu önce yazılsın.
+    const seen = new Set(), post = [];
+    const roots = nodes.filter(n => n.kind === 'start').concat(nodes.filter(n => n.kind !== 'start').sort((a, b) => a.y - b.y || a.x - b.x));
+    roots.forEach(r => {
+      if (seen.has(r.id)) return;
+      const part = [];
+      const stack = [{ id: r.id, i: 0 }];
+      seen.add(r.id);
+      while (stack.length) {
+        const top = stack[stack.length - 1];
+        const kids = (outs[top.id] || []).slice().reverse();
+        if (top.i < kids.length) {
+          const c = kids[top.i++].to;
+          if (!seen.has(c) && byId[c]) { seen.add(c); stack.push({ id: c, i: 0 }); }
+        } else { part.push(top.id); stack.pop(); }
+      }
+      post.push(part.reverse()); // her bağlı parça kendi içinde ters sırada
+    });
+    return { order: [].concat(...post).map(id => byId[id]), outs: outs };
+  }
+
+  function flowToSteps(pid) {
+    const { order, outs } = flowOrder(pid);
+    if (!order.length) return '';
+    const next = n => (outs[n.id] || [])[0];
+    const branch = (n, l) => (outs[n.id] || []).find(e => e.label === l);
+    // 1. geçiş: numaraları ver (gerekiyorsa "git" satırı da bir numara alır)
+    const num = {}, needGoto = {};
+    let k = 1;
+    order.forEach((n, i) => {
+      num[n.id] = k++;
+      const e = !flBranches(n) && n.kind !== 'end' ? next(n) : null;
+      if (e && (!order[i + 1] || order[i + 1].id !== e.to)) { needGoto[n.id] = k++; }
+    });
+    const step = id => (id && num[id]) ? 'Adım ' + trDative(num[id]) : 'Adım ?';
+    const oneLine = s => s.trim().replace(/\s*\n\s*/g, '; ');
+    // 2. geçiş: satırları yaz
+    const lines = [];
+    order.forEach(n => {
+      let t = oneLine(n.text) || FL_KINDS[n.kind].def;
+      if (n.kind === 'decision') {
+        const yes = branch(n, 'Evet') || (outs[n.id] || [])[0], no = branch(n, 'Hayır') || (outs[n.id] || []).find(e => e !== yes);
+        t = 'Eğer ' + t.replace(/\?\s*$/, '').trim() + ' ise ' + step(yes && yes.to) + ' git, değilse ' + step(no && no.to) + ' git.';
+      } else if (n.kind === 'loop') {
+        const yes = branch(n, 'Evet') || (outs[n.id] || [])[0], no = branch(n, 'Hayır') || (outs[n.id] || []).find(e => e !== yes);
+        t = 'Döngü ' + t + ' : sürerse ' + step(yes && yes.to) + ', bitince ' + step(no && no.to) + ' git.';
+      } else if (n.kind !== 'end' && !next(n)) {
+        t += '  (devamı bağlanmamış)';
+      }
+      lines.push('Adım ' + num[n.id] + ': ' + t);
+      if (needGoto[n.id]) lines.push('Adım ' + needGoto[n.id] + ': ' + step(next(n).to) + ' git.');
+    });
+    return lines.join('\n');
+  }
+
+  /* ---------- YAZILI ALGORİTMADAN AKIŞ ŞEMASI ----------
+     Her satır bir adımdır. İki biçim (karışık da olabilir) anlaşılır:
+       1) Girintili yapı:   Eğer a > b ise / Değilse / İken k / İçin i = 1 .. n / Tekrarla ... olana kadar
+          (girinti yerine "Eğer sonu", "Döngü sonu", "end if" gibi kapanış satırları da olur)
+       2) Numaralı biçim:   "Adım 4: Eğer x > 0 ise Adım 6'ya git" · "Adım 7: Adım 3'e git"
+     Sonuç: { nodes, edges, warn } — konumlar sonra flLayoutGraph ile verilir. */
+
+  /* Anahtar kelime tanımak için: küçük harf + Türkçe harfleri sadeleştirme (ğ->g, ı->i ...).
+     Uzunluk değişmez, böylece sadeleşmiş metindeki konumlar asıl metinde de geçerlidir. */
+  const FL_FOLD = { 'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u', 'â': 'a', 'î': 'i', 'û': 'u' };
+  function flFold(s) {
+    let o = '';
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      let l = c.toLocaleLowerCase('tr');
+      if (l.length !== 1) l = c.toLowerCase();
+      if (l.length !== 1) l = c;
+      o += FL_FOLD[l] || l;
+    }
+    return o;
+  }
+
+  /* Virgülle ayırır ama tırnak ve parantez içindeki virgüllere dokunmaz: Yaz "a, b", f(x, y) */
+  function splitTopLevel(s, sep) {
+    const out = [];
+    let depth = 0, q = null, cur = '';
+    for (const ch of s) {
+      if (q) { if (ch === q) q = null; cur += ch; continue; }
+      if (ch === '"' || ch === '“' || ch === '”') { q = ch === '“' ? '”' : ch; cur += ch; continue; }
+      if (ch === '(') depth++;
+      if (ch === ')') depth--;
+      if (ch === sep && depth === 0) { out.push(cur.trim()); cur = ''; continue; }
+      cur += ch;
+    }
+    if (cur.trim() || out.length) out.push(cur.trim());
+    return out;
+  }
+
+  /* Döngü başlığı: "i = 1 .. 10", "i = 1, n, 2", "i ← 1'den 10'a kadar", "i = 10 .. 1 adım -1"
+     -> { v: 'i', a: '1', b: '10', step: null|'2' } ; anlaşılmazsa null */
+  function parseLoopHeader(text) {
+    let s = String(text).trim();
+    s = s.slice((flFold(s).match(/^(?:icin|for|dongu|her)\s+/) || [''])[0].length);
+    s = s.slice(0, s.length - (flFold(s).match(/\s*(?:icin|do|tekrarla|:)\s*$/) || [''])[0].length).trim();
+    const m = s.match(/^([\p{L}_][\p{L}\p{N}_]*)\s*(?:=|←|<-|:=)\s*(.+)$/u);
+    if (!m) return null;
+    let rest = m[2], step = null;
+    const fr = flFold(rest);
+    let sm = fr.match(/\s+(?:adim|step|artis|artim)\s*:?\s*(?=\S)/);
+    if (sm) { step = rest.slice(sm.index + sm[0].length).trim(); rest = rest.slice(0, sm.index); }
+    else if ((sm = fr.match(/\s+(\S+)\s+(artarak|azalarak)$/))) {
+      step = rest.slice(sm.index).trim().split(/\s+/)[0];
+      if (sm[2] === 'azalarak' && step[0] !== '-') step = '-' + step;
+      rest = rest.slice(0, sm.index);
+    }
+    rest = rest.slice(0, rest.length - (flFold(rest).match(/\s+kadar$/) || [''])[0].length).trim();
+    let parts = null;
+    const pm = rest.match(/^(.+?)\s*\.\.\s*(.+)$/) || rest.match(/^(.+?)\s+(?:to|ile)\s+(.+)$/i) || rest.match(/^(.+?)['’][dDtT][aeAE][nN]\s+(.+)$/);
+    if (pm) parts = [pm[1], pm[2]];
+    else {
+      const c = splitTopLevel(rest, ',');
+      if (c.length === 2 || c.length === 3) { parts = [c[0], c[1]]; if (c[2] && !step) step = c[2]; }
+    }
+    if (!parts) return null;
+    const clean = x => String(x).trim().replace(/['’][\p{L}]+$/u, '').trim();
+    const a = clean(parts[0]), b = clean(parts[1]);
+    if (!a || !b) return null;
+    return { v: m[1], a: a, b: b, step: step ? clean(step) : null };
+  }
+
+  /* Satırları hazırlar: girinti, "Adım 3:" / "3." numarası, sondaki nokta */
+  function flPrepLines(src) {
+    const out = [];
+    String(src).replace(/\r/g, '').split('\n').forEach((raw, i) => {
+      const exp = raw.replace(/\t/g, '    ');
+      let t = exp.trim();
+      if (!t || /^(#|\/\/)/.test(t) || t === '{') return;
+      const ind = exp.length - exp.replace(/^\s+/, '').length;
+      let label = null;
+      const ft = flFold(t);
+      const m = ft.match(/^(?:adim|step)\s*(\d+)\s*[:.)\-–]\s*/) || ft.match(/^(\d+)\s*[.):\-–]\s+/);
+      // "7. adıma git" tek başına bir numara değil, bir "git" satırıdır
+      if (m && !FL_GOTO.test(ft)) { label = +m[1]; t = t.slice(m[0].length).trim(); }
+      if (/[^.]\.$/.test(t)) t = t.slice(0, -1).trim();
+      if (/;$/.test(t)) t = t.slice(0, -1).trim();
+      if (!t && label == null) return;
+      out.push({ ind: ind, text: t, label: label, no: i + 1 });
+    });
+    return out;
+  }
+
+  /* "Adım 6'ya git" · "6. adıma git" · "git 6" / "goto 6" (sadeleşmiş metin üzerinde) */
+  const FL_GOTO = /^(?:adim\s*(\d+)\S*\s+(?:git|gidilir|gidin|don|geri don)\b|(?:git|goto|go to|jump)\s+(?:adim\s*)?(\d+)|(\d+)\s*\.?\s*(?:numarali\s+)?adim\S*\s+(?:git|gidilir|gidin|don|geri don)\b)/;
+  const flGotoNum = m => +(m[1] || m[2] || m[3]);
+
+  /* Bir satırın ne olduğunu bulur: { type, ...ayrıntılar } */
+  function flClassify(text) {
+    const t = text, f = flFold(text);
+    const pre = re => { const m = f.match(re); return m ? t.slice(m[0].length).trim() : null; };
+    const suf = re => { const m = f.match(re); return m ? t.slice(0, m.index).trim() : null; };
+    const gotoStep = s => { const m = flFold(s).match(FL_GOTO); return m && !flFold(s).slice(m[0].length).trim() ? flGotoNum(m) : null; };
+    const stripCond = s => s.replace(/\s*:\s*$/, '').trim();
+    let r;
+
+    if (/^(?:eger sonu|egersonu|son eger|end ?if|end ?while|end ?for|dongu sonu|son dongu|iken sonu|icin sonu|tekrar sonu|wend|next(?:\s+\S+)?|sonraki(?:\s+\S+)?|\})$/.test(f)) return { type: 'closer' };
+    if (/^(?:degilse|aksi halde|aksi takdirde|yoksa|else|elif|elseif|else if)\b/.test(f)) {
+      if ((r = pre(/^(?:(?:degilse|aksi halde|aksi takdirde|yoksa|else)\s*,?\s*(?:eger|if)|elif|elseif)\s+/)) != null) return { type: 'else', elseIf: r };
+      r = pre(/^(?:degilse|aksi halde|aksi takdirde|yoksa|else)\s*[,:]?\s*/);
+      return { type: 'else', inline: r ? r : null };
+    }
+    if ((r = pre(/^(?:until|kadar)\s+/)) != null) return { type: 'until', cond: stripCond(r) };
+    if ((r = suf(/\s+(?:olana|olunca|olasiya)\s+kadar(?:\s+tekrarla)?$/)) != null) return { type: 'until', cond: r };
+    if (/^(?:basla|baslat|baslangic|start|begin)$/.test(f)) return { type: 'start' };
+    if (/^(?:bitir|bitis|bitti|dur|son|stop|end|programi bitir|cik)$/.test(f)) return { type: 'end' };
+    let g = gotoStep(t);
+    if (g != null) return { type: 'goto', step: g };
+
+    // Eğer ... (ise ...)
+    if ((r = pre(/^(?:eger|if)\s+/)) != null) {
+      const fr = flFold(r);
+      const m = fr.match(/\s(?:ise|then)(?=\s|:|$)/);
+      let cond = m ? r.slice(0, m.index) : r, tail = m ? r.slice(m.index + m[0].length).replace(/^\s*:?\s*/, '') : '';
+      cond = stripCond(cond);
+      if (!tail) return { type: 'if', cond: cond };
+      const ft = flFold(tail), gm = ft.match(FL_GOTO);
+      if (gm) {
+        const after = tail.slice(gm[0].length);
+        const em = flFold(after).match(/^\s*[,;]?\s*(?:degilse|aksi halde|aksi takdirde|yoksa|else)\s*,?\s*/);
+        const elseStep = em ? gotoStep(after.slice(em[0].length).trim()) : null;
+        return { type: 'if', cond: cond, thenStep: flGotoNum(gm), elseStep: elseStep };
+      }
+      const em = ft.match(/\s*[,;]?\s+(?:degilse|aksi halde|aksi takdirde|yoksa|else)\s*[,:]?\s+/);
+      return { type: 'if', cond: cond, thenText: em ? tail.slice(0, em.index) : tail, elseText: em ? tail.slice(em.index + em[0].length) : null };
+    }
+    // Numaralı biçimin döngü satırı (şemadan üretilen): "Döngü i = 1 .. 10 : sürerse Adım 5'e, bitince Adım 8'e git"
+    let lm = f.match(/\s*:\s*surerse\s+adim\s*(\d+)\S*\s*,\s*bitince\s+adim\s*(\d+)\S*(?:\s+git)?$/);
+    if (lm && (r = pre(/^(?:dongu|icin|for)\s+/)) != null) return { type: 'forGoto', header: r.slice(0, r.length - lm[0].length).trim(), yes: +lm[1], no: +lm[2] };
+    // Döngüler
+    if ((r = pre(/^(?:iken|while)\s+/)) != null) return { type: 'while', cond: stripCond(r.replace(/\s+(?:do|ise|iken|tekrarla)\s*:?$/i, '')) };
+    if ((r = suf(/\s+(?:iken|oldugu (?:surece|muddetce)|oldukca)(?:\s+tekrarla)?\s*:?$/)) != null) return { type: 'while', cond: r };
+    if ((lm = f.match(/^(\S+)\s+(?:kez|kere|defa)\s+tekrarla\s*:?$/)) || (lm = f.match(/^(?:tekrarla|repeat)\s+(\S+)\s+(?:kez|kere|defa|times)\s*:?$/)))
+      return { type: 'count', count: t.split(/\s+/)[/^(tekrarla|repeat)/.test(f) ? 1 : 0] };
+    if (/^(?:tekrarla|repeat|yap|do)\s*:?$/.test(f)) return { type: 'repeat' };
+    if ((r = pre(/^(?:icin|for|dongu|her)\s+/)) != null) {
+      if (parseLoopHeader(r)) return { type: 'for', header: r.replace(/\s*(?:için|icin|do|tekrarla|:)\s*$/i, '').trim() };
+      if (/^dongu/.test(f)) return { type: 'while', cond: stripCond(r) };
+    }
+    if ((r = suf(/\s+(?:icin|tekrarla)\s*:?$/)) != null && parseLoopHeader(r)) return { type: 'for', header: r };
+    // Atama her zaman işlemdir ("yaz = 3" bir çıkış değildir)
+    if (/^[\p{L}_][\p{L}\p{N}_]*\s*(?:=(?!=)|←|<-|:=|\+=|-=|\*=|\/=)/u.test(t)) return { type: 'process' };
+    if (/^(?:oku|gir|al|input|read|giris|klavyeden (?:oku|gir)|veri gir)\b/.test(f) || /\s(?:oku|gir|al|girin|okuyun|iste)$/.test(f)) return { type: 'input' };
+    if (/^(?:yaz|yazdir|goster|ekrana yaz|ekrana yazdir|print|output|write|cikti|cikis)\b/.test(f) || /\s(?:yaz|yazdir|goster)$/.test(f)) return { type: 'output' };
+    return { type: 'process' };
+  }
+
+  function parseAlgorithm(src) {
+    const L = flPrepLines(src);
+    L.forEach(l => { l.c = flClassify(l.text); });
+    const nodes = [], edges = [], gotos = [], labels = {}, warn = [];
+    let pos = 0;
+    const mk = (kind, text) => { const n = { id: 'n' + nodes.length, kind: kind, text: String(text || '').trim() }; nodes.push(n); return n; };
+    const link = (pend, n) => pend.forEach(p => edges.push({ from: p.n.id, to: n.id, label: p.label || '' }));
+    const pseudo = (text, base) => ({ ind: base.ind, text: text, label: null, no: base.no, c: flClassify(text) });
+
+    /* Bir bloğun (Eğer/İken/İçin gövdesi) satırları: girintiliyse girinti bitene kadar,
+       değilse "Değilse" / kapanış / "olana kadar" satırına kadar. */
+    function block(pend, hdr) {
+      const nx = L[pos];
+      const mode = nx && nx.ind > hdr.ind ? 'indent' : 'closer';
+      while (pos < L.length) {
+        const l = L[pos];
+        if (mode === 'indent' && l.ind <= hdr.ind) break;
+        if (l.c.type === 'else' || l.c.type === 'closer' || l.c.type === 'until') break;
+        pos++;
+        pend = stmt(l, pend);
+      }
+      return { pend: pend, mode: mode };
+    }
+    function close(hdr, mode) {
+      const l = L[pos];
+      if (l && l.c.type === 'closer' && (mode === 'closer' || l.ind === hdr.ind)) pos++;
+    }
+    function loopBody(n, hdr) {
+      const r = block([{ n: n, label: 'Evet' }], hdr);
+      link(r.pend, n); // gövdenin sonu döngü başına geri döner
+      close(hdr, r.mode);
+      return [{ n: n, label: 'Hayır' }];
+    }
+
+    function stmt(l, pend) {
+      const before = nodes.length;
+      const res = stmtInner(l, pend);
+      if (l.label != null && labels[l.label] == null) {
+        if (nodes.length > before) labels[l.label] = nodes[before].id;
+        else if (l.c.type === 'goto') labels[l.label] = { alias: l.c.step };
+        else labels[l.label] = { next: nodes.length };
+      }
+      return res;
+    }
+
+    function stmtInner(l, pend) {
+      const c = l.c;
+      let n;
+      switch (c.type) {
+        case 'start': n = mk('start', l.text); link(pend, n); return [{ n: n }];
+        case 'end': n = mk('end', l.text); link(pend, n); return [];
+        case 'goto': pend.forEach(p => gotos.push({ from: p.n.id, label: p.label || '', step: c.step, no: l.no })); return [];
+        case 'if': {
+          if (!c.cond) warn.push('Satır ' + l.no + ': koşul boş.');
+          const d = mk('decision', c.cond);
+          link(pend, d);
+          if (c.thenStep) {
+            gotos.push({ from: d.id, label: 'Evet', step: c.thenStep, no: l.no });
+            if (c.elseStep) { gotos.push({ from: d.id, label: 'Hayır', step: c.elseStep, no: l.no }); return []; }
+            return [{ n: d, label: 'Hayır' }];
+          }
+          if (c.thenText != null) {
+            const tp = stmt(pseudo(c.thenText, l), [{ n: d, label: 'Evet' }]);
+            const ep = c.elseText != null ? stmt(pseudo(c.elseText, l), [{ n: d, label: 'Hayır' }]) : [{ n: d, label: 'Hayır' }];
+            return tp.concat(ep);
+          }
+          const r = block([{ n: d, label: 'Evet' }], l);
+          let ep = [{ n: d, label: 'Hayır' }];
+          const e = L[pos];
+          if (e && e.c.type === 'else' && (r.mode === 'closer' || e.ind >= l.ind)) {
+            pos++;
+            if (e.c.elseIf != null) return r.pend.concat(stmtInner(pseudo('Eğer ' + e.c.elseIf, e), ep)); // iç "Eğer" kapanışı kendisi alır
+            if (e.c.inline) ep = stmt(pseudo(e.c.inline, e), ep);
+            else ep = block(ep, e).pend;
+          }
+          close(l, r.mode);
+          return r.pend.concat(ep);
+        }
+        case 'while': {
+          if (!c.cond) warn.push('Satır ' + l.no + ': döngü koşulu boş.');
+          n = mk('decision', c.cond); link(pend, n);
+          return loopBody(n, l);
+        }
+        case 'for': n = mk('loop', c.header); link(pend, n); return loopBody(n, l);
+        case 'count': n = mk('loop', 'tekrar = 1 .. ' + c.count); link(pend, n); return loopBody(n, l);
+        case 'forGoto':
+          n = mk('loop', c.header); link(pend, n);
+          gotos.push({ from: n.id, label: 'Evet', step: c.yes, no: l.no }, { from: n.id, label: 'Hayır', step: c.no, no: l.no });
+          return [];
+        case 'repeat': {
+          const first = nodes.length;
+          const r = block(pend, l);
+          const firstNode = nodes[first];
+          const u = L[pos];
+          if (u && u.c.type === 'until' && (r.mode === 'closer' || u.ind >= l.ind)) {
+            pos++;
+            const d = mk('decision', u.c.cond);
+            link(r.pend, d);
+            if (firstNode) edges.push({ from: d.id, to: firstNode.id, label: 'Hayır' }); // koşul sağlanmadıkça başa dön
+            return [{ n: d, label: 'Evet' }];
+          }
+          warn.push('Satır ' + l.no + ': "Tekrarla" bloğunun sonunda "... olana kadar" satırı yok; sonsuz döngü oldu.');
+          if (firstNode) link(r.pend, firstNode);
+          return [];
+        }
+        case 'else': case 'closer': case 'until':
+          warn.push('Satır ' + l.no + ': "' + l.text + '" beklenmedik yerde, atlandı.');
+          return pend;
+        default:
+          n = mk(c.type, l.text); link(pend, n); return [{ n: n }];
+      }
+    }
+
+    let pend = [];
+    while (pos < L.length) { const l = L[pos++]; pend = stmt(l, pend); }
+
+    // "Adım N'e git" hedeflerini bağla (ileriye atlamalar da olur)
+    const resolve = (step, depth) => {
+      const v = labels[step];
+      if (typeof v === 'string') return v;
+      if (v && v.alias != null && depth < 20) return resolve(v.alias, depth + 1);
+      if (v && v.next != null && nodes[v.next]) return nodes[v.next].id;
+      return null;
+    };
+    gotos.forEach(g => {
+      const to = resolve(g.step, 0);
+      if (to) edges.push({ from: g.from, to: to, label: g.label });
+      else warn.push('Satır ' + g.no + ': Adım ' + g.step + ' bulunamadı.');
+    });
+
+    if (!nodes.length) return { nodes: nodes, edges: edges, warn: warn };
+    if (!nodes.some(n => n.kind === 'start')) {
+      const s = { id: 'n_bas', kind: 'start', text: 'Başla' };
+      edges.push({ from: s.id, to: nodes[0].id, label: '' });
+      nodes.unshift(s);
+    }
+    if (pend.length) { const e = mk('end', 'Bitir'); link(pend, e); }
+    return { nodes: nodes, edges: edges, warn: warn };
+  }
+
+  /* ---------- OTOMATİK YERLEŞTİRME ----------
+     Katmanlı yerleşim: her şekil, kendisine gelen (geri dönüş olmayan) okların en uzununa göre
+     bir satıra konur. Evet kolu aynı sütunda aşağı iner, Hayır kolu sağdaki sütuna geçer.
+     Döngüden çıkış (Hayır) döngü gövdesinin altına konur; geri dönüş okları soldan dolaşır. */
+  function flLayoutGraph(nodes, edges, x0, y0) {
+    const byId = {};
+    nodes.forEach(n => { byId[n.id] = n; });
+    const outs = {}, ins = {};
+    edges.forEach(e => {
+      if (!byId[e.from] || !byId[e.to]) return;
+      (outs[e.from] = outs[e.from] || []).push(e);
+      (ins[e.to] = ins[e.to] || []).push(e);
+    });
+    Object.values(outs).forEach(l => l.sort((a, b) => flLabelRank(a.label) - flLabelRank(b.label)));
+
+    // 1) Derinlik öncelikli gezinti: geri dönüş oklarını (döngüler) bul
+    const state = {}, pre = {}, back = new Set();
+    let k = 0;
+    nodes.filter(n => n.kind === 'start').concat(nodes.filter(n => n.kind !== 'start')).forEach(r => {
+      if (state[r.id]) return;
+      const stack = [{ id: r.id, i: 0 }];
+      state[r.id] = 1; pre[r.id] = k++;
+      while (stack.length) {
+        const top = stack[stack.length - 1], list = outs[top.id] || [];
+        if (top.i < list.length) {
+          const e = list[top.i++], s = state[e.to];
+          if (s === 1) back.add(e);
+          else if (!s) { state[e.to] = 1; pre[e.to] = k++; stack.push({ id: e.to, i: 0 }); }
+        } else { state[top.id] = 2; stack.pop(); }
+      }
+    });
+
+    // 2) Döngüden çıkışlar gövdenin altına gelsin
+    const extra = [], exitSameCol = new Set();
+    back.forEach(be => {
+      const H = be.to, body = new Set([H]), q = [be.from];
+      while (q.length) {
+        const id = q.pop();
+        if (body.has(id)) continue;
+        body.add(id);
+        (ins[id] || []).forEach(e => { if (!back.has(e)) q.push(e.from); });
+      }
+      (outs[H] || []).forEach(e => { if (!body.has(e.to) && !back.has(e)) { extra.push([be.from, e.to]); exitSameCol.add(e); } });
+    });
+
+    // 3) Satırlar: en uzun yol
+    const rank = {};
+    nodes.forEach(n => { rank[n.id] = 0; });
+    const cons = edges.filter(e => byId[e.from] && byId[e.to] && !back.has(e)).map(e => [e.from, e.to]).concat(extra);
+    for (let it = 0; it <= nodes.length; it++) {
+      let ch = false;
+      cons.forEach(c => { if (rank[c[1]] < rank[c[0]] + 1 && rank[c[0]] < nodes.length) { rank[c[1]] = rank[c[0]] + 1; ch = true; } });
+      if (!ch) break;
+    }
+
+    // 4) Sütunlar: Evet aynı sütun, Hayır bir sağ; birleşen kollar en soldakini alır
+    const order = nodes.slice().sort((a, b) => rank[a.id] - rank[b.id] || pre[a.id] - pre[b.id]);
+    const prop = {}, col = {}, occ = new Set();
+    order.forEach(n => {
+      let c = prop[n.id] != null ? prop[n.id] : 0;
+      while (occ.has(rank[n.id] + ':' + c)) c++;
+      col[n.id] = c;
+      occ.add(rank[n.id] + ':' + c);
+      let nth = 0;
+      (outs[n.id] || []).forEach(e => {
+        if (back.has(e)) return;
+        let want = c;
+        if (flBranches(n) && !exitSameCol.has(e) && (e.label === 'Hayır' || (!e.label && nth > 0))) want = c + 1;
+        nth++;
+        prop[e.to] = prop[e.to] == null ? want : Math.min(prop[e.to], want);
+      });
+    });
+
+    // 5) Koordinatlar: sütun genişliği / satır yüksekliği en büyük şekle göre
+    const colW = {}, rowH = {};
+    nodes.forEach(n => {
+      const g = flGeom(n);
+      colW[col[n.id]] = Math.max(colW[col[n.id]] || 120, g.w);
+      rowH[rank[n.id]] = Math.max(rowH[rank[n.id]] || 40, g.h);
+    });
+    const cx = {}, cy = {};
+    let x = x0, y = y0;
+    const maxC = Math.max(0, ...Object.keys(colW).map(Number)), maxR = Math.max(0, ...Object.keys(rowH).map(Number));
+    for (let c = 0; c <= maxC; c++) { const w = colW[c] || 0; cx[c] = x + w / 2; if (w) x += w + 70; }
+    for (let r = 0; r <= maxR; r++) { const h = rowH[r] || 0; cy[r] = y + h / 2; if (h) y += h + 46; }
+    nodes.forEach(n => { n.x = Math.round(cx[col[n.id]]); n.y = Math.round(cy[rank[n.id]]); });
+  }
+
+  async function flAutoLayoutCmd() {
+    const nodes = projectFlowNodes(activeProject);
+    if (!nodes.length) return;
+    flCheckpoint();
+    flLayoutGraph(nodes, projectFlowEdges(activeProject), 90, 50);
+    for (const n of nodes) await saveFlowNode(n);
+    renderFlow();
+    flFit();
+    flToast('Şekiller akışa göre dizildi (geri almak için Ctrl+Z).');
+  }
+
+  /* Ayrıştırılan algoritmayı projeye ekler (ya da mevcut şemanın yerine koyar). */
+  async function flApplyParsed(res, mode) {
+    flCheckpoint();
+    let x0 = 90;
+    if (mode === 'replace') await flClear(false);
+    else {
+      const b = projectFlowNodes(activeProject).map(flBox);
+      if (b.length) x0 = Math.max(...b.map(v => v.r)) + 160;
+    }
+    const idMap = {}, now = Date.now();
+    const nodes = res.nodes.map((n, i) => {
+      const nn = { id: uid(), projectId: activeProject, kind: n.kind, text: n.text, x: 0, y: 0, created: now + i };
+      idMap[n.id] = nn.id;
+      return nn;
+    });
+    const edges = res.edges.map((e, i) => ({ id: uid(), projectId: activeProject, from: idMap[e.from], to: idMap[e.to], label: e.label, fromSide: '', created: now + i }));
+    flLayoutGraph(nodes, edges, x0, 50);
+    for (const n of nodes) { flowNodes.push(n); await saveFlowNode(n); }
+    for (const e of edges) { flowEdges.push(e); await saveFlowEdge(e); }
+    flSel = null;
+    renderFlow();
+    flFit(0.7);
+  }
+
+  /* ---------- İFADE DEĞERLENDİRİCİ ----------
+     Güvenlik: şema başkasından gelen bir yedekten de yüklenmiş olabilir. Bu yüzden eval /
+     new Function KULLANILMAZ; küçük bir ayrıştırıcı sadece sayı, metin, değişken, işlemler
+     ve birkaç hazır fonksiyonu anlar. Değişken adlarında büyük/küçük harf ve ş/s farkı yoktur. */
+  function flErr(msg) { const e = new Error(msg); e.fl = true; return e; }
+  const FL_OPS = ['**', '<=', '>=', '<>', '!=', '==', ':=', '<-', '&&', '||', '≤', '≥', '≠', '←', '+', '-', '*', '/', '%', '^', '(', ')', ',', '<', '>', '=', '!', '×', '÷'];
+  const FL_WORD_OPS = { 've': '&&', 'and': '&&', 'veya': '||', 'or': '||', 'degil': '!', 'not': '!', 'mod': '%', 'div': 'div' };
+
+  function flTokenize(s) {
+    const toks = [];
+    let i = 0;
+    while (i < s.length) {
+      const c = s[i];
+      if (/\s/.test(c)) { i++; continue; }
+      let m = s.slice(i).match(/^(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?/);
+      if (m) { toks.push({ t: 'num', v: parseFloat(m[0]) }); i += m[0].length; continue; }
+      if (c === '"' || c === "'" || c === '“' || c === '‘') {
+        const close = c === '“' ? '”' : (c === '‘' ? '’' : c);
+        const j = s.indexOf(close, i + 1);
+        if (j < 0) throw flErr('Tırnak kapatılmamış: ' + s.slice(i));
+        toks.push({ t: 'str', v: s.slice(i + 1, j) });
+        i = j + 1; continue;
+      }
+      m = s.slice(i).match(/^[\p{L}_][\p{L}\p{N}_]*/u);
+      if (m) {
+        const f = flFold(m[0]);
+        if (FL_WORD_OPS[f]) toks.push({ t: 'op', v: FL_WORD_OPS[f] });
+        else if (f === 'dogru' || f === 'true') toks.push({ t: 'bool', v: true });
+        else if (f === 'yanlis' || f === 'false') toks.push({ t: 'bool', v: false });
+        else toks.push({ t: 'id', v: m[0] });
+        i += m[0].length; continue;
+      }
+      const op = FL_OPS.find(o => s.startsWith(o, i));
+      if (!op) throw flErr('Anlaşılmayan işaret: "' + c + '"');
+      const norm = { '≤': '<=', '≥': '>=', '≠': '<>', '!=': '<>', '==': '=', '×': '*', '÷': '/', '**': '^' }[op] || op;
+      toks.push({ t: 'op', v: norm });
+      i += op.length;
+    }
+    return toks;
+  }
+
+  const flNum = (v, what) => {
+    if (typeof v === 'number') return v;
+    if (typeof v === 'boolean') return v ? 1 : 0;
+    const s = String(v).trim().replace(',', '.');
+    if (/^[-+]?(\d+\.?\d*|\.\d+)$/.test(s)) return parseFloat(s);
+    throw flErr((what || 'İşlem') + ' için sayı gerekiyor, "' + v + '" bir metin.');
+  };
+  function flFmt(v) {
+    if (typeof v === 'boolean') return v ? 'Doğru' : 'Yanlış';
+    if (typeof v === 'number') {
+      if (!isFinite(v)) return v > 0 ? '∞' : (v < 0 ? '-∞' : 'tanımsız');
+      return Number.isInteger(v) ? String(v) : String(parseFloat(v.toPrecision(12)));
+    }
+    return String(v);
+  }
+  const flTruthy = v => typeof v === 'string' ? v !== '' : !!v;
+
+  /* Hazır fonksiyonlar (adların sadeleşmiş hali) */
+  const FL_FUNCS = {
+    karekok: [1, x => { x = flNum(x, 'karekök'); if (x < 0) throw flErr('Negatif sayının karekökü alınamaz.'); return Math.sqrt(x); }], sqrt: 'karekok',
+    kare: [1, x => flNum(x) * flNum(x)],
+    mutlak: [1, x => Math.abs(flNum(x))], abs: 'mutlak',
+    yuvarla: [1, (x, d) => { const p = Math.pow(10, d == null ? 0 : flNum(d)); return Math.round(flNum(x) * p) / p; }], round: 'yuvarla',
+    tam: [1, x => Math.trunc(flNum(x))], tamsayi: 'tam', int: 'tam', tamkisim: 'tam',
+    taban: [1, x => Math.floor(flNum(x))], floor: 'taban',
+    tavan: [1, x => Math.ceil(flNum(x))], ceil: 'tavan',
+    us: [2, (a, b) => Math.pow(flNum(a), flNum(b))], pow: 'us',
+    min: [1, (...a) => Math.min(...a.map(x => flNum(x)))],
+    max: [1, (...a) => Math.max(...a.map(x => flNum(x)))],
+    uzunluk: [1, x => String(x).length], len: 'uzunluk',
+    rastgele: [2, (a, b) => { a = Math.ceil(flNum(a)); b = Math.floor(flNum(b)); return a + Math.floor(Math.random() * (b - a + 1)); }], random: 'rastgele',
+    sayi: [1, x => flNum(x)], metin: [1, x => flFmt(x)]
+  };
+
+  /* İfadeyi hesaplar. vars: Map(sadeleşmiş ad -> { name, value }) */
+  function flEval(src, vars) {
+    const toks = flTokenize(String(src));
+    if (!toks.length) throw flErr('Boş ifade.');
+    let p = 0;
+    const peek = () => toks[p], isOp = v => toks[p] && toks[p].t === 'op' && toks[p].v === v;
+    const take = v => { if (!isOp(v)) throw flErr('"' + v + '" bekleniyordu.'); p++; };
+    function or() { let a = and(); while (isOp('||')) { p++; const b = and(); a = flTruthy(a) || flTruthy(b); } return a; }
+    function and() { let a = not(); while (isOp('&&')) { p++; const b = not(); a = flTruthy(a) && flTruthy(b); } return a; }
+    function not() { if (isOp('!')) { p++; return !flTruthy(not()); } return cmp(); }
+    function cmp() {
+      let a = add();
+      while (peek() && peek().t === 'op' && ['=', '<>', '<', '>', '<=', '>='].includes(peek().v)) {
+        const op = toks[p++].v, b = add();
+        let x = a, y = b;
+        const numeric = typeof x !== 'string' && typeof y !== 'string' ||
+          [x, y].every(v => typeof v !== 'string' || /^\s*[-+]?(\d+[.,]?\d*|[.,]\d+)\s*$/.test(v));
+        let c;
+        if (numeric) { x = flNum(x); y = flNum(y); c = x < y ? -1 : (x > y ? 1 : 0); }
+        else c = String(x).localeCompare(String(y), 'tr');
+        a = op === '=' ? c === 0 : op === '<>' ? c !== 0 : op === '<' ? c < 0 : op === '>' ? c > 0 : op === '<=' ? c <= 0 : c >= 0;
+      }
+      return a;
+    }
+    function add() {
+      let a = mul();
+      while (isOp('+') || isOp('-')) {
+        const op = toks[p++].v, b = mul();
+        if (op === '+' && (typeof a === 'string' || typeof b === 'string')) a = flFmt(a) + flFmt(b);
+        else a = op === '+' ? flNum(a) + flNum(b) : flNum(a) - flNum(b);
+      }
+      return a;
+    }
+    function mul() {
+      let a = unary();
+      while (isOp('*') || isOp('/') || isOp('%') || isOp('div')) {
+        const op = toks[p++].v, b = flNum(unary());
+        a = flNum(a);
+        if (op !== '*' && b === 0) throw flErr('Sıfıra bölme hatası.');
+        a = op === '*' ? a * b : op === '/' ? a / b : op === 'div' ? Math.trunc(a / b) : a % b;
+      }
+      return a;
+    }
+    function unary() {
+      if (isOp('-')) { p++; return -flNum(unary()); }
+      if (isOp('+')) { p++; return flNum(unary()); }
+      return pow();
+    }
+    function pow() {
+      const a = primary();
+      if (isOp('^')) { p++; return Math.pow(flNum(a), flNum(unary())); }
+      return a;
+    }
+    function primary() {
+      const t = toks[p];
+      if (!t) throw flErr('İfade yarım kalmış.');
+      if (t.t === 'num' || t.t === 'str' || t.t === 'bool') { p++; return t.v; }
+      if (isOp('(')) { p++; const v = or(); take(')'); return v; }
+      if (t.t === 'id') {
+        p++;
+        const key = flFold(t.v);
+        if (isOp('(')) {
+          p++;
+          let fn = FL_FUNCS[key];
+          if (typeof fn === 'string') fn = FL_FUNCS[fn];
+          if (!fn) throw flErr('Bilinmeyen fonksiyon: ' + t.v + '( )');
+          const args = [];
+          if (!isOp(')')) { args.push(or()); while (isOp(',')) { p++; args.push(or()); } }
+          take(')');
+          if (args.length < fn[0]) throw flErr(t.v + '( ) için ' + fn[0] + ' değer gerekiyor.');
+          return fn[1](...args);
+        }
+        if (vars.has(key)) return vars.get(key).value;
+        if (key === 'pi') return Math.PI;
+        throw flErr('Tanımsız değişken: ' + t.v + ' (önce bir değer verilmeli ya da okunmalı).');
+      }
+      throw flErr('Beklenmeyen "' + t.v + '".');
+    }
+    const v = or();
+    if (p < toks.length) throw flErr('Fazladan "' + (toks[p].v != null ? toks[p].v : '') + '" var.');
+    return v;
+  }
+
+  /* ---------- ADIM ADIM ÇALIŞTIRMA ----------
+     Şema Başla'dan itibaren yürütülür. "Sıradaki" şekil yeşil çerçeveyle gösterilir;
+     değişkenler ve ekran çıktısı alttaki panelde izlenir. Giriş şekline gelince değer sorulur. */
+  let flRun = null;   // { pid, cur, vars, out, steps, loops, ask, done, error, timer, playing, lastEdge, changed }
+  const FL_MAX_STEPS = 20000;
+
+  function flSetVar(name, value) {
+    const key = flFold(name);
+    const old = flRun.vars.get(key);
+    flRun.vars.set(key, { name: old ? old.name : name, value: value });
+    flRun.changed.add(key);
+  }
+
+  /* Okunacak değişkenleri bulur: "Oku a, b" / "a ve b'yi oku" / "sayıyı gir".
+     Kesme işaretsiz ek (sayıyı) için: şemada "sayı" adı kullanılıyorsa o kabul edilir. */
+  function flInputVars(text) {
+    const used = new Set();
+    projectFlowNodes(activeProject).forEach(n => (n.text.match(/[\p{L}_][\p{L}\p{N}_]*/gu) || []).forEach(w => used.add(flFold(w))));
+    const stem = w => {
+      const m = w.match(/^(.+?)(?:y[ıiuü]|[ıiuü]|n[ıiuü])$/);
+      return m && m[1].length > 0 && used.has(flFold(m[1])) ? m[1] : w;
+    };
+    let s = text.trim();
+    s = s.slice((flFold(s).match(/^(?:klavyeden (?:oku|gir)|veri gir|oku|gir|al|input|read|giris)\b\s*:?\s*/) || [''])[0].length);
+    s = s.slice(0, s.length - (flFold(s).match(/\s*(?:degerini|degerlerini)?\s*(?:klavyeden\s+)?(?:oku|gir|al|girin|okuyun|iste)$/) || [''])[0].length);
+    return s.split(/\s*,\s*|\s+ve\s+|\s+and\s+|\s+/i)
+      .map(w => w.replace(/['’][\p{L}]*$/u, '').trim())
+      .filter(w => /^[\p{L}_][\p{L}\p{N}_]*$/u.test(w))
+      .map(stem);
+  }
+
+  function flRunOutLine(text, cls) {
+    flRun.out.push({ text: text, cls: cls || '' });
+    if (flRun.out.length > 500) flRun.out.shift();
+  }
+
+  function flEdgeFor(n, yes) {
+    const outs = flOut(n.id);
+    let e = outs.find(x => x.label === (yes ? 'Evet' : 'Hayır'));
+    if (!e && outs.length === 2) {
+      const other = outs.find(x => x.label === (yes ? 'Hayır' : 'Evet'));
+      e = other ? outs.find(x => x !== other) : outs[yes ? 0 : 1];
+    }
+    if (!e) throw flErr(flName(n) + ': "' + (yes ? 'Evet' : 'Hayır') + '" çıkışı yok.');
+    return e;
+  }
+
+  /* Sıradaki şekli çalıştırır. Döner: 'ok' | 'ask' | 'done' | 'error' */
+  function flStepOnce() {
+    const R = flRun;
+    if (!R || R.done || R.error || R.ask) return R && R.ask ? 'ask' : 'done';
+    const n = findFlowNode(R.cur);
+    if (!n || n.projectId !== R.pid) { R.error = 'Şema değişti; "Baştan" ile yeniden başlat.'; return 'error'; }
+    R.changed = new Set();
+    R.steps++;
+    let next = null;
+    try {
+      const t = n.text.trim();
+      switch (n.kind) {
+        case 'end': R.done = true; R.lastEdge = null; return 'done';
+        case 'input': {
+          const names = flInputVars(t);
+          if (!names.length) throw flErr(flName(n) + ': hangi değişkene okunacağı anlaşılamadı. Örnek: Oku a, b');
+          R.ask = { node: n.id, names: names, i: 0 };
+          return 'ask';
+        }
+        case 'process': {
+          splitTopLevel(t.replace(/\n/g, ';'), ';').filter(Boolean).forEach(st => {
+            let m = st.match(/^([\p{L}_][\p{L}\p{N}_]*)\s*(=(?!=)|←|<-|:=|\+=|-=|\*=|\/=)\s*(.+)$/u);
+            if (m) {
+              let v = flEval(m[3], R.vars);
+              const key = flFold(m[1]);
+              if (m[2].length === 2 && m[2][1] === '=' && m[2] !== ':=') {
+                if (!R.vars.has(key)) throw flErr('Tanımsız değişken: ' + m[1]);
+                const old = R.vars.get(key).value, op = m[2][0];
+                if (op === '+' && (typeof old === 'string' || typeof v === 'string')) v = flFmt(old) + flFmt(v);
+                else if (op === '/' && flNum(v) === 0) throw flErr('Sıfıra bölme hatası.');
+                else v = op === '+' ? flNum(old) + flNum(v) : op === '-' ? flNum(old) - flNum(v) : op === '*' ? flNum(old) * flNum(v) : flNum(old) / flNum(v);
+              }
+              flSetVar(m[1], v);
+            } else if ((m = st.match(/^([\p{L}_][\p{L}\p{N}_]*)\s*(\+\+|--)$/u))) {
+              const key = flFold(m[1]);
+              if (!R.vars.has(key)) throw flErr('Tanımsız değişken: ' + m[1]);
+              flSetVar(m[1], flNum(R.vars.get(key).value) + (m[2] === '++' ? 1 : -1));
+            } else {
+              flRunOutLine('(atlandı, atama değil: ' + st + ')', 'in');
+            }
+          });
+          break;
+        }
+        case 'output': {
+          let s = t.slice((flFold(t).match(/^(?:ekrana yazdir|ekrana yaz|yazdir|yaz|goster|print|output|write|cikti|cikis)\b\s*:?\s*/) || [''])[0].length);
+          s = s.slice(0, s.length - (flFold(s).match(/\s*(?:degerini\s+)?(?:ekrana\s+)?(?:yaz|yazdir|goster)$/) || [''])[0].length);
+          const parts = s.trim() ? splitTopLevel(s, ',') : [];
+          const vals = parts.map(part => {
+            try { return flFmt(flEval(part, R.vars)); }
+            catch (err) {
+              // "Yaz Merhaba Dünya" gibi tırnaksız cümleler olduğu gibi yazılsın
+              if (/\s/.test(part.trim()) && !/["'“(]/.test(part)) return part.trim();
+              throw err;
+            }
+          });
+          flRunOutLine(vals.join(' '));
+          break;
+        }
+        case 'decision': {
+          let c = t.slice((flFold(t).match(/^(?:eger|if)\s+/) || [''])[0].length);
+          c = c.slice(0, c.length - (flFold(c).match(/\s*(?:\s(?:ise|then))?\s*[?:]*\s*$/) || [''])[0].length);
+          if (!c.trim()) throw flErr('Karar şeklinde koşul yok.');
+          next = flEdgeFor(n, flTruthy(flEval(c, R.vars)));
+          break;
+        }
+        case 'loop': {
+          const h = parseLoopHeader(t);
+          if (!h) throw flErr(flName(n) + ': döngü anlaşılamadı. Örnek: i = 1 .. 10');
+          let st = R.loops[n.id];
+          if (!st) {
+            const step = h.step ? flNum(flEval(h.step, R.vars), 'Artış') : 1;
+            if (step === 0) throw flErr('Döngünün artış miktarı 0 olamaz.');
+            st = R.loops[n.id] = { end: flNum(flEval(h.b, R.vars), 'Bitiş değeri'), step: step };
+            flSetVar(h.v, flNum(flEval(h.a, R.vars), 'Başlangıç değeri'));
+          } else {
+            const key = flFold(h.v);
+            flSetVar(h.v, flNum(R.vars.has(key) ? R.vars.get(key).value : 0) + st.step);
+          }
+          const v = R.vars.get(flFold(h.v)).value;
+          const go = st.step > 0 ? v <= st.end : v >= st.end;
+          if (!go) delete R.loops[n.id]; // döngü bitti: bir dahaki gelişte baştan başlar
+          next = flEdgeFor(n, go);
+          break;
+        }
+      }
+      if (!next) {
+        const outs = flOut(n.id);
+        if (!outs.length) throw flErr(flName(n) + ' adımından sonra devam eden ok yok.');
+        next = outs[0];
+      }
+      R.lastEdge = next.id;
+      R.cur = next.to;
+      return 'ok';
+    } catch (err) {
+      R.error = err.fl ? err.message : 'Beklenmeyen hata: ' + err.message;
+      return 'error';
+    }
+  }
+
+  /* Giriş sorusuna verilen cevabı işler */
+  function flAnswer(raw) {
+    const R = flRun;
+    if (!R || !R.ask) return;
+    const s = String(raw).trim();
+    const num = s.replace(',', '.');
+    const val = /^[-+]?(\d+\.?\d*|\.\d+)$/.test(num) ? parseFloat(num) : s;
+    el('flAskIn').value = '';
+    if (R.ask.i === 0) R.changed = new Set();
+    flSetVar(R.ask.names[R.ask.i], val);
+    flRunOutLine('> ' + R.ask.names[R.ask.i] + ' = ' + flFmt(val), 'in');
+    R.ask.i++;
+    if (R.ask.i >= R.ask.names.length) {
+      const n = findFlowNode(R.ask.node);
+      R.ask = null;
+      const outs = n ? flOut(n.id) : [];
+      if (!outs.length) R.error = (n ? flName(n) : 'Giriş') + ' adımından sonra devam eden ok yok.';
+      else { R.lastEdge = outs[0].id; R.cur = outs[0].to; }
+    }
+    renderFlRun();
+    if (R.playing && !R.ask) flSchedule();
+  }
+
+  function flOpenRun() {
+    el('flRun').style.display = '';
+    flResetRun();
+    setTimeout(() => { updateFlSurfaceSize(); drawFlEdges(); }, 0); // panel açılınca tuval küçüldü
+  }
+
+  function flResetRun() {
+    flStopRun();
+    const start = projectFlowNodes(activeProject).find(n => n.kind === 'start');
+    flRun = { pid: activeProject, cur: start ? start.id : null, vars: new Map(), out: [], steps: 0, loops: {}, ask: null,
+              done: false, error: start ? null : 'Başla şekli yok; çalıştırmak için önce bir Başla ekle.', timer: null, playing: false,
+              lastEdge: null, changed: new Set() };
+    renderFlRun();
+    if (start) flJumpTo(start.id, false, true);
+  }
+
+  function flStopRun() {
+    if (!flRun) return;
+    clearTimeout(flRun.timer);
+    flRun.timer = null;
+    if (flRun.playing) { flRun.playing = false; renderFlRun(); }
+  }
+
+  function flCloseRun() {
+    if (flRun) clearTimeout(flRun.timer);
+    flRun = null;
+    el('flRun').style.display = 'none';
+    if (currentView === 'flow') { flApplyRunMarks(); updateFlSurfaceSize(); drawFlEdges(); }
+  }
+
+  /* Oynat: hız 0 ise bir giriş istenene ya da bitene kadar hemen çalışır; değilse adım adım. */
+  function flPlay() {
+    if (!flRun || flRun.pid !== activeProject) flResetRun();
+    const R = flRun;
+    if (R.done || R.error) flResetRun();
+    if (flRun.error) { renderFlRun(); return; }
+    if (flRun.playing) { flStopRun(); return; } // düğme "Duraklat" iken
+    flRun.playing = true;
+    flSchedule();
+    renderFlRun();
+  }
+
+  function flSchedule() {
+    const R = flRun;
+    if (!R || !R.playing) return;
+    const speed = +el('flRunSpeed').value;
+    if (speed === 0) {
+      let r = 'ok', k = 0;
+      while (r === 'ok' && k++ < FL_MAX_STEPS) r = flStepOnce();
+      if (r === 'ok') { R.playing = false; flRunOutLine('(' + FL_MAX_STEPS + ' adımda bitmedi — sonsuz döngü olabilir; devam için tekrar Oynat)', 'err'); }
+      if (r !== 'ok') R.playing = false;
+      if (r === 'ask') R.playing = true; // giriş girilince devam etsin
+      renderFlRun();
+      return;
+    }
+    R.timer = setTimeout(() => {
+      const r = flStepOnce();
+      if (r !== 'ok') R.playing = r === 'ask'; // giriş beklerken oynatma askıda
+      renderFlRun();
+      if (r === 'ok') flSchedule();
+    }, speed);
+  }
+
+  function flStepBtn() {
+    if (!flRun || flRun.pid !== activeProject || flRun.done || flRun.error) flResetRun();
+    if (flRun.error) return;
+    flStopRun();
+    flStepOnce();
+    renderFlRun();
+  }
+
+  /* Şekillerde "sıradaki" işaretini ve son geçilen oku günceller */
+  function flApplyRunMarks() {
+    const cur = flRun && flRun.pid === activeProject && !flRun.done ? flRun.cur : null;
+    el('flNodes').querySelectorAll('.fl-node').forEach(g => g.classList.toggle('run', g.dataset.node === cur));
+  }
+
+  function renderFlRun() {
+    const R = flRun;
+    if (!R) return;
+    const st = el('flRunState');
+    const n = R.cur ? findFlowNode(R.cur) : null;
+    st.className = 'fl-run-state' + (R.error ? ' err' : (R.done ? ' ok' : ''));
+    if (R.error) st.textContent = '⚠ ' + R.error;
+    else if (R.done) st.textContent = '✓ Bitti — ' + R.steps + ' adım çalıştı.';
+    else if (R.ask) st.innerHTML = 'Giriş bekleniyor: <b>' + esc(R.ask.names[R.ask.i]) + '</b>';
+    else st.innerHTML = (R.steps ? R.steps + '. adımdan sonra sıradaki: ' : 'Başlamaya hazır: ') + '<b>' + esc(n ? (n.text.trim() || FL_KINDS[n.kind].name) : '—') + '</b>';
+    el('flRunPlay').innerHTML = R.playing && !R.ask ? '&#10074;&#10074; Duraklat' : '&#9654; Oynat';
+
+    el('flAsk').style.display = R.ask ? '' : 'none';
+    if (R.ask) {
+      el('flAskLabel').textContent = R.ask.names[R.ask.i] + ' = ';
+      const inp = el('flAskIn');
+      if (document.activeElement !== inp) { inp.value = ''; setTimeout(() => inp.focus(), 0); }
+    }
+
+    const vars = [...R.vars.entries()];
+    el('flVars').innerHTML = vars.length
+      ? '<table class="fl-vars">' + vars.map(([k, v]) => '<tr' + (R.changed.has(k) ? ' class="changed"' : '') + '><td>' + esc(v.name) + '</td><td>' +
+          esc(typeof v.value === 'string' ? '"' + v.value + '"' : flFmt(v.value)) + '</td></tr>').join('') + '</table>'
+      : '<div class="fl-none">Henüz değişken yok.</div>';
+    const out = el('flOut');
+    out.innerHTML = R.out.length ? R.out.map(o => '<div' + (o.cls ? ' class="' + o.cls + '"' : '') + '>' + (esc(o.text) || '&nbsp;') + '</div>').join('') : '<span class="fl-none">Ekran boş.</span>';
+    out.scrollTop = out.scrollHeight;
+
+    flApplyRunMarks();
+    drawFlEdges();
+    if (n && !R.done) flJumpTo(n.id, false, true);
+  }
+
+  /* ---------- ÖRNEK ALGORİTMALAR ("Algoritmadan şema" sekmesindeki liste) ---------- */
+  const FL_EXAMPLES = [
+    ['İki sayının toplamı', 'Başla\nOku a, b\ntoplam = a + b\nYaz "Toplam:", toplam\nBitir'],
+    ['Büyük olanı bul (Eğer / Değilse)', 'Başla\nOku a, b\nEğer a > b ise\n    Yaz a, "daha büyük"\nDeğilse\n    Yaz b, "daha büyük ya da eşit"\nBitir'],
+    ['Not harfi (iç içe karar)', 'Başla\nOku puan\nEğer puan >= 85 ise\n    Yaz "Pekiyi"\nDeğilse eğer puan >= 70 ise\n    Yaz "İyi"\nDeğilse eğer puan >= 50 ise\n    Yaz "Geçer"\nDeğilse\n    Yaz "Kaldı"\nBitir'],
+    ['1\'den N\'e kadar toplam (İçin döngüsü)', 'Başla\nOku n\ntoplam = 0\nİçin i = 1 .. n\n    toplam = toplam + i\nYaz "Toplam:", toplam\nBitir'],
+    ['Faktöriyel (İken döngüsü)', 'Başla\nOku n\nf = 1\ni = 1\nİken i <= n\n    f = f * i\n    i = i + 1\nYaz n, "! =", f\nBitir'],
+    ['Asal sayı mı?', 'Başla\nOku n\nasal = doğru\nEğer n < 2 ise\n    asal = yanlış\ni = 2\nİken i * i <= n ve asal\n    Eğer n mod i = 0 ise\n        asal = yanlış\n    i = i + 1\nEğer asal ise\n    Yaz n, "asal sayıdır"\nDeğilse\n    Yaz n, "asal değildir"\nBitir'],
+    ['Sayı tahmin oyunu (Tekrarla ... olana kadar)', 'Başla\ngizli = rastgele(1, 100)\ndeneme = 0\nTekrarla\n    Oku tahmin\n    deneme = deneme + 1\n    Eğer tahmin < gizli ise\n        Yaz "Daha büyük bir sayı söyle"\n    Eğer tahmin > gizli ise\n        Yaz "Daha küçük bir sayı söyle"\ntahmin = gizli olana kadar\nYaz "Bildin!", deneme, "denemede"\nBitir'],
+    ['Tek mi çift mi? (numaralı "git" biçimi)', 'Adım 1: Başla\nAdım 2: Oku sayi\nAdım 3: Eğer sayi mod 2 = 0 ise Adım 6\'ya git\nAdım 4: Yaz "Tek"\nAdım 5: Adım 7\'ye git\nAdım 6: Yaz "Çift"\nAdım 7: Bitir'],
+    ['White Note\'un çalışma akışı (koddan, açıklama)', '# Bu uygulamanın (index.html) açılırken ve çalışırken izlediği yol.\n# Açıklama amaçlıdır; "Çalıştır" ile yürütülemez.\nBaşla\nKayıtlı temayı yükle (loadTheme)\nEğer localStorage kullanılabilir ise\n    Projeleri, notları, sütunları, şemaları ve akış şemalarını depodan oku (loadAll)\nDeğilse\n    Uyarı göster: değişiklikler sadece bu oturumda tutulur\nEğer hiç proje yok ise\n    "Genel" projesini varsayılan sütunlarla oluştur (createProject)\nSon açılan görünümü aç: Liste / Pano / Şema / Akış (loadView)\nEkranı çiz (renderProjects, renderMain ...)\nTekrarla\n    Kullanıcının bir şey yapmasını bekle (tıklama, yazma, sürükleme)\n    İlgili fonksiyon bellekteki veriyi günceller\n    Değişikliği localStorage\'a kaydet (sSet)\n    Ekranı yeniden çiz (render)\nsayfa kapalı olana kadar\nBitir']
+  ];
+
+  /* ---------- "ŞEKİLLER NE İŞE YARAR?" PENCERESİ ("?" düğmesi) ---------- */
+  const FL_LEGEND = {
+    start:    ['Başlangıç noktası. Algoritma buradan başlar; her şemada bir tane olur.', 'Başla'],
+    input:    ['Kullanıcıdan (klavyeden) değer alınır ve bir değişkende saklanır.', 'Oku a, b'],
+    process:  ['Hesaplama yapılır ya da bir değişkene değer verilir.', 'toplam = a + b'],
+    decision: ['Bir soru (koşul) sorulur. Doğruysa <b>Evet</b>, yanlışsa <b>Hayır</b> okundan devam edilir.', 'a > b'],
+    loop:     ['Sayaçlı tekrar. Sayaç bitene kadar <b>Evet</b> yoluna girilir, bitince <b>Hayır</b> okundan çıkılır.', 'i = 1 .. 10'],
+    output:   ['Sonuç ya da mesaj ekrana yazdırılır.', 'Yaz toplam'],
+    end:      ['Bitiş noktası. Algoritma burada sona erer.', 'Bitir']
+  };
+
+  function renderFlLegend() {
+    const rows = FL_KIND_ORDER.map(k => {
+      const ex = FL_LEGEND[k][1];
+      return '<div class="fl-leg-row">' +
+        '<svg viewBox="-34 -18 68 36" aria-hidden="true"><path class="fl-ico k-' + k + '" d="' + flShapePath(k, 64, 32, 13, 10) + '"/></svg>' +
+        '<div><div class="fl-leg-name">' + FL_KINDS[k].name + (ex !== FL_KINDS[k].name ? ' <span class="fl-leg-ex">' + esc(ex) + '</span>' : '') + '</div>' +
+        '<div class="fl-leg-what">' + FL_LEGEND[k][0] + '</div></div>' +
+        '<button class="er-btn fl-leg-add" data-legadd="' + k + '" title="Bu şekli şemaya ekle">+ Ekle</button>' +
+      '</div>';
+    }).join('');
+    const arrow = '<div class="fl-leg-row">' +
+      '<svg viewBox="-34 -18 68 36" aria-hidden="true"><path class="fl-leg-arrow" d="M-28,0 H21"/><path class="fl-leg-arrow-head" d="M20,-5 L30,0 L20,5 z"/></svg>' +
+      '<div><div class="fl-leg-name">Ok (akış çizgisi)</div>' +
+      '<div class="fl-leg-what">Adımların hangi sırayla yapılacağını gösterir. Karar ve Döngü şekillerinden iki ok çıkar: Evet ve Hayır.</div></div>' +
+      '<span></span></div>';
+    el('flLegend').innerHTML = rows + arrow;
+  }
+  function openFlHelp() { renderFlLegend(); el('flHelpModal').classList.add('open'); }
+  function closeFlHelp() { el('flHelpModal').classList.remove('open'); }
+
+  /* ---------- OLAY BAĞLAMALARI ---------- */
+
+  // Paletteki şekil simgeleri ve örnek listesi
+  el('flPalette').querySelectorAll('[data-addkind]').forEach(b => b.insertAdjacentHTML('afterbegin', flIconSVG(b.dataset.addkind)));
+  el('flExample').innerHTML += FL_EXAMPLES.map((x, i) => '<option value="' + i + '">' + esc(x[0]) + '</option>').join('');
+
+  // Araç çubuğu
+  el('flPalette').addEventListener('click', e => { const b = e.target.closest('[data-addkind]'); if (b) flAddNode(b.dataset.addkind); });
+  el('flUndo').addEventListener('click', flUndo);
+  el('flRedo').addEventListener('click', flRedo);
+  el('flLayout').addEventListener('click', flAutoLayoutCmd);
+  el('flFit').addEventListener('click', () => flFit());
+  el('flZoomIn').addEventListener('click', () => setFlZoom(flZoom + 0.1));
+  el('flZoomOut').addEventListener('click', () => setFlZoom(flZoom - 0.1));
+  el('flZoomLabel').addEventListener('click', () => setFlZoom(1));
+  el('flRunBtn').addEventListener('click', flOpenRun);
+  el('flAlgoBtn').addEventListener('click', () => openFlAlgo('steps'));
+  el('flStats').addEventListener('click', e => { if (e.target.closest('[data-flissues]')) openFlAlgo('steps'); });
+  el('flHelpBtn').addEventListener('click', openFlHelp);
+  el('flHelpClose').addEventListener('click', closeFlHelp);
+  el('flHelpDone').addEventListener('click', closeFlHelp);
+  el('flHelpModal').addEventListener('click', e => { if (e.target === el('flHelpModal')) closeFlHelp(); });
+  // Penceredeki "+ Ekle": pencereyi kapatıp o şekli ekler (seçili şekil varsa altına bağlanır)
+  el('flLegend').addEventListener('click', e => {
+    const b = e.target.closest('[data-legadd]');
+    if (!b) return;
+    closeFlHelp();
+    flAddNode(b.dataset.legadd);
+  });
+
+  // Dosya menüsü ve boş tuvaldeki düğmeler
+  function flFileAction(act) {
+    el('flFileMenu').classList.remove('open');
+    if (act === 'fromtext') openFlAlgo('parse');
+    else if (act === 'example') { openFlAlgo('parse'); el('flExample').focus(); }
+    else if (act === 'png' || act === 'svg') exportFlowImage(act);
+    else if (act === 'txt') {
+      const txt = flowToSteps(activeProject);
+      if (!txt) { flToast('Dışa aktarılacak adım yok.'); return; }
+      download(txt + '\n', safeName('one') + '-algoritma.txt', 'text/plain');
+    }
+    else if (act === 'clear') flClear(true);
+    else if (act === 'help') openFlHelp();
+  }
+  el('flFileBtn').addEventListener('click', e => { e.stopPropagation(); el('flFileMenu').classList.toggle('open'); });
+  document.addEventListener('click', e => { if (!e.target.closest('#flFileMenu, #flFileBtn')) el('flFileMenu').classList.remove('open'); });
+  el('flFileMenu').addEventListener('click', e => { const b = e.target.closest('[data-flact]'); if (b) flFileAction(b.dataset.flact); });
+  el('flEmpty').addEventListener('click', e => { const b = e.target.closest('[data-flact]'); if (b) flFileAction(b.dataset.flact); });
+
+  // Şekiller: gövdeden tut -> taşı, kenardaki noktadan tut -> ok çiz, dokun -> seç, iki kez dokun -> düzenle
+  el('flNodes').addEventListener('pointerdown', e => {
+    const g = e.target.closest('.fl-node');
+    const n = g && findFlowNode(g.dataset.node);
+    if (!n) return;
+    const port = e.target.closest('.fl-port');
+    if (port && n.kind !== 'end') { flStart(e, 'link', { id: n.id, side: port.dataset.port }); return; }
+    const p = toFlSurface(e.clientX, e.clientY);
+    flStart(e, 'node', { id: n.id, el: g, offX: p.x - n.x, offY: p.y - n.y });
+  });
+  // Telefonda şekli sürüklerken sayfa kaymasın (boş yerde parmakla kaydırma serbest)
+  el('flSvg').addEventListener('touchstart', e => { if (e.target.closest && e.target.closest('.fl-node')) e.preventDefault(); }, { passive: false });
+  // Fare ile çift tıklama (dokunuşlar flOnUp'ta sayılıyor; bu sadece yedek)
+  el('flNodes').addEventListener('dblclick', e => { const g = e.target.closest('.fl-node'); if (g && !el('flNodeModal').classList.contains('open')) openFlNodeModal(g.dataset.node); });
+  // Fare tekerleği ile değil, Ctrl + tekerlek ile yakınlaştır
+  let flWheelAcc = 0;
+  el('flCanvas').addEventListener('wheel', e => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    flWheelAcc += e.deltaY;
+    if (Math.abs(flWheelAcc) < 40) return;
+    setFlZoom(flZoom + (flWheelAcc < 0 ? 0.1 : -0.1), e.clientX, e.clientY);
+    flWheelAcc = 0;
+  }, { passive: false });
+  // Boş yerden fareyle tutup kaydır
+  el('flCanvas').addEventListener('pointerdown', e => {
+    if (e.target.closest('.fl-node, .fl-edge-hit, .er-link-panel, .fl-empty-btns')) return;
+    if (e.pointerType !== 'mouse') return;
+    const c = el('flCanvas');
+    flStart(e, 'pan', { scrollL: c.scrollLeft, scrollT: c.scrollTop });
+  });
+  // Oka tıkla -> seç (ayar kutusu açılır); boş yere tıkla -> seçimi kaldır
+  el('flCanvas').addEventListener('click', e => {
+    if (flJustDragged || e.target.closest('.er-link-panel, .fl-empty-btns')) return;
+    const hit = e.target.closest('.fl-edge-hit');
+    if (hit) { flSelect({ type: 'edge', id: hit.dataset.edge }); return; }
+    if (!e.target.closest('.fl-node') && flSel) flSelect(null);
+  });
+  // Ok ayar kutusu
+  el('flEdgePanel').addEventListener('change', e => {
+    const k = e.target.dataset.k;
+    if (flSel && flSel.type === 'edge' && (k === 'label' || k === 'fromSide')) flUpdateEdge(flSel.id, k, e.target.value);
+  });
+  el('flEdgePanel').addEventListener('click', e => {
+    const b = e.target.closest('[data-act]');
+    if (!b || !flSel || flSel.type !== 'edge') return;
+    if (b.dataset.act === 'del') flDeleteEdge(flSel.id);
+    else if (b.dataset.act === 'swap') flSwapEdge(flSel.id);
+  });
+  window.addEventListener('resize', () => { if (currentView === 'flow') { updateFlSurfaceSize(); drawFlEdges(); } });
+
+  // Klavye: Esc, Ctrl+Z / Ctrl+Y, Delete (seçili şekli / oku sil), Enter (seçili şekli düzenle)
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (el('flNodeModal').classList.contains('open')) closeFlNodeModal();
+      else if (el('flHelpModal').classList.contains('open')) closeFlHelp();
+      else if (el('flAlgoModal').classList.contains('open')) el('flAlgoModal').classList.remove('open');
+      else if (currentView === 'flow' && flSel && !document.querySelector('.modal-overlay.open')) flSelect(null);
+      return;
+    }
+    if (currentView !== 'flow') return;
+    const tag = document.activeElement ? document.activeElement.tagName : '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (document.querySelector('.modal-overlay.open')) return;
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && !e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); flUndo(); }
+    else if (mod && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { e.preventDefault(); flRedo(); }
+    else if ((e.key === 'Delete' || e.key === 'Backspace') && flSel) {
+      e.preventDefault();
+      if (flSel.type === 'node') flDeleteNode(flSel.id); else flDeleteEdge(flSel.id);
+    }
+    else if (e.key === 'Enter' && flSel && flSel.type === 'node') { e.preventDefault(); openFlNodeModal(flSel.id); }
+    else if (e.key === '?') { e.preventDefault(); openFlHelp(); }
+  });
+
+  /* ---- ADIM DÜZENLEME PENCERESİ olayları ---- */
+  el('flNodeKinds').addEventListener('click', async e => {
+    const b = e.target.closest('[data-flkind]');
+    const n = findFlowNode(flOpenNode);
+    if (!b || !n || n.kind === b.dataset.flkind) return;
+    flNodeTouch();
+    const wasBranch = flBranches(n);
+    if (n.text === FL_KINDS[n.kind].def) { n.text = FL_KINDS[b.dataset.flkind].def; el('flNodeText').value = n.text; }
+    n.kind = b.dataset.flkind;
+    // Dallanan şekle dönüştüyse mevcut çıkışlara Evet / Hayır ver
+    if (!wasBranch && flBranches(n)) {
+      const outs = flOut(n.id);
+      for (let i = 0; i < outs.length; i++) { if (!outs[i].label) { outs[i].label = i === 0 ? 'Evet' : 'Hayır'; await saveFlowEdge(outs[i]); } }
+    }
+    await saveFlowNode(n);
+    renderFlNodeModal();
+    renderFlow();
+  });
+  el('flNodeText').addEventListener('input', async () => {
+    const n = findFlowNode(flOpenNode);
+    if (!n) return;
+    flNodeTouch();
+    n.text = el('flNodeText').value.slice(0, 500);
+    await saveFlowNode(n);
+    renderFlow();
+  });
+  el('flNodeText').addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); closeFlNodeModal(); } });
+  el('flNodeClose').addEventListener('click', closeFlNodeModal);
+  el('flNodeDone').addEventListener('click', closeFlNodeModal);
+  el('flNodeModal').addEventListener('click', e => { if (e.target === el('flNodeModal')) closeFlNodeModal(); });
+  el('flNodeDelete').addEventListener('click', () => {
+    const id = flOpenNode;
+    el('flNodeModal').classList.remove('open');
+    flOpenNode = null;
+    if (id) flDeleteNode(id);
+  });
+
+  /* ---- ALGORİTMA PENCERESİ ---- */
+  function openFlAlgo(tab) {
+    el('flSource').value = flowSettings().source || '';
+    el('flParseMsg').textContent = '';
+    el('flParseMsg').className = 'er-msg';
+    el('flExample').value = '';
+    setFlTab(tab);
+    el('flAlgoModal').classList.add('open');
+  }
+  function setFlTab(tab) {
+    el('flAlgoModal').querySelectorAll('[data-fltab]').forEach(b => b.classList.toggle('sel', b.dataset.fltab === tab));
+    el('flTabSteps').style.display = tab === 'steps' ? '' : 'none';
+    el('flTabParse').style.display = tab === 'parse' ? '' : 'none';
+    if (tab === 'steps') {
+      const txt = flowToSteps(activeProject);
+      el('flAlgoOut').value = txt || 'Şema boş. "Algoritmadan şema" sekmesinde algoritmanı yazarak oluşturabilir ya da şekilleri tek tek ekleyebilirsin.';
+      const issues = lintFlow(activeProject);
+      el('flIssues').style.display = issues.length ? '' : 'none';
+      el('flIssues').innerHTML = issues.map(i => '<div class="er-issue ' + i.lvl + '"' + (i.nid ? ' data-nid="' + i.nid + '"' : '') + ' title="' + (i.nid ? 'Şekle git' : '') + '">' +
+        '<span class="lv">' + (i.lvl === 'err' ? 'HATA' : 'UYARI') + '</span><span>' + esc(i.msg) + '</span></div>').join('');
+    }
+  }
+  el('flAlgoModal').querySelectorAll('[data-fltab]').forEach(b => b.addEventListener('click', () => setFlTab(b.dataset.fltab)));
+  el('flAlgoClose').addEventListener('click', () => el('flAlgoModal').classList.remove('open'));
+  el('flAlgoModal').addEventListener('click', e => { if (e.target === el('flAlgoModal')) el('flAlgoModal').classList.remove('open'); });
+  el('flIssues').addEventListener('click', e => {
+    const row = e.target.closest('[data-nid]');
+    if (!row) return;
+    el('flAlgoModal').classList.remove('open');
+    flSelect({ type: 'node', id: row.dataset.nid });
+    flJumpTo(row.dataset.nid, true);
+  });
+  el('flAlgoCopy').addEventListener('click', async () => {
+    const txt = el('flAlgoOut').value;
+    let ok = false;
+    try { await navigator.clipboard.writeText(txt); ok = true; }
+    catch (err) { el('flAlgoOut').select(); try { ok = document.execCommand('copy'); } catch (_) {} }
+    el('flAlgoCopy').textContent = ok ? 'Kopyalandı ✓' : 'Kopyalanamadı';
+    setTimeout(() => { el('flAlgoCopy').textContent = 'Kopyala'; }, 1600);
+  });
+  el('flAlgoDownload').addEventListener('click', () => flFileAction('txt'));
+  el('flAlgoEdit').addEventListener('click', () => {
+    const txt = flowToSteps(activeProject);
+    if (txt) el('flSource').value = txt;
+    setFlTab('parse');
+  });
+  el('flExample').addEventListener('change', () => {
+    const ex = FL_EXAMPLES[+el('flExample').value];
+    if (!ex) return;
+    el('flSource').value = ex[1];
+    el('flSource').dispatchEvent(new Event('input'));
+  });
+  let flSrcTimer = null;
+  el('flSource').addEventListener('input', () => {
+    clearTimeout(flSrcTimer);
+    flSrcTimer = setTimeout(() => { flowSettings().source = el('flSource').value; saveFlowSettings(); }, 400);
+  });
+  el('flSource').addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); el('flParseBtn').click(); return; }
+    if (e.key !== 'Tab' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
+    e.preventDefault();
+    e.target.setRangeText('    ', e.target.selectionStart, e.target.selectionEnd, 'end'); // girinti = blok
+    e.target.dispatchEvent(new Event('input'));
+  });
+  el('flParseBtn').addEventListener('click', async () => {
+    const src = el('flSource').value;
+    const msg = el('flParseMsg');
+    if (!src.trim()) { msg.className = 'er-msg err'; msg.textContent = 'Önce algoritmayı yaz (ya da bir örnek seç).'; return; }
+    const res = parseAlgorithm(src);
+    if (res.nodes.length < 2) { msg.className = 'er-msg err'; msg.textContent = 'Algoritmada adım bulunamadı.'; return; }
+    flowSettings().source = src;
+    await saveFlowSettings();
+    const mode = (document.querySelector('input[name="flMode"]:checked') || {}).value || 'replace';
+    await flApplyParsed(res, mode);
+    el('flAlgoModal').classList.remove('open');
+    flToast('Akış şeması oluşturuldu: ' + res.nodes.length + ' adım, ' + res.edges.length + ' ok.' +
+            (res.warn.length ? ' ⚠ ' + res.warn[0] + (res.warn.length > 1 ? ' (+' + (res.warn.length - 1) + ' uyarı)' : '') : ' Geri almak için Ctrl+Z.'), res.warn.length ? 8000 : 4500);
+  });
+
+  /* ---- ÇALIŞTIRMA PANELİ olayları ---- */
+  el('flRunPlay').addEventListener('click', flPlay);
+  el('flRunStep').addEventListener('click', flStepBtn);
+  el('flRunReset').addEventListener('click', flResetRun);
+  el('flRunClose').addEventListener('click', flCloseRun);
+  el('flAskBtn').addEventListener('click', () => flAnswer(el('flAskIn').value));
+  el('flAskIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); flAnswer(el('flAskIn').value); } });
+
+  /* ===================================================================
      DIŞA / İÇE AKTARMA
      Verileri farklı dosya biçimlerine dönüştürme ve geri okuma işlemleri.
      =================================================================== */
@@ -4844,7 +7585,9 @@
       }
       const hasSchema = projectTables(p.id).length > 0;
       if (hasSchema) out += '\n## Veritabanı şeması (SQLite)\n\n```sql\n' + buildSQLiteSQL(p.id) + '```\n';
-      if (!mine.length && !hasSchema) out += '_Boş._\n';
+      const hasFlow = projectFlowNodes(p.id).length > 0;
+      if (hasFlow) out += '\n## Algoritma (akış şemasından)\n\n```text\n' + flowToSteps(p.id) + '\n```\n';
+      if (!mine.length && !hasSchema && !hasFlow) out += '_Boş._\n';
     });
     return out;
   }
@@ -4869,7 +7612,9 @@
       }
       const hasSchema = projectTables(p.id).length > 0;
       if (hasSchema) out += '\nVERİTABANI ŞEMASI (SQLite)\n\n' + buildSQLiteSQL(p.id);
-      if (!mine.length && !hasSchema) out += '(Boş)\n';
+      const hasFlow = projectFlowNodes(p.id).length > 0;
+      if (hasFlow) out += '\nALGORİTMA (akış şemasından)\n\n' + flowToSteps(p.id) + '\n';
+      if (!mine.length && !hasSchema && !hasFlow) out += '(Boş)\n';
     });
     return out;
   }
@@ -4924,7 +7669,9 @@
       }
       const hasSchema = projectTables(p.id).length > 0;
       if (hasSchema) b += '<h2>Veritabanı şeması (SQLite)</h2><pre style="font-size:.78rem;white-space:pre-wrap;background:#f4f1ea;padding:.8rem;border-radius:6px;">' + esc(buildSQLiteSQL(p.id)) + '</pre>';
-      if (!mine.length && !hasSchema) b += '<p><em>Boş.</em></p>';
+      const hasFlow = projectFlowNodes(p.id).length > 0;
+      if (hasFlow) b += '<h2>Algoritma (akış şemasından)</h2><pre style="font-size:.85rem;white-space:pre-wrap;background:#f4f1ea;padding:.8rem;border-radius:6px;">' + esc(flowToSteps(p.id)) + '</pre>';
+      if (!mine.length && !hasSchema && !hasFlow) b += '<p><em>Boş.</em></p>';
     });
     b += '</body></html>';
     const w = window.open('', '_blank');
@@ -4940,8 +7687,9 @@
   function exportJSON() {
     // O anki tema: body'de "dark" sınıfı varsa karanlık, yoksa açık
     const theme = document.body.classList.contains('dark') ? 'dark' : 'light';
-    const data = { version: 3, exported: Date.now(), theme: theme, projects: projects, columns: columns, items: items,
-                   dbTables: dbTables, dbLinks: dbLinks, dbSettings: Object.values(dbSettings) };
+    const data = { version: 4, exported: Date.now(), theme: theme, projects: projects, columns: columns, items: items,
+                   dbTables: dbTables, dbLinks: dbLinks, dbSettings: Object.values(dbSettings),
+                   flowNodes: flowNodes, flowEdges: flowEdges, flSettings: Object.values(flSettings) };
     download(JSON.stringify(data, null, 2), 'notlar-yedek-' + new Date().toISOString().slice(0,10) + '.json', 'application/json');
   }
 
@@ -4963,6 +7711,8 @@
       ((t && t.indexes) || []).forEach(ix => { add(ix && ix.id); ((ix && ix.cols) || []).forEach(c => add(c)); });
     });
     (data.dbLinks || []).forEach(l => add(l && l.id, l && l.projectId, l && l.fromTable, l && l.fromField, l && l.toTable, l && l.toField));
+    (data.flowNodes || []).forEach(n => add(n && n.id, n && n.projectId));
+    (data.flowEdges || []).forEach(e => add(e && e.id, e && e.projectId, e && e.from, e && e.to));
     return ids.every(x => typeof x === 'string' && SAFE_ID.test(x));
   }
 
@@ -4988,7 +7738,7 @@
       const data = JSON.parse(text);
       if (!Array.isArray(data.projects) || !Array.isArray(data.items)) throw new Error('format'); // beklenen alanlar yoksa geçersiz
       if (!backupIdsOk(data)) { alert('Bu yedek dosyası bozuk ya da güvensiz görünüyor (geçersiz kimlikler). Yüklenmedi.'); return; }
-      if (!confirm('Yedek yüklensin mi? Mevcut projeler, öğeler ve şemalar bununla DEĞİŞTİRİLECEK.')) return;
+      if (!confirm('Yedek yüklensin mi? Mevcut projeler, öğeler, şemalar ve akış şemaları bununla DEĞİŞTİRİLECEK.')) return;
 
       // Mevcut depoyu temizle
       if (storageOK) {
@@ -4998,8 +7748,12 @@
         for (const t of dbTables) await sDel('tbl:' + t.id);
         for (const l of dbLinks) await sDel('rel:' + l.id);
         for (const pid in dbSettings) await sDel('sch:' + pid);
+        for (const n of flowNodes) await sDel('fln:' + n.id);
+        for (const e of flowEdges) await sDel('fle:' + e.id);
+        for (const pid in flSettings) await sDel('fls:' + pid);
       }
       closeConsoleDb();
+      flCloseRun();
       // Yedekteki veriyi belleğe al
       projects = data.projects.filter(p => p && p.id).map(p => Object.assign(p, { name: String(p.name || 'Proje'), created: +p.created || Date.now() }))
         .sort((a, b) => a.created - b.created); // açılıştaki gibi oluşturulma sırasına göre
@@ -5013,6 +7767,11 @@
       dbLinks = normalizeDbLinks(Array.isArray(data.dbLinks) ? data.dbLinks : []);
       dbSettings = {};
       (Array.isArray(data.dbSettings) ? data.dbSettings : []).forEach(s => { if (s && s.projectId) dbSettings[s.projectId] = s; });
+      // Akış şeması version 4 ile geldi; eski yedeklerde yoksa boş başlar.
+      flowNodes = normalizeFlowNodes(Array.isArray(data.flowNodes) ? data.flowNodes : []);
+      flowEdges = normalizeFlowEdges(Array.isArray(data.flowEdges) ? data.flowEdges : [], flowNodes);
+      flSettings = {};
+      (Array.isArray(data.flSettings) ? data.flSettings : []).forEach(s => { if (s && s.projectId) flSettings[s.projectId] = { projectId: s.projectId, source: String(s.source || '') }; });
       // Depoya yaz
       if (storageOK) {
         for (const p of projects) await sSet('proj:' + p.id, JSON.stringify(p));
@@ -5021,6 +7780,9 @@
         for (const t of dbTables) await sSet('tbl:' + t.id, JSON.stringify(t));
         for (const l of dbLinks) await sSet('rel:' + l.id, JSON.stringify(l));
         for (const pid in dbSettings) await sSet('sch:' + pid, JSON.stringify(dbSettings[pid]));
+        for (const n of flowNodes) await sSet('fln:' + n.id, JSON.stringify(n));
+        for (const e of flowEdges) await sSet('fle:' + e.id, JSON.stringify(e));
+        for (const pid in flSettings) await sSet('fls:' + pid, JSON.stringify(flSettings[pid]));
       }
       activeProject = projects.length ? projects[0].id : null;
       if (!activeProject) await createProject('Genel');
@@ -5039,9 +7801,11 @@
 
       // Eski verinin geri alma geçmişi yeni veriye uygulanmasın
       for (const k in erHistory) delete erHistory[k];
+      for (const k in flHistory) delete flHistory[k];
       selectedLinkId = null;
+      flSel = null;
 
-      renderProjects(); renderMain(); renderBoard(); renderSchema();
+      renderProjects(); renderMain(); renderBoard(); renderSchema(); renderFlow();
       el('status').textContent = 'Yedek yüklendi. (Kullanılan alan: ' + storageUsedMB().toFixed(1) + ' MB)';
     } catch(e) {
       alert('Geçersiz yedek dosyası.');
@@ -5119,6 +7883,7 @@
   el('viewList').addEventListener('click', () => setView('list'));
   el('viewBoard').addEventListener('click', () => setView('board'));
   el('viewSchema').addEventListener('click', () => setView('schema'));
+  el('viewFlow').addEventListener('click', () => setView('flow'));
 
   // Panoda fare tekerleği: sütun içi kartlar kaymıyorsa panoyu yatay kaydırsın
   el('boardWrap').addEventListener('wheel', e => {
@@ -5282,7 +8047,7 @@
   async function loadView() {
     let view = 'list';
     const saved = await sGet('pref:view');
-    if (saved && (saved.value === 'board' || saved.value === 'list' || saved.value === 'schema')) {
+    if (saved && ['board', 'list', 'schema', 'flow'].includes(saved.value)) {
       view = saved.value;
     }
     await setView(view);
