@@ -934,6 +934,24 @@
   .fl-help { font-size: 0.82rem; color: var(--muted); line-height: 1.55; margin-top: 0.4rem; }
   .fl-help code, .fl-syntax code { font-family: monospace; background: var(--bg); border: 1px solid var(--line); border-radius: 3px; padding: 0 0.25rem; color: var(--ink); }
 
+  /* "?" yardım düğmesi ve "Şekiller ne işe yarar?" penceresi */
+  .er-btn.fl-help-btn { font-weight: bold; font-family: Georgia, serif; border-radius: 50%; min-width: 2.1rem; }
+  .fl-legend { display: flex; flex-direction: column; }
+  .fl-leg-row {
+    display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 0.75rem; align-items: center;
+    padding: 0.55rem 0.1rem; border-bottom: 1px dashed var(--line);
+  }
+  .fl-leg-row:last-child { border-bottom: none; }
+  .fl-leg-row > svg { width: 66px; height: 36px; overflow: visible; justify-self: center; }
+  .fl-leg-row .fl-ico { stroke-width: 1.6; }
+  .fl-leg-arrow { stroke: var(--muted); stroke-width: 1.8; fill: none; }
+  .fl-leg-arrow-head { fill: var(--muted); }
+  .fl-leg-name { font-weight: bold; font-size: 0.98rem; }
+  .fl-leg-what { font-size: 0.86rem; color: var(--muted); line-height: 1.45; margin-top: 0.1rem; }
+  .fl-leg-ex { font-family: monospace; font-size: 0.78rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 3px; padding: 0 0.3rem; white-space: nowrap; }
+  .fl-leg-add { font-size: 0.78rem; padding: 0.3rem 0.55rem; }
+  .fl-leg-tips { border-top: 1px solid var(--line); padding-top: 0.7rem; margin-top: 0.3rem; }
+
   /* Algoritma penceresi: iki sekme (şemadan algoritma / algoritmadan şema) */
   .fl-tabs { display: flex; gap: 0.3rem; border-bottom: 1px solid var(--line); margin-bottom: 0.8rem; flex-wrap: wrap; }
   .fl-tab {
@@ -1007,6 +1025,8 @@
     .fl-shape-btn .lbl { display: none; }
     .fl-shape-btn { padding: 0.4rem 0.45rem; }
     .fl-run-body { grid-template-columns: 1fr; }
+    .fl-leg-row { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 0.5rem; }
+    .fl-leg-row > svg { width: 54px; }
     .fl-run { max-height: 45vh; }
   }
 </style>
@@ -1212,6 +1232,7 @@
             </div>
             <button class="er-btn" id="flRunBtn" title="Algoritmayı adım adım çalıştır: değişkenleri ve çıktıyı izle">&#9654; Çalıştır</button>
             <button class="er-btn dark" id="flAlgoBtn" title="Şemayı numaralı algoritma adımlarına çevir ya da yazılı algoritmadan şema oluştur">Algoritma</button>
+            <button class="er-btn icon fl-help-btn" id="flHelpBtn" title="Hangi şekil ne işe yarar?" aria-label="Yardım: şekillerin anlamı">?</button>
           </div>
         </div>
         <div class="er-canvas" id="flCanvas">
@@ -1229,6 +1250,7 @@
               <div class="fl-empty-btns">
                 <button class="er-btn primary" data-flact="fromtext">Algoritmadan oluştur</button>
                 <button class="er-btn" data-flact="example">Örnek aç</button>
+                <button class="er-btn" data-flact="help">? Şekiller ne işe yarar</button>
               </div>
             </div>
           </div>
@@ -1476,6 +1498,32 @@
       <div class="modal-actions">
         <button class="modal-btn danger" id="flNodeDelete">Adımı sil</button>
         <button class="modal-btn primary" id="flNodeDone">Bitti</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     ŞEKİLLER NE İŞE YARAR? (Akış görünümü, "?" düğmesi)
+     Her akış şeması şeklinin anlamını kısa bir örnekle hatırlatır.
+     İçerik JS ile (FL_KINDS'tan) çizilir; satırdaki "+ Ekle" o şekli şemaya ekler.
+     =================================================================== -->
+<div class="modal-overlay" id="flHelpModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-heading">Şekiller ne işe yarar?</div>
+      <button class="modal-close" id="flHelpClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="fl-legend" id="flLegend"></div>
+      <div class="fl-help fl-leg-tips">
+        <b>Okuma sırası:</b> Başla'dan başlanır, okları izleyerek ilerlenir, Bitir'de durulur.<br>
+        <b>Kısa yollar:</b> şekle çift tık = düzenle · seçiliyken <code>Delete</code> = sil · <code>Ctrl+Z</code> = geri al ·
+        şekil seçiliyken paletten yenisine tıklarsan altına eklenip bağlanır.
+      </div>
+      <div class="modal-actions">
+        <span></span>
+        <button class="modal-btn primary" id="flHelpDone">Tamam</button>
       </div>
     </div>
   </div>
@@ -7228,6 +7276,37 @@
     ['White Note\'un çalışma akışı (koddan, açıklama)', '# Bu uygulamanın (index.html) açılırken ve çalışırken izlediği yol.\n# Açıklama amaçlıdır; "Çalıştır" ile yürütülemez.\nBaşla\nKayıtlı temayı yükle (loadTheme)\nEğer localStorage kullanılabilir ise\n    Projeleri, notları, sütunları, şemaları ve akış şemalarını depodan oku (loadAll)\nDeğilse\n    Uyarı göster: değişiklikler sadece bu oturumda tutulur\nEğer hiç proje yok ise\n    "Genel" projesini varsayılan sütunlarla oluştur (createProject)\nSon açılan görünümü aç: Liste / Pano / Şema / Akış (loadView)\nEkranı çiz (renderProjects, renderMain ...)\nTekrarla\n    Kullanıcının bir şey yapmasını bekle (tıklama, yazma, sürükleme)\n    İlgili fonksiyon bellekteki veriyi günceller\n    Değişikliği localStorage\'a kaydet (sSet)\n    Ekranı yeniden çiz (render)\nsayfa kapalı olana kadar\nBitir']
   ];
 
+  /* ---------- "ŞEKİLLER NE İŞE YARAR?" PENCERESİ ("?" düğmesi) ---------- */
+  const FL_LEGEND = {
+    start:    ['Başlangıç noktası. Algoritma buradan başlar; her şemada bir tane olur.', 'Başla'],
+    input:    ['Kullanıcıdan (klavyeden) değer alınır ve bir değişkende saklanır.', 'Oku a, b'],
+    process:  ['Hesaplama yapılır ya da bir değişkene değer verilir.', 'toplam = a + b'],
+    decision: ['Bir soru (koşul) sorulur. Doğruysa <b>Evet</b>, yanlışsa <b>Hayır</b> okundan devam edilir.', 'a > b'],
+    loop:     ['Sayaçlı tekrar. Sayaç bitene kadar <b>Evet</b> yoluna girilir, bitince <b>Hayır</b> okundan çıkılır.', 'i = 1 .. 10'],
+    output:   ['Sonuç ya da mesaj ekrana yazdırılır.', 'Yaz toplam'],
+    end:      ['Bitiş noktası. Algoritma burada sona erer.', 'Bitir']
+  };
+
+  function renderFlLegend() {
+    const rows = FL_KIND_ORDER.map(k => {
+      const ex = FL_LEGEND[k][1];
+      return '<div class="fl-leg-row">' +
+        '<svg viewBox="-34 -18 68 36" aria-hidden="true"><path class="fl-ico k-' + k + '" d="' + flShapePath(k, 64, 32, 13, 10) + '"/></svg>' +
+        '<div><div class="fl-leg-name">' + FL_KINDS[k].name + (ex !== FL_KINDS[k].name ? ' <span class="fl-leg-ex">' + esc(ex) + '</span>' : '') + '</div>' +
+        '<div class="fl-leg-what">' + FL_LEGEND[k][0] + '</div></div>' +
+        '<button class="er-btn fl-leg-add" data-legadd="' + k + '" title="Bu şekli şemaya ekle">+ Ekle</button>' +
+      '</div>';
+    }).join('');
+    const arrow = '<div class="fl-leg-row">' +
+      '<svg viewBox="-34 -18 68 36" aria-hidden="true"><path class="fl-leg-arrow" d="M-28,0 H21"/><path class="fl-leg-arrow-head" d="M20,-5 L30,0 L20,5 z"/></svg>' +
+      '<div><div class="fl-leg-name">Ok (akış çizgisi)</div>' +
+      '<div class="fl-leg-what">Adımların hangi sırayla yapılacağını gösterir. Karar ve Döngü şekillerinden iki ok çıkar: Evet ve Hayır.</div></div>' +
+      '<span></span></div>';
+    el('flLegend').innerHTML = rows + arrow;
+  }
+  function openFlHelp() { renderFlLegend(); el('flHelpModal').classList.add('open'); }
+  function closeFlHelp() { el('flHelpModal').classList.remove('open'); }
+
   /* ---------- OLAY BAĞLAMALARI ---------- */
 
   // Paletteki şekil simgeleri ve örnek listesi
@@ -7246,6 +7325,17 @@
   el('flRunBtn').addEventListener('click', flOpenRun);
   el('flAlgoBtn').addEventListener('click', () => openFlAlgo('steps'));
   el('flStats').addEventListener('click', e => { if (e.target.closest('[data-flissues]')) openFlAlgo('steps'); });
+  el('flHelpBtn').addEventListener('click', openFlHelp);
+  el('flHelpClose').addEventListener('click', closeFlHelp);
+  el('flHelpDone').addEventListener('click', closeFlHelp);
+  el('flHelpModal').addEventListener('click', e => { if (e.target === el('flHelpModal')) closeFlHelp(); });
+  // Penceredeki "+ Ekle": pencereyi kapatıp o şekli ekler (seçili şekil varsa altına bağlanır)
+  el('flLegend').addEventListener('click', e => {
+    const b = e.target.closest('[data-legadd]');
+    if (!b) return;
+    closeFlHelp();
+    flAddNode(b.dataset.legadd);
+  });
 
   // Dosya menüsü ve boş tuvaldeki düğmeler
   function flFileAction(act) {
@@ -7259,6 +7349,7 @@
       download(txt + '\n', safeName('one') + '-algoritma.txt', 'text/plain');
     }
     else if (act === 'clear') flClear(true);
+    else if (act === 'help') openFlHelp();
   }
   el('flFileBtn').addEventListener('click', e => { e.stopPropagation(); el('flFileMenu').classList.toggle('open'); });
   document.addEventListener('click', e => { if (!e.target.closest('#flFileMenu, #flFileBtn')) el('flFileMenu').classList.remove('open'); });
@@ -7320,6 +7411,7 @@
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       if (el('flNodeModal').classList.contains('open')) closeFlNodeModal();
+      else if (el('flHelpModal').classList.contains('open')) closeFlHelp();
       else if (el('flAlgoModal').classList.contains('open')) el('flAlgoModal').classList.remove('open');
       else if (currentView === 'flow' && flSel && !document.querySelector('.modal-overlay.open')) flSelect(null);
       return;
@@ -7336,6 +7428,7 @@
       if (flSel.type === 'node') flDeleteNode(flSel.id); else flDeleteEdge(flSel.id);
     }
     else if (e.key === 'Enter' && flSel && flSel.type === 'node') { e.preventDefault(); openFlNodeModal(flSel.id); }
+    else if (e.key === '?') { e.preventDefault(); openFlHelp(); }
   });
 
   /* ---- ADIM DÜZENLEME PENCERESİ olayları ---- */

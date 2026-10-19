@@ -59,6 +59,8 @@ Tek bir `index.html` dosyasından oluşur; kurulum gerektirmez, tarayıcıda ça
   değişkenler ve ekran çıktısı izlenir, Giriş şeklinde değer sorulur. Hız seçilebilir,
   sonsuz döngüye karşı adım sınırı vardır. İfadeler güvenli bir ayrıştırıcıyla hesaplanır
   (`+ - * / mod ^`, `= <> < > <= >=`, `ve veya değil`, `karekök() mutlak() yuvarla() tam() rastgele(a, b)`)
+- **? düğmesi:** "Şekiller ne işe yarar?" hatırlatması — her şeklin anlamı, kısa örneği ve
+  tek tıkla ekleme (klavyede `?` tuşu da açar)
 - Hata kontrolü: Başla yok, kararın iki çıkışı yok, bağlanmamış adım, ulaşılamayan adım…
 - Otomatik yerleştir, ekrana sığdır, geri al / yinele, PNG / SVG indirme
 - Hazır örnekler: toplam, büyük olanı bul, not harfi, faktöriyel, asal sayı, sayı tahmin oyunu
@@ -91,5 +93,6 @@ Tek bir `index.html` dosyasından oluşur; kurulum gerektirmez, tarayıcıda ça
 | Delete | Akış | Seçili şekli / oku sil |
 | Enter / çift tık | Akış | Seçili şekli düzenle |
 | Ctrl+Enter | Algoritma kutusu | Akış şemasını oluştur |
+| ? | Akış | Şekiller ne işe yarar? (yardım) |
 | Ctrl + tekerlek | Şema, Akış | Yakınlaştır / uzaklaştır |
 | Esc | Her yerde | Açık pencereyi kapat |
