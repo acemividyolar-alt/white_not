@@ -1073,6 +1073,24 @@
   #snackX { background: transparent; color: inherit; opacity: 0.7; font-size: 1.1rem; padding: 0.2rem 0.45rem; }
   @media (prefers-reduced-motion: reduce) { .snack { transition: none; } }
 
+  /* ---- Yedek yükleme penceresi ---- */
+  .bk-modes { display: grid; gap: 0.5rem; margin-bottom: 1rem; }
+  .bk-mode { display: flex; gap: 0.7rem; align-items: flex-start; padding: 0.7rem 0.85rem; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+  .bk-mode:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+  .bk-mode input { margin-top: 0.2rem; accent-color: var(--accent); }
+  .bk-mode b { display: block; }
+  .bk-mode small { display: block; color: var(--muted); font-size: 0.82rem; line-height: 1.45; margin-top: 0.15rem; }
+  .bk-pick-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.35rem; }
+  .link-btn { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .bk-list { max-height: 34vh; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; }
+  .bk-row { display: flex; gap: 0.6rem; align-items: center; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .bk-row:last-child { border-bottom: 0; }
+  .bk-row input { accent-color: var(--accent); }
+  .bk-row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bk-row .ct { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+  .bk-row .same { font-size: 0.72rem; color: var(--warn); border: 1px solid currentColor; border-radius: 99px; padding: 0 0.4rem; white-space: nowrap; }
+  .bk-safe { margin-top: 0.2rem; white-space: normal; }
+
   /* ===================================================================
      SON TARİH ve TAKVİM
      =================================================================== */
@@ -1749,6 +1767,36 @@
       <div class="modal-actions">
         <button class="modal-btn danger" id="trashEmpty">Çöp kutusunu boşalt</button>
         <button class="modal-btn primary" id="trashDone">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     YEDEK YÜKLE: mevcutlara ekle ya da hepsini değiştir
+     =================================================================== -->
+<div class="modal-overlay" id="backupModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-heading">Yedeği yükle</div>
+      <button class="modal-close" id="bkClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-note" id="bkInfo"></p>
+      <div class="bk-modes" role="radiogroup" aria-label="Nasıl yüklensin?">
+        <label class="bk-mode"><input type="radio" name="bkMode" value="merge" checked>
+          <span><b>Mevcutlara ekle</b><small>Seçtiğiniz projeler yeni proje olarak eklenir. Şu anki verilerinize dokunulmaz; aynı adda proje varsa adın sonuna "(2)" eklenir.</small></span></label>
+        <label class="bk-mode"><input type="radio" name="bkMode" value="replace">
+          <span><b>Hepsini değiştir</b><small>Şu anki bütün projeler silinir, yerlerine yedektekiler gelir. Tema da yedekteki gibi olur.</small></span></label>
+      </div>
+      <div id="bkPickWrap">
+        <div class="bk-pick-head"><span>Eklenecek projeler</span><button class="link-btn" id="bkAll" type="button">Hiçbirini seçme</button></div>
+        <div class="bk-list" id="bkList"></div>
+      </div>
+      <label class="opt bk-safe" id="bkSafeRow"><input type="checkbox" id="bkSafe" checked> Değiştirmeden önce şu anki verilerin yedeğini indir</label>
+      <div class="modal-actions">
+        <button class="modal-btn" id="bkCancel">Vazgeç</button>
+        <button class="modal-btn primary" id="bkGo">Ekle</button>
       </div>
     </div>
   </div>
@@ -9092,6 +9140,7 @@
       if (el('flNodeModal').classList.contains('open')) closeFlNodeModal();
       else if (el('flHelpModal').classList.contains('open')) closeFlHelp();
       else if (el('trashModal').classList.contains('open')) el('trashModal').classList.remove('open');
+      else if (el('backupModal').classList.contains('open')) closeBackupModal();
       else if (el('flAlgoModal').classList.contains('open')) el('flAlgoModal').classList.remove('open');
       else if (currentView === 'flow' && flSel && !document.querySelector('.modal-overlay.open')) flSelect(null);
       return;
@@ -9474,94 +9523,254 @@
   }
 
   /* JSON YEDEĞİ YÜKLE:
-     Seçilen yedek dosyasını okur, doğrular, onay sorar ve mevcut verinin
-     ÜZERİNE yazar (eski veriyi depodan silip yenisini yazar). */
+     Seçilen yedek dosyasını okur, doğrular ve "nasıl yüklensin?" penceresini açar:
+     ya mevcut verilere EKLENİR (mergeBackup) ya da mevcut verinin YERİNE geçer (replaceWithBackup). */
+  let pendingImport = null; // { data, file } — pencerede seçim yapılana kadar bekleyen yedek
   async function importJSON(file) {
+    let data;
     try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      if (!Array.isArray(data.projects) || !Array.isArray(data.items)) throw new Error('format'); // beklenen alanlar yoksa geçersiz
-      if (!backupIdsOk(data)) { alert('Bu yedek dosyası bozuk ya da güvensiz görünüyor (geçersiz kimlikler). Yüklenmedi.'); return; }
-      if (!confirm('Yedek yüklensin mi? Mevcut projeler, öğeler, şemalar ve akış şemaları bununla DEĞİŞTİRİLECEK.')) return;
+      data = JSON.parse(await file.text());
+      if (!data || !Array.isArray(data.projects) || !Array.isArray(data.items)) throw new Error('format'); // beklenen alanlar yoksa geçersiz
+    } catch (e) { alert('Geçersiz yedek dosyası.'); return; }
+    if (!backupIdsOk(data)) { alert('Bu yedek dosyası bozuk ya da güvensiz görünüyor (geçersiz kimlikler). Yüklenmedi.'); return; }
+    pendingImport = { data: data, file: file.name || 'yedek.json' };
+    openBackupModal();
+  }
 
-      // Mevcut depoyu temizle
-      if (storageOK) {
-        for (const p of projects) await sDel('proj:' + p.id);
-        for (const i of items) await sDel('item:' + i.id);
-        for (const c of columns) await sDel('col:' + c.id);
-        for (const t of dbTables) await sDel('tbl:' + t.id);
-        for (const l of dbLinks) await sDel('rel:' + l.id);
-        for (const pid in dbSettings) await sDel('sch:' + pid);
-        for (const n of flowNodes) await sDel('fln:' + n.id);
-        for (const e of flowEdges) await sDel('fle:' + e.id);
-        for (const c of flowCharts) await sDel('flc:' + c.id);
-        for (const pid in flSettings) await sDel('fls:' + pid);
-      }
-      closeConsoleDb();
-      flCloseRun();
-      // Yedekteki veriyi belleğe al
-      projects = data.projects.filter(p => p && p.id).map(p => Object.assign(p, { name: String(p.name || 'Proje'), created: +p.created || Date.now() }))
-        .sort((a, b) => a.created - b.created); // açılıştaki gibi oluşturulma sırasına göre
-      items = normalizeItems(data.items);
-      // Eski yedeklerde (version 1) sütun olmayabilir; o zaman boş başlar ve
-      // aşağıda ensureColumns + migrateItemsToColumns ile otomatik oluşturulur.
-      columns = (Array.isArray(data.columns) ? data.columns : []).filter(c => c && c.id)
-        .map(c => Object.assign(c, { name: String(c.name || 'Sütun'), color: /^#[0-9a-f]{3,8}$/i.test(c.color || '') ? c.color : '#c2410c', order: +c.order || 0 }));
-      // Şema verisi version 3 ile geldi; eski yedeklerde yoksa boş başlar.
-      dbTables = normalizeDbTables(Array.isArray(data.dbTables) ? data.dbTables : []);
-      dbLinks = normalizeDbLinks(Array.isArray(data.dbLinks) ? data.dbLinks : []);
-      dbSettings = {};
-      (Array.isArray(data.dbSettings) ? data.dbSettings : []).forEach(s => { if (s && s.projectId) dbSettings[s.projectId] = s; });
-      // Akış şeması version 4 ile, birden çok akış şeması version 5 ile geldi; eski yedeklerde yoksa boş başlar.
-      flowNodes = normalizeFlowNodes(Array.isArray(data.flowNodes) ? data.flowNodes : []);
-      flowEdges = normalizeFlowEdges(Array.isArray(data.flowEdges) ? data.flowEdges : [], flowNodes);
-      flowCharts = normalizeFlowCharts(Array.isArray(data.flowCharts) ? data.flowCharts : []);
-      flSettings = {};
-      (Array.isArray(data.flSettings) ? data.flSettings : []).forEach(s => {
-        if (!s || !s.projectId) return;
-        flSettings[s.projectId] = { projectId: s.projectId, active: typeof s.active === 'string' ? s.active : null };
-        if (typeof s.source === 'string') flSettings[s.projectId].source = s.source; // v4: migrateFlowCharts taşır
-      });
-      // Depoya yaz
-      if (storageOK) {
-        for (const p of projects) await sSet('proj:' + p.id, JSON.stringify(p));
-        for (const i of items) await sSet('item:' + i.id, JSON.stringify(i));
-        for (const c of columns) await sSet('col:' + c.id, JSON.stringify(c));
-        for (const t of dbTables) await sSet('tbl:' + t.id, JSON.stringify(t));
-        for (const l of dbLinks) await sSet('rel:' + l.id, JSON.stringify(l));
-        for (const pid in dbSettings) await sSet('sch:' + pid, JSON.stringify(dbSettings[pid]));
-        for (const n of flowNodes) await sSet('fln:' + n.id, JSON.stringify(n));
-        for (const e of flowEdges) await sSet('fle:' + e.id, JSON.stringify(e));
-        for (const c of flowCharts) await sSet('flc:' + c.id, JSON.stringify(c));
-        for (const pid in flSettings) await sSet('fls:' + pid, JSON.stringify(flSettings[pid]));
-      }
-      await migrateFlowCharts();
-      activeProject = projects.length ? projects[0].id : null;
-      if (!activeProject) await createProject('Genel');
+  /* Yedekteki her projenin içinde ne var (pencerede gösterilir) */
+  function backupProjects(data) {
+    const arr = k => Array.isArray(data[k]) ? data[k] : [];
+    const cnt = (k, pid) => arr(k).filter(x => x && x.projectId === pid).length;
+    return data.projects.filter(p => p && p.id).sort((a, b) => (+a.created || 0) - (+b.created || 0)).map(p => ({
+      id: p.id, name: String(p.name || 'Proje'), items: cnt('items', p.id), tables: cnt('dbTables', p.id),
+      charts: Math.max(cnt('flowCharts', p.id), cnt('flowNodes', p.id) && !cnt('flowCharts', p.id) ? 1 : 0)
+    }));
+  }
+  function backupMode() { return (document.querySelector('input[name="bkMode"]:checked') || {}).value || 'merge'; }
 
-      // Her projenin sütunu olduğundan emin ol ve öğeleri sütunlara yerleştir
-      for (const p of projects) { await ensureColumns(p.id); }
-      await migrateItemsToColumns();
-
-      // Yedekte tema bilgisi varsa onu uygula ve kaydet.
-      // (Eski yedeklerde theme alanı olmayabilir; o zaman tema değişmez.)
-      if (data.theme === 'dark' || data.theme === 'light') {
-        const dark = (data.theme === 'dark');
-        applyTheme(dark);
-        if (storageOK) await sSet('pref:theme', data.theme);
-      }
-
-      // Eski verinin geri alma geçmişi yeni veriye uygulanmasın
-      for (const k in erHistory) delete erHistory[k];
-      for (const k in flHistory) delete flHistory[k];
-      selectedLinkId = null;
-      flSel = null;
-
+  function openBackupModal() {
+    const d = pendingImport.data, list = backupProjects(d);
+    const sum = (k) => list.reduce((a, p) => a + p[k], 0);
+    const when = +d.exported ? fmtDate(+d.exported) + ' tarihli' : 'tarihi bilinmeyen';
+    el('bkInfo').textContent = pendingImport.file + ' · ' + when + ' · ' + list.length + ' proje, ' + sum('items') + ' not/görev' +
+      (sum('tables') ? ', ' + sum('tables') + ' tablo' : '') + (sum('charts') ? ', ' + sum('charts') + ' akış şeması' : '');
+    const mine = new Set(projects.map(p => p.name.toLocaleLowerCase('tr')));
+    // Boş projeler (ör. kendiliğinden açılan "Genel") başta seçili gelmez; hepsi boşsa hepsi seçilir
+    const filled = p => p.items + p.tables + p.charts > 0, anyFilled = list.some(filled);
+    el('bkList').innerHTML = list.map(p =>
+      '<label class="bk-row"><input type="checkbox" data-bk="' + p.id + '"' + (filled(p) || !anyFilled ? ' checked' : '') + '>' +
+      '<span class="nm">' + esc(p.name) + '</span>' +
+      (mine.has(p.name.toLocaleLowerCase('tr')) ? '<span class="same" title="Bu adda bir projeniz var; adın sonuna (2) eklenir">aynı ad</span>' : '') +
+      '<span class="ct">' + esc([p.items + ' öğe', p.tables ? p.tables + ' tablo' : '', p.charts ? p.charts + ' akış' : ''].filter(Boolean).join(' · ')) + '</span></label>'
+    ).join('') || '<div class="bk-row" style="cursor:default;color:var(--muted)">Yedekte proje yok.</div>';
+    document.querySelector('input[name="bkMode"][value="merge"]').checked = true;
+    el('bkSafe').checked = true;
+    updateBackupUI();
+    el('backupModal').classList.add('open');
+  }
+  function closeBackupModal() { el('backupModal').classList.remove('open'); pendingImport = null; }
+  function backupPicked() { return [...el('bkList').querySelectorAll('input[data-bk]:checked')].map(c => c.dataset.bk); }
+  function updateBackupUI() {
+    const merge = backupMode() === 'merge';
+    const all = el('bkList').querySelectorAll('input[data-bk]'), n = backupPicked().length;
+    el('bkPickWrap').style.display = merge ? '' : 'none';
+    el('bkSafeRow').style.display = merge ? 'none' : '';
+    el('bkAll').textContent = n === all.length ? 'Hiçbirini seçme' : 'Tümünü seç';
+    const go = el('bkGo');
+    go.textContent = merge ? (n ? n + ' projeyi ekle' : 'Proje seçin') : 'Hepsini değiştir';
+    go.disabled = merge && !n;
+    go.classList.toggle('primary', merge);
+    go.classList.toggle('danger', !merge);
+  }
+  async function runBackupImport() {
+    if (!pendingImport) return;
+    const data = pendingImport.data, merge = backupMode() === 'merge', picked = backupPicked();
+    if (merge && !picked.length) return;
+    if (!merge && el('bkSafe').checked) exportJSON(); // değiştirmeden önce mevcut verinin yedeği
+    closeBackupModal();
+    try {
+      if (merge) await mergeBackup(data, picked);
+      else await replaceWithBackup(data);
+    } catch (e) {
+      console.error(e);
+      alert('Yedek yüklenirken bir sorun çıktı: ' + (e && e.message ? e.message : e));
       renderProjects(); renderMain(); renderBoard(); renderSchema(); renderFlow();
-      el('status').textContent = 'Yedek yüklendi. (Kullanılan alan: ' + storageUsedMB().toFixed(1) + ' MB)';
-    } catch(e) {
-      alert('Geçersiz yedek dosyası.');
     }
+  }
+
+  /* MEVCUTLARA EKLE:
+     Seçilen projeler ve içindeki her şey (öğeler, sütunlar, tablolar, alanlar, dizinler,
+     ilişkiler, akış şemaları, şekiller, oklar) YENİ kimliklerle eklenir; birbirine olan
+     bağlar korunur. Böylece aynı yedeği iki kez yüklemek bile hiçbir kaydın üstüne yazmaz. */
+  async function mergeBackup(data, pickIds) {
+    const pick = new Set(pickIds);
+    const ids = new Map();
+    const nid = (kind, old) => {
+      if (old == null || old === '') return uid();
+      const k = kind + ':' + old;
+      if (!ids.has(k)) ids.set(k, uid());
+      return ids.get(k);
+    };
+    const known = (kind, old) => old != null && ids.has(kind + ':' + old);
+    const arr = k => (Array.isArray(data[k]) ? data[k] : []).filter(x => x && typeof x === 'object' && pick.has(x.projectId));
+
+    // Projeler: aynı ad varsa "(2)", "(3)"…; mevcut projelerin sonuna sıralanır
+    const names = new Set(projects.map(p => p.name.toLocaleLowerCase('tr')));
+    const now = Date.now();
+    const newProjects = data.projects.filter(p => p && p.id && pick.has(p.id))
+      .sort((a, b) => (+a.created || 0) - (+b.created || 0))
+      .map((p, i) => {
+        const base = String(p.name || 'Proje').slice(0, 80);
+        let name = base, k = 2;
+        while (names.has(name.toLocaleLowerCase('tr'))) name = base + ' (' + (k++) + ')';
+        names.add(name.toLocaleLowerCase('tr'));
+        return Object.assign(p, { id: nid('p', p.id), name: name, created: now + i });
+      });
+    const P = old => nid('p', old);
+
+    const newColumns = arr('columns').filter(c => c.id).map(c => Object.assign(c, {
+      id: nid('c', c.id), projectId: P(c.projectId), name: String(c.name || 'Sütun'),
+      color: /^#[0-9a-f]{3,8}$/i.test(c.color || '') ? c.color : '#c2410c', order: +c.order || 0
+    }));
+    const newItems = normalizeItems(arr('items')).map(i => Object.assign(i, {
+      id: nid('i', i.id), projectId: P(i.projectId), columnId: known('c', i.columnId) ? nid('c', i.columnId) : null
+    }));
+
+    const newTables = normalizeDbTables(arr('dbTables').filter(t => t.id)).map(t => {
+      t.id = nid('t', t.id); t.projectId = P(t.projectId);
+      t.fields.forEach(f => { f.id = nid('f', f.id); });
+      t.indexes.forEach(ix => { ix.id = nid('x', ix.id); ix.cols = ix.cols.map(c => nid('f', c)); });
+      return t;
+    });
+    const newLinks = normalizeDbLinks(arr('dbLinks').filter(l => l.id && known('t', l.fromTable) && known('t', l.toTable))).map(l => Object.assign(l, {
+      id: nid('l', l.id), projectId: P(l.projectId),
+      fromTable: nid('t', l.fromTable), fromField: nid('f', l.fromField), toTable: nid('t', l.toTable), toField: nid('f', l.toField),
+      grp: l.grp ? nid('g', l.grp) : null
+    }));
+    const newDbSettings = arr('dbSettings').map(st => Object.assign(st, { projectId: P(st.projectId) }));
+
+    const newCharts = normalizeFlowCharts(arr('flowCharts')).map(c => Object.assign(c, { id: nid('ch', c.id), projectId: P(c.projectId) }));
+    const nodes0 = normalizeFlowNodes(arr('flowNodes'));
+    const edges0 = normalizeFlowEdges(arr('flowEdges'), nodes0); // eski kimliklerle süz, sonra çevir
+    const chartRef = old => known('ch', old) ? nid('ch', old) : null; // yoksa migrateFlowCharts yerleştirir
+    const newNodes = nodes0.map(n => Object.assign(n, { id: nid('n', n.id), projectId: P(n.projectId), chartId: chartRef(n.chartId) }));
+    const newEdges = edges0.map(e => Object.assign(e, {
+      id: nid('e', e.id), projectId: P(e.projectId), from: nid('n', e.from), to: nid('n', e.to), chartId: chartRef(e.chartId)
+    }));
+    const newFlSettings = arr('flSettings').map(st => {
+      const o = { projectId: P(st.projectId), active: typeof st.active === 'string' ? chartRef(st.active) : null };
+      if (typeof st.source === 'string') o.source = st.source; // v4 yedeği: migrateFlowCharts taşır
+      return o;
+    });
+
+    // Belleğe ekle ve kaydet
+    projects.push(...newProjects); columns.push(...newColumns); items.push(...newItems);
+    dbTables.push(...newTables); dbLinks.push(...newLinks);
+    flowCharts.push(...newCharts); flowNodes.push(...newNodes); flowEdges.push(...newEdges);
+    newDbSettings.forEach(st => { dbSettings[st.projectId] = st; });
+    newFlSettings.forEach(st => { flSettings[st.projectId] = st; });
+    for (const x of newProjects) await saveProject(x);
+    for (const x of newColumns) await saveColumn(x);
+    for (const x of newItems) await saveItem(x);
+    for (const x of newTables) await saveDbTable(x);
+    for (const x of newLinks) await saveDbLink(x);
+    for (const x of newDbSettings) await saveSchemaSettings(x.projectId);
+    for (const x of newCharts) await saveFlowChart(x);
+    for (const x of newNodes) await saveFlowNode(x);
+    for (const x of newEdges) await saveFlowEdge(x);
+    for (const x of newFlSettings) await saveFlowSettings(x.projectId);
+
+    await migrateFlowCharts();
+    for (const x of newProjects) await ensureColumns(x.id);
+    await migrateItemsToColumns();
+
+    if (newProjects.length) activeProject = newProjects[0].id;
+    renderProjects(); renderMain(); renderBoard(); renderSchema(); renderFlow();
+    const msg = newProjects.length + ' proje eklendi (' + newItems.length + ' not/görev' +
+      (newTables.length ? ', ' + newTables.length + ' tablo' : '') + (newCharts.length ? ', ' + newCharts.length + ' akış şeması' : '') + ').';
+    el('status').textContent = msg + ' (Kullanılan alan: ' + storageUsedMB().toFixed(1) + ' MB)';
+    showSnack(msg);
+    return newProjects;
+  }
+
+  /* HEPSİNİ DEĞİŞTİR: mevcut verinin ÜZERİNE yazar (eski veriyi depodan silip yenisini yazar). */
+  async function replaceWithBackup(data) {
+    // Mevcut depoyu temizle
+    if (storageOK) {
+      for (const p of projects) await sDel('proj:' + p.id);
+      for (const i of items) await sDel('item:' + i.id);
+      for (const c of columns) await sDel('col:' + c.id);
+      for (const t of dbTables) await sDel('tbl:' + t.id);
+      for (const l of dbLinks) await sDel('rel:' + l.id);
+      for (const pid in dbSettings) await sDel('sch:' + pid);
+      for (const n of flowNodes) await sDel('fln:' + n.id);
+      for (const e of flowEdges) await sDel('fle:' + e.id);
+      for (const c of flowCharts) await sDel('flc:' + c.id);
+      for (const pid in flSettings) await sDel('fls:' + pid);
+    }
+    closeConsoleDb();
+    flCloseRun();
+    // Yedekteki veriyi belleğe al
+    projects = data.projects.filter(p => p && p.id).map(p => Object.assign(p, { name: String(p.name || 'Proje'), created: +p.created || Date.now() }))
+      .sort((a, b) => a.created - b.created); // açılıştaki gibi oluşturulma sırasına göre
+    items = normalizeItems(data.items);
+    // Eski yedeklerde (version 1) sütun olmayabilir; o zaman boş başlar ve
+    // aşağıda ensureColumns + migrateItemsToColumns ile otomatik oluşturulur.
+    columns = (Array.isArray(data.columns) ? data.columns : []).filter(c => c && c.id)
+      .map(c => Object.assign(c, { name: String(c.name || 'Sütun'), color: /^#[0-9a-f]{3,8}$/i.test(c.color || '') ? c.color : '#c2410c', order: +c.order || 0 }));
+    // Şema verisi version 3 ile geldi; eski yedeklerde yoksa boş başlar.
+    dbTables = normalizeDbTables(Array.isArray(data.dbTables) ? data.dbTables : []);
+    dbLinks = normalizeDbLinks(Array.isArray(data.dbLinks) ? data.dbLinks : []);
+    dbSettings = {};
+    (Array.isArray(data.dbSettings) ? data.dbSettings : []).forEach(s => { if (s && s.projectId) dbSettings[s.projectId] = s; });
+    // Akış şeması version 4 ile, birden çok akış şeması version 5 ile geldi; eski yedeklerde yoksa boş başlar.
+    flowNodes = normalizeFlowNodes(Array.isArray(data.flowNodes) ? data.flowNodes : []);
+    flowEdges = normalizeFlowEdges(Array.isArray(data.flowEdges) ? data.flowEdges : [], flowNodes);
+    flowCharts = normalizeFlowCharts(Array.isArray(data.flowCharts) ? data.flowCharts : []);
+    flSettings = {};
+    (Array.isArray(data.flSettings) ? data.flSettings : []).forEach(s => {
+      if (!s || !s.projectId) return;
+      flSettings[s.projectId] = { projectId: s.projectId, active: typeof s.active === 'string' ? s.active : null };
+      if (typeof s.source === 'string') flSettings[s.projectId].source = s.source; // v4: migrateFlowCharts taşır
+    });
+    // Depoya yaz
+    if (storageOK) {
+      for (const p of projects) await sSet('proj:' + p.id, JSON.stringify(p));
+      for (const i of items) await sSet('item:' + i.id, JSON.stringify(i));
+      for (const c of columns) await sSet('col:' + c.id, JSON.stringify(c));
+      for (const t of dbTables) await sSet('tbl:' + t.id, JSON.stringify(t));
+      for (const l of dbLinks) await sSet('rel:' + l.id, JSON.stringify(l));
+      for (const pid in dbSettings) await sSet('sch:' + pid, JSON.stringify(dbSettings[pid]));
+      for (const n of flowNodes) await sSet('fln:' + n.id, JSON.stringify(n));
+      for (const e of flowEdges) await sSet('fle:' + e.id, JSON.stringify(e));
+      for (const c of flowCharts) await sSet('flc:' + c.id, JSON.stringify(c));
+      for (const pid in flSettings) await sSet('fls:' + pid, JSON.stringify(flSettings[pid]));
+    }
+    await migrateFlowCharts();
+    activeProject = projects.length ? projects[0].id : null;
+    if (!activeProject) await createProject('Genel');
+
+    // Her projenin sütunu olduğundan emin ol ve öğeleri sütunlara yerleştir
+    for (const p of projects) { await ensureColumns(p.id); }
+    await migrateItemsToColumns();
+
+    // Yedekte tema bilgisi varsa onu uygula ve kaydet.
+    // (Eski yedeklerde theme alanı olmayabilir; o zaman tema değişmez.)
+    if (data.theme === 'dark' || data.theme === 'light') {
+      const dark = (data.theme === 'dark');
+      applyTheme(dark);
+      if (storageOK) await sSet('pref:theme', data.theme);
+    }
+
+    // Eski verinin geri alma geçmişi yeni veriye uygulanmasın
+    for (const k in erHistory) delete erHistory[k];
+    for (const k in flHistory) delete flHistory[k];
+    selectedLinkId = null;
+    flSel = null;
+
+    renderProjects(); renderMain(); renderBoard(); renderSchema(); renderFlow();
+    el('status').textContent = 'Yedek yüklendi. (Kullanılan alan: ' + storageUsedMB().toFixed(1) + ' MB)';
+    showSnack('Yedek yüklendi: ' + projects.length + ' proje.');
   }
 
   /* Menüden seçilen butona göre doğru dışa/içe aktarma fonksiyonunu çağırır.
@@ -9661,6 +9870,18 @@
     if (r) openCard(r.dataset.open);
   });
   el('calDay').addEventListener('change', e => { const c = e.target.closest('[data-caldone]'); if (c) toggleDone(c.dataset.caldone); });
+
+  /* ---- YEDEK YÜKLEME penceresi ---- */
+  el('bkClose').addEventListener('click', closeBackupModal);
+  el('bkCancel').addEventListener('click', closeBackupModal);
+  el('backupModal').addEventListener('click', e => { if (e.target === el('backupModal')) closeBackupModal(); });
+  el('bkGo').addEventListener('click', runBackupImport);
+  el('backupModal').addEventListener('change', updateBackupUI);
+  el('bkAll').addEventListener('click', () => {
+    const all = [...el('bkList').querySelectorAll('input[data-bk]')], on = all.some(c => !c.checked);
+    all.forEach(c => { c.checked = on; });
+    updateBackupUI();
+  });
 
   /* ---- ÇÖP KUTUSU olayları ---- */
   el('trashBtn').addEventListener('click', openTrash);
