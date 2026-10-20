@@ -952,6 +952,28 @@
   .fl-leg-add { font-size: 0.78rem; padding: 0.3rem 0.55rem; }
   .fl-leg-tips { border-top: 1px solid var(--line); padding-top: 0.7rem; margin-top: 0.3rem; }
 
+  /* Akış şeması sekmeleri (bir projede birden çok şema) */
+  .fl-charts { display: flex; align-items: flex-end; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--line); flex-shrink: 0; scrollbar-width: thin; }
+  .fl-chart-tab {
+    display: inline-flex; align-items: center; gap: 0.35rem; flex-shrink: 0; max-width: 240px;
+    font-family: inherit; font-size: 0.86rem; color: var(--muted); cursor: pointer; white-space: nowrap;
+    background: var(--sidebar-bg); border: 1px solid var(--line); border-bottom: 0; border-radius: 7px 7px 0 0;
+    padding: 0.38rem 0.7rem; margin-bottom: -1px;
+  }
+  .fl-chart-tab:hover { color: var(--ink); }
+  .fl-chart-tab.sel { background: var(--paper); color: var(--ink); font-weight: bold; position: relative; }
+  .fl-chart-tab .nm { overflow: hidden; text-overflow: ellipsis; }
+  .fl-chart-tab .ct { font-family: monospace; font-size: 0.7rem; color: var(--muted); font-weight: normal; }
+  .fl-chart-tab .act { font-weight: normal; color: var(--muted); padding: 0 0.15rem; border-radius: 4px; line-height: 1; }
+  .fl-chart-tab .act:hover { color: var(--accent); background: var(--accent-soft); }
+  .fl-chart-add {
+    flex-shrink: 0; font-family: inherit; font-size: 0.84rem; color: var(--muted); cursor: pointer; white-space: nowrap;
+    background: transparent; border: 1px dashed var(--line); border-bottom: 0; border-radius: 7px 7px 0 0; padding: 0.38rem 0.7rem;
+  }
+  .fl-chart-add:hover { color: var(--ink); border-color: var(--muted); }
+  .fl-modes { margin-bottom: 0.4rem; }
+  .fl-newname { margin-bottom: 0.4rem; }
+
   /* Algoritma penceresi: iki sekme (şemadan algoritma / algoritmadan şema) */
   .fl-tabs { display: flex; gap: 0.3rem; border-bottom: 1px solid var(--line); margin-bottom: 0.8rem; flex-wrap: wrap; }
   .fl-tab {
@@ -1194,6 +1216,8 @@
            Şekiller ve oklar JS ile tek bir SVG'ye (#flSvg) çizilir.
            Diğer görünümlerdeyken CSS ile gizlidir. -->
       <div class="fl-wrap" id="flWrap">
+        <!-- Projedeki akış şemaları (sekmeler). Açık olanın yanında ✎ yeniden adlandır, × sil -->
+        <div class="fl-charts" id="flCharts" role="tablist" aria-label="Akış şemaları"></div>
         <div class="er-toolbar">
           <div class="er-group" id="flPalette">
             <!-- data-addkind: tıklanınca o şekil eklenir (simgeleri JS çizer) -->
@@ -1221,6 +1245,8 @@
                 <div class="menu-group-label">Oluştur</div>
                 <button data-flact="fromtext">Yazılı algoritmadan oluştur&hellip;</button>
                 <button data-flact="example">Örnek şema aç&hellip;</button>
+                <button data-flact="newchart">Yeni akış şeması</button>
+                <button data-flact="duplicate">Bu şemayı çoğalt</button>
                 <div class="sep"></div>
                 <div class="menu-group-label">Dışa aktar</div>
                 <button data-flact="png">Akış şeması resmi (.png)</button>
@@ -1582,9 +1608,14 @@
           </table>
           İfadelerde <code>+ - * / mod ^</code>, <code>= &lt;&gt; &lt; &gt; &lt;= &gt;=</code>, <code>ve veya değil</code>, <code>karekök( )</code> <code>mutlak( )</code> <code>yuvarla( )</code> <code>tam( )</code> kullanılabilir.
         </details>
-        <div class="modal-row">
-          <label class="opt"><input type="radio" name="flMode" value="replace" checked> Mevcut şemanın yerine koy (geri alınabilir)</label>
-          <label class="opt"><input type="radio" name="flMode" value="append"> Mevcut şemanın yanına ekle</label>
+        <div class="modal-row fl-modes">
+          <label class="opt"><input type="radio" name="flMode" value="new"> Yeni akış şeması olarak ekle</label>
+          <label class="opt"><input type="radio" name="flMode" value="replace" checked> Açık şemanın yerine koy (geri alınabilir)</label>
+          <label class="opt"><input type="radio" name="flMode" value="append"> Açık şemanın yanına ekle</label>
+        </div>
+        <div class="modal-row fl-newname" id="flNewNameRow">
+          <label class="opt" for="flNewName">Yeni şemanın adı</label>
+          <input class="modal-tags-input" id="flNewName" maxlength="60" placeholder="ör. Hasta sahibi kaydı" style="flex:1; min-width:10rem">
         </div>
         <div class="er-msg" id="flParseMsg"></div>
         <div class="modal-actions">
@@ -1635,7 +1666,10 @@
   let flowEdges = [];        // Oklar. Her biri: {id, projectId, from, to, label, fromSide, created}
                              //   label: '' | 'Evet' | 'Hayır' (karar/döngü çıkışları)
                              //   fromSide: okun çıktığı kenar ('top'|'right'|'bottom'|'left'), boşsa otomatik
-  let flSettings = {};       // Proje başına: {projectId, source} (son yazılan algoritma metni)
+  let flowCharts = [];       // Akış şemaları (bir projede birden çok olabilir): {id, projectId, name, source, created}
+                             //   source: bu şema için en son yazılan algoritma metni
+                             //   flowNodes ve flowEdges kayıtlarında chartId bu şemanın id'sidir
+  let flSettings = {};       // Proje başına: {projectId, active} (açık olan akış şemasının id'si)
 
   /* Sütunlara verilebilecek hazır renkler (Trello tarzı). İlk değer "renksiz" sayılır. */
   const COLUMN_COLORS = ['#c2410c', '#4d7c4d', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#ca8a04', '#64748b'];
@@ -1806,7 +1840,9 @@
         };
         flowNodes = normalizeFlowNodes(await readAll('fln:'));
         flowEdges = normalizeFlowEdges(await readAll('fle:'), flowNodes);
+        flowCharts = normalizeFlowCharts(await readAll('flc:'));
         (await readAll('fls:')).forEach(s => { if (s && s.projectId) flSettings[s.projectId] = s; });
+        await migrateFlowCharts();
       }
     }
 
@@ -1944,15 +1980,16 @@
     await sDel('sch:' + id);
     if (erConsole && erConsole.pid === id) closeConsoleDb();
 
-    // Projenin akış şemasını sil
+    // Projenin akış şemalarını sil
+    if (flRun && projectCharts(id).some(c => c.id === flRun.pid)) flCloseRun();
     for (const n of flowNodes.filter(x => x.projectId === id)) await deleteFlowNodeStore(n.id);
     flowNodes = flowNodes.filter(n => n.projectId !== id);
     for (const e of flowEdges.filter(x => x.projectId === id)) await deleteFlowEdgeStore(e.id);
     flowEdges = flowEdges.filter(e => e.projectId !== id);
+    for (const c of projectCharts(id)) { await deleteFlowChartStore(c.id); delete flHistory[c.id]; }
+    flowCharts = flowCharts.filter(c => c.projectId !== id);
     delete flSettings[id];
-    delete flHistory[id];
     await sDel('fls:' + id);
-    if (flRun && flRun.pid === id) flCloseRun();
 
     await sDel('proj:' + id);
     projects = projects.filter(x => x.id !== id);
@@ -5291,8 +5328,15 @@
 
   /* ---------- KÜÇÜK YARDIMCILAR ---------- */
 
-  function projectFlowNodes(pid) { return flowNodes.filter(n => n.projectId === pid).sort((a, b) => a.created - b.created); }
-  function projectFlowEdges(pid) { return flowEdges.filter(e => e.projectId === pid).sort((a, b) => a.created - b.created); }
+  /* cid verilmezse projenin açık olan akış şeması kullanılır. */
+  function projectFlowNodes(pid, cid) {
+    if (cid === undefined) cid = activeChartId(pid);
+    return flowNodes.filter(n => n.projectId === pid && n.chartId === cid).sort((a, b) => a.created - b.created);
+  }
+  function projectFlowEdges(pid, cid) {
+    if (cid === undefined) cid = activeChartId(pid);
+    return flowEdges.filter(e => e.projectId === pid && e.chartId === cid).sort((a, b) => a.created - b.created);
+  }
   function findFlowNode(id) { return flowNodes.find(n => n.id === id); }
   function flOut(id) { return projectFlowEdges(activeProject).filter(e => e.from === id); }
   function flBranches(n) { return n.kind === 'decision' || n.kind === 'loop'; }
@@ -5300,6 +5344,7 @@
   /* Bozuk/eksik kayıtlarda çökmemek için düğüm ve okları tamamlar (yedekten gelen veriye karşı da). */
   function normalizeFlowNodes(list) {
     return list.filter(n => n && typeof n === 'object' && n.id && n.projectId).map(n => {
+      n.chartId = typeof n.chartId === 'string' ? n.chartId : null;
       n.kind = FL_KINDS[n.kind] ? n.kind : 'process';
       n.text = typeof n.text === 'string' ? n.text.slice(0, 500) : '';
       n.x = Number.isFinite(+n.x) ? Math.max(0, +n.x) : 120;
@@ -5310,7 +5355,10 @@
   }
   function normalizeFlowEdges(list, nodes) {
     const ids = new Set(nodes.map(n => n.id));
+    const chartOf = {};
+    nodes.forEach(n => { chartOf[n.id] = n.chartId; });
     return list.filter(e => e && typeof e === 'object' && e.id && ids.has(e.from) && ids.has(e.to)).map(e => {
+      e.chartId = chartOf[e.from] || null; // ok her zaman çıktığı şeklin şemasındadır
       e.label = (e.label === 'Evet' || e.label === 'Hayır') ? e.label : '';
       e.fromSide = FL_SIDES.includes(e.fromSide) ? e.fromSide : '';
       e.created = +e.created || Date.now();
@@ -5318,14 +5366,82 @@
     });
   }
 
-  /* Proje başına akış ayarları (son yazılan algoritma metni) */
+  function normalizeFlowCharts(list) {
+    return list.filter(c => c && typeof c === 'object' && c.id && c.projectId).map(c => {
+      c.name = String(c.name || 'Akış').slice(0, 60);
+      c.source = typeof c.source === 'string' ? c.source : '';
+      c.created = +c.created || Date.now();
+      return c;
+    });
+  }
+
+  /* ---------- AKIŞ ŞEMALARI (bir projede birden çok) ---------- */
+  function projectCharts(pid) { return flowCharts.filter(c => c.projectId === pid).sort((a, b) => a.created - b.created); }
+  function findChart(id) { return flowCharts.find(c => c.id === id); }
+  async function saveFlowChart(c) { if (storageOK) await sSet('flc:' + c.id, JSON.stringify(c)); }
+  async function deleteFlowChartStore(id) { if (storageOK) await sDel('flc:' + id); }
+
+  /* Proje başına ayar: hangi akış şeması açık */
   function flowSettings(pid) {
     pid = pid || activeProject;
-    return flSettings[pid] || (flSettings[pid] = { projectId: pid, source: '' });
+    return flSettings[pid] || (flSettings[pid] = { projectId: pid, active: null });
   }
   async function saveFlowSettings(pid) {
     pid = pid || activeProject;
     if (storageOK) await sSet('fls:' + pid, JSON.stringify(flowSettings(pid)));
+  }
+  /* Projenin açık akış şeması (yoksa ilki; hiç yoksa null) */
+  function activeChartId(pid) {
+    pid = pid || activeProject;
+    const charts = projectCharts(pid);
+    const s = flSettings[pid];
+    if (s && s.active && charts.some(c => c.id === s.active)) return s.active;
+    return charts.length ? charts[0].id : null;
+  }
+  function activeChart(pid) { return findChart(activeChartId(pid)); }
+  /* "Akış 1", "Akış 2" ... projede olmayan ilk ad */
+  function nextChartName(pid, base) {
+    base = base || 'Akış';
+    const names = new Set(projectCharts(pid).map(c => c.name.toLocaleLowerCase('tr')));
+    let k = projectCharts(pid).length + 1;
+    while (names.has((base + ' ' + k).toLocaleLowerCase('tr'))) k++;
+    return base + ' ' + k;
+  }
+  async function createChart(pid, name, source) {
+    const c = { id: uid(), projectId: pid, name: (name || nextChartName(pid)).slice(0, 60), source: source || '', created: Date.now() };
+    flowCharts.push(c);
+    await saveFlowChart(c);
+    flowSettings(pid).active = c.id;
+    await saveFlowSettings(pid);
+    return c;
+  }
+  /* Projenin en az bir akış şeması olsun; açık olanın id'sini döndürür */
+  async function ensureChart(pid) {
+    pid = pid || activeProject;
+    return activeChartId(pid) || (await createChart(pid, 'Akış 1')).id;
+  }
+  /* Eski sürümden kalan (şemasız) adımları her projenin ilk akış şemasına yerleştirir.
+     Eski "son yazılan algoritma" metni de o şemaya taşınır. */
+  async function migrateFlowCharts() {
+    const orphanPids = new Set();
+    flowNodes.forEach(n => { if (!n.chartId || !findChart(n.chartId)) orphanPids.add(n.projectId); });
+    Object.values(flSettings).forEach(s => { if (s && s.source && !projectCharts(s.projectId).length) orphanPids.add(s.projectId); });
+    for (const pid of orphanPids) {
+      let c = projectCharts(pid)[0];
+      if (!c) {
+        c = { id: uid(), projectId: pid, name: 'Akış 1', source: '', created: Date.now() };
+        flowCharts.push(c);
+      }
+      const s = flSettings[pid];
+      if (s && typeof s.source === 'string') { if (!c.source) c.source = s.source; delete s.source; }
+      if (s) { s.active = s.active || c.id; await saveFlowSettings(pid); }
+      await saveFlowChart(c);
+      for (const n of flowNodes.filter(x => x.projectId === pid && (!x.chartId || !findChart(x.chartId)))) { n.chartId = c.id; await saveFlowNode(n); }
+    }
+    // Okun şeması, çıktığı şeklin şemasıdır
+    const chartOf = {};
+    flowNodes.forEach(n => { chartOf[n.id] = n.chartId; });
+    for (const e of flowEdges) { if (e.chartId !== chartOf[e.from]) { e.chartId = chartOf[e.from]; await saveFlowEdge(e); } }
   }
 
   /* Alt durum satırında kısa bir mesaj gösterir, sonra eski ipucuna döner. */
@@ -5348,48 +5464,50 @@
     return n + "'e"; // 100'e, 1000'e
   }
 
-  /* ---------- GERİ AL / YİNELE (şemadaki gibi; proje başına 60 adım, sadece bu oturumda) ---------- */
+  /* ---------- GERİ AL / YİNELE (şemadaki gibi; akış şeması başına 60 adım, sadece bu oturumda) ---------- */
   const flHistory = {};
-  function flHist(pid) { return flHistory[pid] || (flHistory[pid] = { undo: [], redo: [] }); }
-  function flSnapshot(pid) {
-    return JSON.stringify({ nodes: flowNodes.filter(n => n.projectId === pid), edges: flowEdges.filter(e => e.projectId === pid) });
+  function flKey() { return activeChartId(activeProject) || 'yok'; }
+  function flHist(key) { key = key || flKey(); return flHistory[key] || (flHistory[key] = { undo: [], redo: [] }); }
+  function flSnapshot() {
+    return JSON.stringify({ nodes: projectFlowNodes(activeProject), edges: projectFlowEdges(activeProject) });
   }
   function flCheckpoint() {
-    const h = flHist(activeProject);
-    h.undo.push(flSnapshot(activeProject));
+    const h = flHist();
+    h.undo.push(flSnapshot());
     if (h.undo.length > 60) h.undo.shift();
     h.redo = [];
     updateFlUndoButtons();
   }
   async function flRestore(snap) {
     const data = JSON.parse(snap);
-    const pid = activeProject;
+    const pid = activeProject, cid = activeChartId(pid);
+    const mine = x => x.projectId === pid && x.chartId === cid;
     const keepN = new Set(data.nodes.map(n => n.id)), keepE = new Set(data.edges.map(e => e.id));
-    for (const n of flowNodes.filter(x => x.projectId === pid && !keepN.has(x.id))) await deleteFlowNodeStore(n.id);
-    for (const e of flowEdges.filter(x => x.projectId === pid && !keepE.has(x.id))) await deleteFlowEdgeStore(e.id);
-    flowNodes = flowNodes.filter(n => n.projectId !== pid).concat(data.nodes);
-    flowEdges = flowEdges.filter(e => e.projectId !== pid).concat(data.edges);
+    for (const n of flowNodes.filter(x => mine(x) && !keepN.has(x.id))) await deleteFlowNodeStore(n.id);
+    for (const e of flowEdges.filter(x => mine(x) && !keepE.has(x.id))) await deleteFlowEdgeStore(e.id);
+    flowNodes = flowNodes.filter(n => !mine(n)).concat(data.nodes);
+    flowEdges = flowEdges.filter(e => !mine(e)).concat(data.edges);
     for (const n of data.nodes) await saveFlowNode(n);
     for (const e of data.edges) await saveFlowEdge(e);
     flSel = null;
     renderFlow();
   }
   async function flUndo() {
-    const h = flHist(activeProject);
+    const h = flHist();
     if (!h.undo.length) return;
-    h.redo.push(flSnapshot(activeProject));
+    h.redo.push(flSnapshot());
     await flRestore(h.undo.pop());
     flToast('Geri alındı.');
   }
   async function flRedo() {
-    const h = flHist(activeProject);
+    const h = flHist();
     if (!h.redo.length) return;
-    h.undo.push(flSnapshot(activeProject));
+    h.undo.push(flSnapshot());
     await flRestore(h.redo.pop());
     flToast('Yinelendi.');
   }
   function updateFlUndoButtons() {
-    const h = flHist(activeProject);
+    const h = flHist();
     el('flUndo').disabled = !h.undo.length;
     el('flRedo').disabled = !h.redo.length;
   }
@@ -5740,6 +5858,7 @@
     flIssueMap = {};
     issues.forEach(i => { if (i.nid) (flIssueMap[i.nid] = flIssueMap[i.nid] || []).push(i); });
 
+    renderFlCharts();
     el('flNodes').innerHTML = nodes.map(flNodeSVG).join('');
     el('flEmpty').style.display = nodes.length ? 'none' : '';
     el('flZoomLabel').textContent = Math.round(flZoom * 100) + '%';
@@ -5754,6 +5873,100 @@
     if (nWarn) stats += ' <button class="er-issue-btn warn" data-flissues>' + nWarn + ' uyarı</button>';
     el('flStats').innerHTML = stats;
     updateFlUndoButtons();
+  }
+
+  /* Akış şeması sekmeleri */
+  function renderFlCharts() {
+    const cur = activeChartId(activeProject);
+    const counts = {};
+    flowNodes.forEach(n => { if (n.projectId === activeProject) counts[n.chartId] = (counts[n.chartId] || 0) + 1; });
+    el('flCharts').innerHTML = projectCharts(activeProject).map(c => {
+      const sel = c.id === cur;
+      return '<div class="fl-chart-tab' + (sel ? ' sel' : '') + '" role="tab" tabindex="0" aria-selected="' + sel + '" data-chart="' + c.id + '" title="' + escAttr(c.name + (sel ? ' · çift tıkla: yeniden adlandır' : '')) + '">' +
+        '<span class="nm">' + esc(c.name) + '</span><span class="ct">' + (counts[c.id] || 0) + '</span>' +
+        (sel ? '<span class="act" data-chartact="rename" title="Yeniden adlandır" role="button">&#9998;</span><span class="act" data-chartact="delete" title="Bu akış şemasını sil" role="button">&times;</span>' : '') +
+      '</div>';
+    }).join('') + '<button class="fl-chart-add" type="button" data-chartact="new" title="Bu projeye yeni bir akış şeması ekle">+ Yeni şema</button>';
+    const tab = el('flCharts').querySelector('.fl-chart-tab.sel');
+    if (tab && tab.scrollIntoView) tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
+  async function flSwitchChart(id) {
+    if (!findChart(id) || id === activeChartId(activeProject)) return;
+    flowSettings(activeProject).active = id;
+    await saveFlowSettings(activeProject);
+    flSel = null;
+    flCloseRun();
+    renderFlow();
+    el('flCanvas').scrollTo(0, 0);
+  }
+  async function flNewChart() {
+    const name = prompt('Yeni akış şemasının adı:', nextChartName(activeProject));
+    if (name === null) return;
+    await createChart(activeProject, name.trim() || nextChartName(activeProject));
+    flSel = null;
+    flCloseRun();
+    renderFlow();
+    el('flCanvas').scrollTo(0, 0);
+    flToast('Yeni akış şeması açıldı. Şekil ekle ya da Algoritma › Algoritmadan şema ile doldur.', 4500);
+  }
+  async function flRenameChart() {
+    const c = activeChart();
+    if (!c) return;
+    const name = prompt('Akış şemasının adı:', c.name);
+    if (name === null || !name.trim() || name.trim() === c.name) return;
+    c.name = name.trim().slice(0, 60);
+    await saveFlowChart(c);
+    renderFlCharts();
+  }
+  async function flDuplicateChart() {
+    const c = activeChart();
+    if (!c) { flToast('Çoğaltılacak şema yok.'); return; }
+    const nodes = projectFlowNodes(activeProject), edges = projectFlowEdges(activeProject);
+    const copy = await createChart(activeProject, (c.name + ' (kopya)').slice(0, 60), c.source);
+    const idMap = {}, now = Date.now();
+    for (const [i, n] of nodes.entries()) {
+      const nn = Object.assign({}, n, { id: uid(), chartId: copy.id, created: now + i });
+      idMap[n.id] = nn.id; flowNodes.push(nn); await saveFlowNode(nn);
+    }
+    for (const [i, e] of edges.entries()) {
+      const ne = Object.assign({}, e, { id: uid(), chartId: copy.id, from: idMap[e.from], to: idMap[e.to], created: now + i });
+      flowEdges.push(ne); await saveFlowEdge(ne);
+    }
+    flSel = null; flCloseRun(); renderFlow();
+    flToast('"' + copy.name + '" oluşturuldu.');
+  }
+  async function flDeleteChart() {
+    const c = activeChart();
+    if (!c) return;
+    const nodes = projectFlowNodes(activeProject), edges = projectFlowEdges(activeProject);
+    if (!confirm('"' + c.name + '" akış şeması' + (nodes.length ? ' ve içindeki ' + nodes.length + ' adım' : '') + ' silinsin mi?')) return;
+    if (flRun && flRun.pid === c.id) flCloseRun();
+    await flDropChart(c, nodes, edges);
+    flSel = null;
+    renderFlow();
+    flToast('"' + c.name + '" silindi.');
+  }
+  /* Şemayı ve içindekileri bellekten ve depodan kaldırır (çöp kutusu da bunu kullanır) */
+  async function flDropChart(c, nodes, edges) {
+    for (const e of edges) await deleteFlowEdgeStore(e.id);
+    for (const n of nodes) await deleteFlowNodeStore(n.id);
+    flowEdges = flowEdges.filter(e => e.chartId !== c.id);
+    flowNodes = flowNodes.filter(n => n.chartId !== c.id);
+    flowCharts = flowCharts.filter(x => x.id !== c.id);
+    await deleteFlowChartStore(c.id);
+    delete flHistory[c.id];
+    const st = flSettings[c.projectId];
+    if (st && st.active === c.id) { st.active = activeChartId(c.projectId); await saveFlowSettings(c.projectId); }
+  }
+
+  /* Algoritma metninden yeni şema adı: ilk "# ..." yorum satırı ya da "Akış N" */
+  function flNameFromSource(src) {
+    const line = String(src).split('\n').map(l => l.trim()).find(l => /^#\s*\S/.test(l));
+    if (!line) return '';
+    let t = line.replace(/^#+\s*/, '').replace(/^\d+\s*[).:-]\s*/, '');
+    t = t.split(/\s+[—–-]\s+/)[0];
+    return t.trim().slice(0, 40);
   }
 
   /* Tuvali en uzaktaki şeklin biraz ötesine kadar büyütür ve yakınlaştırmayı uygular. */
@@ -6078,7 +6291,7 @@
   }
 
   async function flAddEdgeRecord(from, to, label, fromSide) {
-    const e = { id: uid(), projectId: activeProject, from: from, to: to, label: label || '', fromSide: fromSide || '', created: Date.now() + Math.random() };
+    const e = { id: uid(), projectId: activeProject, chartId: activeChartId(activeProject), from: from, to: to, label: label || '', fromSide: fromSide || '', created: Date.now() + Math.random() };
     flowEdges.push(e);
     await saveFlowEdge(e);
     return e;
@@ -6095,8 +6308,9 @@
       if (t === null) return;
       text = t.trim() || K.def;
     }
+    const cid = await ensureChart(activeProject); // hiç akış şeması yoksa "Akış 1" açılır
     flCheckpoint();
-    const n = { id: uid(), projectId: activeProject, kind: kind, text: text, x: 0, y: 0, created: Date.now() };
+    const n = { id: uid(), projectId: activeProject, chartId: cid, kind: kind, text: text, x: 0, y: 0, created: Date.now() };
     const g = flGeom(n);
     const src = flSel && flSel.type === 'node' ? findFlowNode(flSel.id) : null;
     let from = null, label = '';
@@ -6199,12 +6413,15 @@
   async function flClear(ask) {
     const nodes = projectFlowNodes(activeProject);
     if (!nodes.length) return true;
-    if (ask && !confirm('Bu projedeki akış şeması (' + nodes.length + ' adım) silinsin mi?\n(Ctrl+Z ile geri alınabilir.)')) return false;
+    const ch = activeChart();
+    if (ask && !confirm('"' + (ch ? ch.name : 'Akış') + '" şemasındaki ' + nodes.length + ' adım silinsin mi?\n(Ctrl+Z ile geri alınabilir.)')) return false;
     if (ask) flCheckpoint();
+    const cid = activeChartId(activeProject);
+    const mine = x => x.projectId === activeProject && x.chartId === cid;
     for (const e of projectFlowEdges(activeProject)) await deleteFlowEdgeStore(e.id);
     for (const n of nodes) await deleteFlowNodeStore(n.id);
-    flowEdges = flowEdges.filter(e => e.projectId !== activeProject);
-    flowNodes = flowNodes.filter(n => n.projectId !== activeProject);
+    flowEdges = flowEdges.filter(e => !mine(e));
+    flowNodes = flowNodes.filter(n => !mine(n));
     flSel = null;
     flCloseRun();
     renderFlow();
@@ -6249,20 +6466,20 @@
   /* ---------- RESİM OLARAK DIŞA AKTARMA (PNG / SVG) ----------
      Ekrandaki SVG'den bağımsız, renkleri içine yazılmış bir SVG üretilir; PNG için bu
      SVG tuvale iki kat çözünürlükte basılır (şema görünümündeki gibi). */
-  function buildFlowSVG(pid) {
-    const nodes = projectFlowNodes(pid);
+  function buildFlowSVG(pid, cid) {
+    const nodes = projectFlowNodes(pid, cid);
     if (!nodes.length) return null;
     const cs = getComputedStyle(document.body);
     const C = k => cs.getPropertyValue(k).trim();
     const P = { ink: C('--ink'), muted: C('--muted'), paper: C('--paper'), bg: C('--bg'), green: C('--green') };
     const fill = { start: 'term', end: 'term', input: 'io', output: 'io', process: 'proc', decision: 'dec', loop: 'loop' };
-    const routes = flRouteAll(nodes, projectFlowEdges(pid)).routes;
+    const routes = flRouteAll(nodes, projectFlowEdges(pid, cid)).routes;
     const byId = {};
     nodes.forEach(n => { byId[n.id] = n; });
     let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
     const grow = (a, b, c, d) => { x1 = Math.min(x1, a); y1 = Math.min(y1, b); x2 = Math.max(x2, c); y2 = Math.max(y2, d); };
     let body = '';
-    projectFlowEdges(pid).forEach(e => {
+    projectFlowEdges(pid, cid).forEach(e => {
       const A = byId[e.from], B = byId[e.to], r = routes[e.id];
       if (!A || !B || !r) return;
       r.pts.forEach(p => grow(p.x - 4, p.y - 4, p.x + 4, p.y + 4));
@@ -6288,10 +6505,17 @@
       '<rect x="' + Math.floor(x1) + '" y="' + Math.floor(y1) + '" width="' + W + '" height="' + H + '" fill="' + P.bg + '"/>' + body + '</svg>';
   }
 
+  /* İndirilen dosyanın adı: proje-adı-şema-adı-ek */
+  function flFileName(suffix) {
+    const c = activeChart();
+    const part = c ? '-' + (c.name.replace(/[^\w ğüşıöçĞÜŞİÖÇ-]/g, '').trim().replace(/\s+/g, '-') || 'akis') : '';
+    return safeName('one') + part + '-' + suffix;
+  }
+
   async function exportFlowImage(kind) {
     const svg = buildFlowSVG(activeProject);
     if (!svg) { flToast('Dışa aktarılacak adım yok.'); return; }
-    const name = safeName('one') + '-akis-semasi';
+    const name = flFileName('akis-semasi');
     if (kind === 'svg') { download(svg, name + '.svg', 'image/svg+xml'); return; }
     const img = new Image();
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
@@ -6313,10 +6537,10 @@
     return '"' + (t.length > 32 ? t.slice(0, 30) + '…' : t) + '"';
   }
 
-  function lintFlow(pid) {
+  function lintFlow(pid, cid) {
     const out = [];
     const add = (lvl, nid, msg) => out.push({ lvl: lvl, nid: nid, msg: msg });
-    const nodes = projectFlowNodes(pid), edges = projectFlowEdges(pid);
+    const nodes = projectFlowNodes(pid, cid), edges = projectFlowEdges(pid, cid);
     if (!nodes.length) return out;
     const starts = nodes.filter(n => n.kind === 'start');
     if (!starts.length) add('err', null, 'Başla şekli yok: algoritmanın nereden başlayacağı belli değil.');
@@ -6355,14 +6579,19 @@
     return out;
   }
 
+  /* Dışa aktarma için: projenin dolu akış şemaları ve numaralı adımları */
+  function flowExportBlocks(pid) {
+    return projectCharts(pid).map(c => ({ name: c.name, steps: flowToSteps(pid, c.id) })).filter(f => f.steps);
+  }
+
   /* ---------- ŞEMADAN NUMARALI ALGORİTMA ----------
      Şekiller okuma sırasına dizilir (Evet kolu önce, birleşme noktaları iki koldan sonra),
      her biri "Adım N: ..." olur. Sıradaki adım bir sonraki satır değilse "Adım N'e git"
      yazılır — Türkçe ders kitaplarındaki algoritma biçimi. */
   function flLabelRank(l) { return l === 'Evet' ? 0 : (l === 'Hayır' ? 2 : 1); }
 
-  function flowOrder(pid) {
-    const nodes = projectFlowNodes(pid), edges = projectFlowEdges(pid);
+  function flowOrder(pid, cid) {
+    const nodes = projectFlowNodes(pid, cid), edges = projectFlowEdges(pid, cid);
     const byId = {};
     nodes.forEach(n => { byId[n.id] = n; });
     const outs = {};
@@ -6390,8 +6619,8 @@
     return { order: [].concat(...post).map(id => byId[id]), outs: outs };
   }
 
-  function flowToSteps(pid) {
-    const { order, outs } = flowOrder(pid);
+  function flowToSteps(pid, cid) {
+    const { order, outs } = flowOrder(pid, cid);
     if (!order.length) return '';
     const next = n => (outs[n.id] || [])[0];
     const branch = (n, l) => (outs[n.id] || []).find(e => e.label === l);
@@ -6819,7 +7048,10 @@
   }
 
   /* Ayrıştırılan algoritmayı projeye ekler (ya da mevcut şemanın yerine koyar). */
-  async function flApplyParsed(res, mode) {
+  /* mode: 'replace' (açık şemanın yerine), 'append' (yanına), 'new' (yeni bir akış şeması olarak; ad: name) */
+  async function flApplyParsed(res, mode, name) {
+    if (mode === 'new') { await createChart(activeProject, name); flCloseRun(); }
+    const cid = await ensureChart(activeProject);
     flCheckpoint();
     let x0 = 90;
     if (mode === 'replace') await flClear(false);
@@ -6829,11 +7061,11 @@
     }
     const idMap = {}, now = Date.now();
     const nodes = res.nodes.map((n, i) => {
-      const nn = { id: uid(), projectId: activeProject, kind: n.kind, text: n.text, x: 0, y: 0, created: now + i };
+      const nn = { id: uid(), projectId: activeProject, chartId: cid, kind: n.kind, text: n.text, x: 0, y: 0, created: now + i };
       idMap[n.id] = nn.id;
       return nn;
     });
-    const edges = res.edges.map((e, i) => ({ id: uid(), projectId: activeProject, from: idMap[e.from], to: idMap[e.to], label: e.label, fromSide: '', created: now + i }));
+    const edges = res.edges.map((e, i) => ({ id: uid(), projectId: activeProject, chartId: cid, from: idMap[e.from], to: idMap[e.to], label: e.label, fromSide: '', created: now + i }));
     flLayoutGraph(nodes, edges, x0, 50);
     for (const n of nodes) { flowNodes.push(n); await saveFlowNode(n); }
     for (const e of edges) { flowEdges.push(e); await saveFlowEdge(e); }
@@ -7003,7 +7235,7 @@
   /* ---------- ADIM ADIM ÇALIŞTIRMA ----------
      Şema Başla'dan itibaren yürütülür. "Sıradaki" şekil yeşil çerçeveyle gösterilir;
      değişkenler ve ekran çıktısı alttaki panelde izlenir. Giriş şekline gelince değer sorulur. */
-  let flRun = null;   // { pid, cur, vars, out, steps, loops, ask, done, error, timer, playing, lastEdge, changed }
+  let flRun = null;   // { pid (açık akış şemasının id'si), cur, vars, out, steps, loops, ask, done, error, timer, playing, lastEdge, changed }
   const FL_MAX_STEPS = 20000;
 
   function flSetVar(name, value) {
@@ -7052,7 +7284,7 @@
     const R = flRun;
     if (!R || R.done || R.error || R.ask) return R && R.ask ? 'ask' : 'done';
     const n = findFlowNode(R.cur);
-    if (!n || n.projectId !== R.pid) { R.error = 'Şema değişti; "Baştan" ile yeniden başlat.'; return 'error'; }
+    if (!n || n.chartId !== R.pid) { R.error = 'Şema değişti; "Baştan" ile yeniden başlat.'; return 'error'; }
     R.changed = new Set();
     R.steps++;
     let next = null;
@@ -7178,7 +7410,7 @@
   function flResetRun() {
     flStopRun();
     const start = projectFlowNodes(activeProject).find(n => n.kind === 'start');
-    flRun = { pid: activeProject, cur: start ? start.id : null, vars: new Map(), out: [], steps: 0, loops: {}, ask: null,
+    flRun = { pid: flKey(), cur: start ? start.id : null, vars: new Map(), out: [], steps: 0, loops: {}, ask: null,
               done: false, error: start ? null : 'Başla şekli yok; çalıştırmak için önce bir Başla ekle.', timer: null, playing: false,
               lastEdge: null, changed: new Set() };
     renderFlRun();
@@ -7201,7 +7433,7 @@
 
   /* Oynat: hız 0 ise bir giriş istenene ya da bitene kadar hemen çalışır; değilse adım adım. */
   function flPlay() {
-    if (!flRun || flRun.pid !== activeProject) flResetRun();
+    if (!flRun || flRun.pid !== flKey()) flResetRun();
     const R = flRun;
     if (R.done || R.error) flResetRun();
     if (flRun.error) { renderFlRun(); return; }
@@ -7233,7 +7465,7 @@
   }
 
   function flStepBtn() {
-    if (!flRun || flRun.pid !== activeProject || flRun.done || flRun.error) flResetRun();
+    if (!flRun || flRun.pid !== flKey() || flRun.done || flRun.error) flResetRun();
     if (flRun.error) return;
     flStopRun();
     flStepOnce();
@@ -7242,7 +7474,7 @@
 
   /* Şekillerde "sıradaki" işaretini ve son geçilen oku günceller */
   function flApplyRunMarks() {
-    const cur = flRun && flRun.pid === activeProject && !flRun.done ? flRun.cur : null;
+    const cur = flRun && flRun.pid === flKey() && !flRun.done ? flRun.cur : null;
     el('flNodes').querySelectorAll('.fl-node').forEach(g => g.classList.toggle('run', g.dataset.node === cur));
   }
 
@@ -7342,6 +7574,21 @@
   el('flAlgoBtn').addEventListener('click', () => openFlAlgo('steps'));
   el('flStats').addEventListener('click', e => { if (e.target.closest('[data-flissues]')) openFlAlgo('steps'); });
   el('flHelpBtn').addEventListener('click', openFlHelp);
+  el('flCharts').addEventListener('click', e => {
+    const a = e.target.closest('[data-chartact]');
+    if (a) {
+      const act = a.dataset.chartact;
+      if (act === 'new') flNewChart(); else if (act === 'rename') flRenameChart(); else if (act === 'delete') flDeleteChart();
+      return;
+    }
+    const t = e.target.closest('[data-chart]');
+    if (t) flSwitchChart(t.dataset.chart);
+  });
+  el('flCharts').addEventListener('dblclick', e => { const t = e.target.closest('.fl-chart-tab.sel'); if (t) flRenameChart(); });
+  el('flCharts').addEventListener('keydown', e => {
+    const t = e.target.closest('[data-chart]');
+    if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); flSwitchChart(t.dataset.chart); }
+  });
   el('flHelpClose').addEventListener('click', closeFlHelp);
   el('flHelpDone').addEventListener('click', closeFlHelp);
   el('flHelpModal').addEventListener('click', e => { if (e.target === el('flHelpModal')) closeFlHelp(); });
@@ -7362,10 +7609,12 @@
     else if (act === 'txt') {
       const txt = flowToSteps(activeProject);
       if (!txt) { flToast('Dışa aktarılacak adım yok.'); return; }
-      download(txt + '\n', safeName('one') + '-algoritma.txt', 'text/plain');
+      download(txt + '\n', flFileName('algoritma') + '.txt', 'text/plain');
     }
     else if (act === 'clear') flClear(true);
     else if (act === 'help') openFlHelp();
+    else if (act === 'newchart') flNewChart();
+    else if (act === 'duplicate') flDuplicateChart();
   }
   el('flFileBtn').addEventListener('click', e => { e.stopPropagation(); el('flFileMenu').classList.toggle('open'); });
   document.addEventListener('click', e => { if (!e.target.closest('#flFileMenu, #flFileBtn')) el('flFileMenu').classList.remove('open'); });
@@ -7486,7 +7735,14 @@
 
   /* ---- ALGORİTMA PENCERESİ ---- */
   function openFlAlgo(tab) {
-    el('flSource').value = flowSettings().source || '';
+    const ch = activeChart();
+    el('flSource').value = ch ? ch.source : '';
+    // Açık şema doluysa yapıştırılan algoritma varsayılan olarak yeni bir şemaya gider
+    const hasNodes = projectFlowNodes(activeProject).length > 0;
+    document.querySelector('input[name="flMode"][value="' + (hasNodes ? 'new' : 'replace') + '"]').checked = true;
+    el('flNewName').value = '';
+    el('flNewName').placeholder = flNameFromSource(el('flSource').value) || nextChartName(activeProject);
+    updateFlModeUI();
     el('flParseMsg').textContent = '';
     el('flParseMsg').className = 'er-msg';
     el('flExample').value = '';
@@ -7538,9 +7794,20 @@
   });
   let flSrcTimer = null;
   el('flSource').addEventListener('input', () => {
+    el('flNewName').placeholder = flNameFromSource(el('flSource').value) || nextChartName(activeProject);
     clearTimeout(flSrcTimer);
-    flSrcTimer = setTimeout(() => { flowSettings().source = el('flSource').value; saveFlowSettings(); }, 400);
+    // Taslak açık şemaya kaydedilir; "Yeni şema" seçiliyse oluşturulunca yeni şemaya geçer
+    flSrcTimer = setTimeout(() => {
+      const ch = activeChart();
+      if (ch && document.querySelector('input[name="flMode"]:checked').value !== 'new') { ch.source = el('flSource').value; saveFlowChart(ch); }
+    }, 400);
   });
+  function updateFlModeUI() {
+    const m = (document.querySelector('input[name="flMode"]:checked') || {}).value;
+    el('flNewNameRow').style.display = m === 'new' ? '' : 'none';
+    el('flParseBtn').textContent = m === 'new' ? 'Yeni akış şeması oluştur' : 'Akış şemasını oluştur';
+  }
+  document.querySelectorAll('input[name="flMode"]').forEach(r => r.addEventListener('change', updateFlModeUI));
   el('flSource').addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); el('flParseBtn').click(); return; }
     if (e.key !== 'Tab' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
@@ -7554,10 +7821,11 @@
     if (!src.trim()) { msg.className = 'er-msg err'; msg.textContent = 'Önce algoritmayı yaz (ya da bir örnek seç).'; return; }
     const res = parseAlgorithm(src);
     if (res.nodes.length < 2) { msg.className = 'er-msg err'; msg.textContent = 'Algoritmada adım bulunamadı.'; return; }
-    flowSettings().source = src;
-    await saveFlowSettings();
     const mode = (document.querySelector('input[name="flMode"]:checked') || {}).value || 'replace';
-    await flApplyParsed(res, mode);
+    const name = el('flNewName').value.trim() || flNameFromSource(src) || nextChartName(activeProject);
+    await flApplyParsed(res, mode, name);
+    const ch = activeChart();
+    if (ch) { ch.source = src; await saveFlowChart(ch); }
     el('flAlgoModal').classList.remove('open');
     flToast('Akış şeması oluşturuldu: ' + res.nodes.length + ' adım, ' + res.edges.length + ' ok.' +
             (res.warn.length ? ' ⚠ ' + res.warn[0] + (res.warn.length > 1 ? ' (+' + (res.warn.length - 1) + ' uyarı)' : '') : ' Geri almak için Ctrl+Z.'), res.warn.length ? 8000 : 4500);
@@ -7601,8 +7869,8 @@
       }
       const hasSchema = projectTables(p.id).length > 0;
       if (hasSchema) out += '\n## Veritabanı şeması (SQLite)\n\n```sql\n' + buildSQLiteSQL(p.id) + '```\n';
-      const hasFlow = projectFlowNodes(p.id).length > 0;
-      if (hasFlow) out += '\n## Algoritma (akış şemasından)\n\n```text\n' + flowToSteps(p.id) + '\n```\n';
+      const flows = flowExportBlocks(p.id), hasFlow = flows.length > 0;
+      flows.forEach(f => { out += '\n## Algoritma: ' + f.name + '\n\n```text\n' + f.steps + '\n```\n'; });
       if (!mine.length && !hasSchema && !hasFlow) out += '_Boş._\n';
     });
     return out;
@@ -7628,8 +7896,8 @@
       }
       const hasSchema = projectTables(p.id).length > 0;
       if (hasSchema) out += '\nVERİTABANI ŞEMASI (SQLite)\n\n' + buildSQLiteSQL(p.id);
-      const hasFlow = projectFlowNodes(p.id).length > 0;
-      if (hasFlow) out += '\nALGORİTMA (akış şemasından)\n\n' + flowToSteps(p.id) + '\n';
+      const flows = flowExportBlocks(p.id), hasFlow = flows.length > 0;
+      flows.forEach(f => { out += '\nALGORİTMA: ' + f.name.toLocaleUpperCase('tr') + '\n\n' + f.steps + '\n'; });
       if (!mine.length && !hasSchema && !hasFlow) out += '(Boş)\n';
     });
     return out;
@@ -7685,8 +7953,8 @@
       }
       const hasSchema = projectTables(p.id).length > 0;
       if (hasSchema) b += '<h2>Veritabanı şeması (SQLite)</h2><pre style="font-size:.78rem;white-space:pre-wrap;background:#f4f1ea;padding:.8rem;border-radius:6px;">' + esc(buildSQLiteSQL(p.id)) + '</pre>';
-      const hasFlow = projectFlowNodes(p.id).length > 0;
-      if (hasFlow) b += '<h2>Algoritma (akış şemasından)</h2><pre style="font-size:.85rem;white-space:pre-wrap;background:#f4f1ea;padding:.8rem;border-radius:6px;">' + esc(flowToSteps(p.id)) + '</pre>';
+      const flows = flowExportBlocks(p.id), hasFlow = flows.length > 0;
+      flows.forEach(f => { b += '<h2>Algoritma: ' + esc(f.name) + '</h2><pre style="font-size:.85rem;white-space:pre-wrap;background:#f4f1ea;padding:.8rem;border-radius:6px;">' + esc(f.steps) + '</pre>'; });
       if (!mine.length && !hasSchema && !hasFlow) b += '<p><em>Boş.</em></p>';
     });
     b += '</body></html>';
@@ -7703,9 +7971,9 @@
   function exportJSON() {
     // O anki tema: body'de "dark" sınıfı varsa karanlık, yoksa açık
     const theme = document.body.classList.contains('dark') ? 'dark' : 'light';
-    const data = { version: 4, exported: Date.now(), theme: theme, projects: projects, columns: columns, items: items,
+    const data = { version: 5, exported: Date.now(), theme: theme, projects: projects, columns: columns, items: items,
                    dbTables: dbTables, dbLinks: dbLinks, dbSettings: Object.values(dbSettings),
-                   flowNodes: flowNodes, flowEdges: flowEdges, flSettings: Object.values(flSettings) };
+                   flowCharts: flowCharts, flowNodes: flowNodes, flowEdges: flowEdges, flSettings: Object.values(flSettings) };
     download(JSON.stringify(data, null, 2), 'notlar-yedek-' + new Date().toISOString().slice(0,10) + '.json', 'application/json');
   }
 
@@ -7727,8 +7995,10 @@
       ((t && t.indexes) || []).forEach(ix => { add(ix && ix.id); ((ix && ix.cols) || []).forEach(c => add(c)); });
     });
     (data.dbLinks || []).forEach(l => add(l && l.id, l && l.projectId, l && l.fromTable, l && l.fromField, l && l.toTable, l && l.toField));
-    (data.flowNodes || []).forEach(n => add(n && n.id, n && n.projectId));
+    (data.flowCharts || []).forEach(c => add(c && c.id, c && c.projectId));
+    (data.flowNodes || []).forEach(n => { add(n && n.id, n && n.projectId); if (n && n.chartId != null) add(n.chartId); });
     (data.flowEdges || []).forEach(e => add(e && e.id, e && e.projectId, e && e.from, e && e.to));
+    (data.flSettings || []).forEach(st => { if (st && st.active != null) add(st.active); });
     return ids.every(x => typeof x === 'string' && SAFE_ID.test(x));
   }
 
@@ -7766,6 +8036,7 @@
         for (const pid in dbSettings) await sDel('sch:' + pid);
         for (const n of flowNodes) await sDel('fln:' + n.id);
         for (const e of flowEdges) await sDel('fle:' + e.id);
+        for (const c of flowCharts) await sDel('flc:' + c.id);
         for (const pid in flSettings) await sDel('fls:' + pid);
       }
       closeConsoleDb();
@@ -7783,11 +8054,16 @@
       dbLinks = normalizeDbLinks(Array.isArray(data.dbLinks) ? data.dbLinks : []);
       dbSettings = {};
       (Array.isArray(data.dbSettings) ? data.dbSettings : []).forEach(s => { if (s && s.projectId) dbSettings[s.projectId] = s; });
-      // Akış şeması version 4 ile geldi; eski yedeklerde yoksa boş başlar.
+      // Akış şeması version 4 ile, birden çok akış şeması version 5 ile geldi; eski yedeklerde yoksa boş başlar.
       flowNodes = normalizeFlowNodes(Array.isArray(data.flowNodes) ? data.flowNodes : []);
       flowEdges = normalizeFlowEdges(Array.isArray(data.flowEdges) ? data.flowEdges : [], flowNodes);
+      flowCharts = normalizeFlowCharts(Array.isArray(data.flowCharts) ? data.flowCharts : []);
       flSettings = {};
-      (Array.isArray(data.flSettings) ? data.flSettings : []).forEach(s => { if (s && s.projectId) flSettings[s.projectId] = { projectId: s.projectId, source: String(s.source || '') }; });
+      (Array.isArray(data.flSettings) ? data.flSettings : []).forEach(s => {
+        if (!s || !s.projectId) return;
+        flSettings[s.projectId] = { projectId: s.projectId, active: typeof s.active === 'string' ? s.active : null };
+        if (typeof s.source === 'string') flSettings[s.projectId].source = s.source; // v4: migrateFlowCharts taşır
+      });
       // Depoya yaz
       if (storageOK) {
         for (const p of projects) await sSet('proj:' + p.id, JSON.stringify(p));
@@ -7798,8 +8074,10 @@
         for (const pid in dbSettings) await sSet('sch:' + pid, JSON.stringify(dbSettings[pid]));
         for (const n of flowNodes) await sSet('fln:' + n.id, JSON.stringify(n));
         for (const e of flowEdges) await sSet('fle:' + e.id, JSON.stringify(e));
+        for (const c of flowCharts) await sSet('flc:' + c.id, JSON.stringify(c));
         for (const pid in flSettings) await sSet('fls:' + pid, JSON.stringify(flSettings[pid]));
       }
+      await migrateFlowCharts();
       activeProject = projects.length ? projects[0].id : null;
       if (!activeProject) await createProject('Genel');
 
