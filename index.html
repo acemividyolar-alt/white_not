@@ -5506,9 +5506,13 @@
      Karar şeklinde Evet aşağıdan, Hayır sağdan çıkmayı tercih eder (ders kitaplarındaki gibi). */
   const FL_STUB = 16; // ok şekilden önce bu kadar dümdüz çıkar / girer
 
-  /* Kenar tercihleri: sağ taraf Hayır kollarına bırakılır; geri dönüş okları soldan dolaşır. */
-  function flSideCost(side, src, label, isFrom) {
-    if (!isFrom) return { top: 0, left: 14, right: 22, bottom: 70 }[side];
+  /* Kenar tercihleri: sağ taraf Hayır kollarına bırakılır; geri dönüş okları soldan dolaşır.
+     Karar / döngü şekline giren ok sağdan ya da alttan girmesin: oralar Evet / Hayır çıkışlarına ayrılır
+     (yoksa giren ok ile çıkan ok aynı noktayı paylaşır, etiketler üst üste biner). */
+  function flSideCost(side, node, label, isFrom) {
+    if (!isFrom) return flBranches(node) ? { top: 0, left: 14, right: 150, bottom: 120 }[side]
+                                         : { top: 0, left: 14, right: 22, bottom: 70 }[side];
+    const src = node;
     if (flBranches(src)) {
       if (label === 'Hayır') return { right: 0, left: 14, bottom: 26, top: 90 }[side];
       return { bottom: 0, left: 14, right: 30, top: 90 }[side];
@@ -5577,7 +5581,15 @@
   }
 
   /* A şeklinden B şekline giden okun en iyi yolu: { pts, sa (çıkış kenarı), sb, cost } */
-  function flRoute(A, B, e, obs, placed) {
+  /* ports: daha önce yönlendirilen okların kullandığı bağlantı noktaları ("şekilId:kenar" -> {in, out}).
+     Aynı noktadan iki ok çıkması (Evet ve Hayır üst üste) ya da bir okun girdiği yerden çıkması pahalıdır. */
+  function flPortCost(ports, A, sa, B, sb) {
+    if (!ports) return 0;
+    const a = ports[A.id + ':' + sa], b = ports[B.id + ':' + sb];
+    return (a && a.out ? 400 : 0) + (a && a.in ? 150 : 0) + (b && b.out ? 150 : 0);
+  }
+
+  function flRoute(A, B, e, obs, placed, ports) {
     const ga = flBox(A), gb = flBox(B);
     const fromSides = e && e.fromSide ? [e.fromSide] : FL_SIDES;
     const label = e ? e.label : '';
@@ -5591,7 +5603,7 @@
       // Ara kanallar: doğrudan, ortadan ve iki şeklin dışından (dolu ise biraz daha dıştan)
       const xs = [S.x, T.x, (S.x + T.x) / 2, L - 28, L - 44, L - 60, R + 28, R + 44, R + 60];
       const ys = [S.y, T.y, (S.y + T.y) / 2, Tp - 28, Tp - 44, Bt + 28, Bt + 44];
-      const side = flSideCost(sa, A, label, true) + flSideCost(sb, B, label, false);
+      const side = flSideCost(sa, A, label, true) + flSideCost(sb, B, label, false) + flPortCost(ports, A, sa, B, sb);
       const mids = xs.map(x => [{ x: x, y: S.y }, { x: x, y: T.y }]).concat(ys.map(y => [{ x: S.x, y: y }, { x: T.x, y: y }]));
       for (const m of mids) {
         const pts = flSimplify([p0, S, m[0], m[1], T, p3]);
@@ -5603,7 +5615,8 @@
   }
 
   /* Bir projenin tüm oklarını sırayla yönlendirir: önce ana akış (Evet / etiketsiz, kısa oklar),
-     sonra Hayır kolları, en son geri dönüşler; her ok öncekilerin üstüne binmemeye çalışır. */
+     sonra Hayır kolları, en son geri dönüşler; her ok öncekilerin üstüne ve çıkış noktalarına
+     binmemeye çalışır. */
   function flRouteAll(nodes, edges) {
     const byId = {};
     nodes.forEach(n => { byId[n.id] = n; });
@@ -5611,12 +5624,15 @@
     const ok = edges.filter(e => byId[e.from] && byId[e.to]);
     const backOf = e => byId[e.to].y < byId[e.from].y - 4 ? 1 : 0;
     const span = e => Math.abs(byId[e.to].y - byId[e.from].y) + Math.abs(byId[e.to].x - byId[e.from].x);
-    const group = e => backOf(e) ? 1 : (e.label === 'Hayır' ? 2 : 0);
+    const group = e => backOf(e) ? 2 : (e.label === 'Hayır' ? 1 : 0);
     ok.sort((a, b) => group(a) - group(b) || flLabelRank(a.label) - flLabelRank(b.label) || span(a) - span(b));
-    const placed = [], routes = {};
+    const placed = [], routes = {}, ports = {};
+    const usePort = (id, side, dir) => { const k = id + ':' + side; (ports[k] = ports[k] || {})[dir] = true; };
     ok.forEach(e => {
-      const r = flRoute(byId[e.from], byId[e.to], e, obs, placed);
+      const r = flRoute(byId[e.from], byId[e.to], e, obs, placed, ports);
       routes[e.id] = r;
+      usePort(e.from, r.sa, 'out');
+      usePort(e.to, r.sb, 'in');
       for (let i = 0; i < r.pts.length - 1; i++) placed.push({ a: r.pts[i], b: r.pts[i + 1], from: e.from, to: e.to });
     });
     return { routes: routes, obs: obs };
