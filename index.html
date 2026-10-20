@@ -43,6 +43,8 @@
     --green: #4d7c4d;       /* İlerleme çubuğu ve onay rengi (yeşil) */
     --sidebar-bg: #efe9de;  /* Kenar çubuğu arka planı */
     --proj-hover: #e6dfd2;  /* Proje üzerine gelince */
+    --danger: #c0392b;      /* Gecikmiş, hata */
+    --warn: #b7791f;        /* Bugün, uyarı */
     /* Akış şeması şekil renkleri (zemin / kenar) */
     --fl-term-bg: #fbe3d4;  --fl-term-bd: #c2410c;   /* Başla / Bitir */
     --fl-io-bg: #dfe9fb;    --fl-io-bd: #2563eb;     /* Giriş / Çıkış */
@@ -64,6 +66,8 @@
     --green: #6fa36f;       /* Yeşil (karanlıkta daha açık) */
     --sidebar-bg: #211e1b;  /* Kenar çubuğu arka planı */
     --proj-hover: #2e2a25;  /* Proje üzerine gelince */
+    --danger: #e57373;
+    --warn: #e0b252;
     --fl-term-bg: #3d2619;  --fl-term-bd: #e2632c;
     --fl-io-bg: #1d2a42;    --fl-io-bd: #6b9cf5;
     --fl-proc-bg: #262320;  --fl-proc-bd: #a39a8d;
@@ -995,6 +999,76 @@
   .fl-syntax td { border-bottom: 1px dashed var(--line); padding: 0.25rem 0.4rem; vertical-align: top; }
   .fl-syntax td:first-child { white-space: nowrap; color: var(--ink); }
 
+  /* ===================================================================
+     SON TARİH ve TAKVİM
+     =================================================================== */
+  .c-due { display: inline-flex; align-items: center; gap: 0.3rem; border: 1px solid var(--line); border-radius: 5px; padding: 0.15rem 0.4rem; color: var(--muted); cursor: pointer; }
+  .c-due input { border: 0; background: transparent; color: var(--ink); font-family: inherit; font-size: 0.85rem; outline: none; min-width: 0; max-width: 9.5rem; }
+  .c-due-ico { font-size: 0.85rem; }
+  .due {
+    display: inline-flex; align-items: center; gap: 0.25rem; font-family: monospace; font-size: 0.72rem; white-space: nowrap;
+    border-radius: 999px; padding: 0.05rem 0.5rem; border: 1px solid var(--line); color: var(--muted); background: var(--paper);
+  }
+  .due::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.8; }
+  .due.late { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); background: color-mix(in srgb, var(--danger) 9%, var(--paper)); }
+  .due.today { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); background: color-mix(in srgb, var(--warn) 12%, var(--paper)); }
+  .due.soon { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+  .due.done { text-decoration: line-through; opacity: 0.7; }
+  .meta-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; min-width: 0; }
+  .card-due { margin-top: 0.4rem; }
+  .due-hint { font-size: 0.8rem; color: var(--muted); }
+  .due-filters { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.8rem; }
+  .due-filters:empty { display: none; }
+  .df { font-family: inherit; font-size: 0.82rem; border: 1px solid var(--line); background: var(--paper); color: var(--muted); border-radius: 999px; padding: 0.25rem 0.75rem; cursor: pointer; }
+  .df b { font-family: monospace; font-weight: normal; margin-left: 0.2rem; }
+  .df.late b { color: var(--danger); }
+  .df[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .df[aria-pressed="true"] b { color: inherit; }
+  .proj-late { font-family: monospace; font-size: 0.7rem; font-weight: bold; color: #fff; background: var(--danger); border-radius: 999px; padding: 0 0.4rem; line-height: 1.5; }
+
+  body:not(.view-calendar) .cal-wrap { display: none; }
+  body.view-calendar .content, body.view-calendar .search { display: none; }
+  .cal-wrap { display: flex; flex-direction: column; gap: 0.7rem; }
+  .cal-bar { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; }
+  .cal-nav { display: flex; align-items: center; gap: 0.4rem; }
+  .cal-title { font-size: 1.2rem; min-width: 9.5rem; text-align: center; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--line); gap: 1px; }
+  .cal-dow { background: var(--sidebar-bg); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 0.45rem 0.5rem; font-family: monospace; }
+  .cal-cell { background: var(--paper); min-height: 104px; padding: 0.35rem 0.4rem 0.45rem; display: flex; flex-direction: column; gap: 0.25rem; cursor: pointer; min-width: 0; text-align: left; border: 0; font: inherit; color: inherit; }
+  .cal-cell:hover { background: color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  .cal-cell.out { background: var(--bg); color: var(--muted); }
+  .cal-cell.sel { box-shadow: inset 0 0 0 2px var(--accent); }
+  .cal-num { font-family: monospace; font-size: 0.78rem; color: var(--muted); align-self: flex-start; border-radius: 999px; padding: 0 0.35rem; }
+  .cal-cell.today .cal-num { background: var(--accent); color: #fff; font-weight: bold; }
+  .cal-item {
+    display: block; font-size: 0.76rem; line-height: 1.3; padding: 0.12rem 0.4rem; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    background: var(--accent-soft); color: var(--ink); border-left: 3px solid var(--accent);
+  }
+  .cal-item.late { border-left-color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--paper)); }
+  .cal-item.done { opacity: 0.55; text-decoration: line-through; border-left-color: var(--green); }
+  .cal-item.note { border-left-color: var(--muted); background: var(--sidebar-bg); }
+  .cal-more { font-size: 0.72rem; color: var(--muted); padding-left: 0.3rem; }
+  .cal-dots { display: none; gap: 3px; flex-wrap: wrap; }
+  .cal-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .cal-dots i.late { background: var(--danger); }
+  .cal-dots i.done { background: var(--green); opacity: 0.6; }
+  .cal-day { border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.8rem 1rem; }
+  .cal-day h4 { font-size: 1rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .cal-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0; border-bottom: 1px dashed var(--line); cursor: pointer; }
+  .cal-row:last-child { border-bottom: 0; }
+  .cal-row input { width: 18px; height: 18px; accent-color: var(--green); flex-shrink: 0; }
+  .cal-row .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cal-row .t.done { text-decoration: line-through; color: var(--muted); }
+  .cal-row .pj { font-size: 0.75rem; color: var(--muted); font-family: monospace; flex-shrink: 0; }
+  .cal-empty { color: var(--muted); font-style: italic; font-size: 0.9rem; }
+  @media (max-width: 720px) {
+    .cal-cell { min-height: 54px; padding: 0.25rem; }
+    .cal-item, .cal-more { display: none; }
+    .cal-dots { display: flex; }
+    .cal-dow { padding: 0.35rem 0.2rem; text-align: center; letter-spacing: 0; }
+    .cal-title { min-width: 7.5rem; font-size: 1.05rem; }
+  }
+
   /* GENİŞ EKRAN (1100px üstü): iki sütunlu yerleşim.
      Sol sütun ekleme kutusu (yapışkan), sağ sütun liste. */
   .content { width: 100%; }
@@ -1100,6 +1174,7 @@
             <button id="viewBoard">Pano</button>
             <button id="viewSchema" title="SQL tabloları ve ilişkileri">Şema</button>
             <button id="viewFlow" title="Algoritma / akış şeması">Akış</button>
+            <button id="viewCal" title="Son tarihi olan görevler takvimde">Takvim</button>
           </div>
           <!-- Tema değiştirme düğmesi (açık/karanlık) -->
           <button class="theme-btn" id="themeBtn" aria-label="Tema değiştir" title="Tema değiştir">&#9789;</button>
@@ -1148,15 +1223,33 @@
                 <button data-type="note" class="sel" id="tNote">Not</button>
                 <button data-type="task" id="tTask">Görev</button>
               </div>
+              <label class="c-due" title="Son tarih (isteğe bağlı)"><span class="c-due-ico" aria-hidden="true">&#128197;</span><input type="date" id="cDue" aria-label="Son tarih"></label>
               <button class="btn-add" id="add">Ekle</button>
             </div>
           </div>
         </div>
 
         <div class="col-list">
+          <div class="due-filters" id="dueFilters"></div>
           <div id="list"></div>                     <!-- Notlar/görevler JS ile buraya yazılır -->
           <div class="status" id="status"></div>    <!-- Bilgi/uyarı satırı -->
         </div>
+      </div>
+
+      <!-- TAKVİM GÖRÜNÜMÜ: son tarihi olan not ve görevler aylık takvimde.
+           Diğer görünümlerdeyken CSS ile gizlidir. -->
+      <div class="cal-wrap" id="calWrap">
+        <div class="cal-bar">
+          <div class="cal-nav">
+            <button class="er-btn icon" id="calPrev" title="Önceki ay" aria-label="Önceki ay">&#8249;</button>
+            <h3 class="cal-title" id="calTitle"></h3>
+            <button class="er-btn icon" id="calNext" title="Sonraki ay" aria-label="Sonraki ay">&#8250;</button>
+            <button class="er-btn" id="calToday">Bugün</button>
+          </div>
+          <label class="opt cal-all"><input type="checkbox" id="calAll"> Tüm projeler</label>
+        </div>
+        <div class="cal-grid" id="calGrid" role="grid"></div>
+        <div class="cal-day" id="calDay"></div>
       </div>
 
       <!-- PANO GÖRÜNÜMÜ: sütunlar JS tarafından buraya yazılır.
@@ -1350,6 +1443,13 @@
           <option value="note">Not</option>
           <option value="task">Görev</option>
         </select>
+      </div>
+
+      <div class="modal-section-label">Son tarih</div>
+      <div class="modal-row">
+        <input type="date" class="modal-select" id="modalDue" aria-label="Son tarih">
+        <button class="modal-btn" id="modalDueClear" type="button">Tarihi kaldır</button>
+        <span class="due-hint" id="modalDueHint"></span>
       </div>
 
       <div class="modal-section-label">Kapak resmi</div>
@@ -2038,9 +2138,10 @@
   function renderProjects() {
     el('projList').innerHTML = projects.map(p => {
       const cnt = items.filter(i => i.projectId === p.id).length; // öğe sayısı rozeti
+      const late = items.filter(i => i.projectId === p.id && isLate(i)).length; // gecikmiş görev
       return '<div class="proj ' + (p.id===activeProject?'active':'') + '" data-id="' + p.id + '">' +
         '<span class="proj-name">' + esc(p.name) + '</span>' +
-        '<span class="proj-right"><span class="proj-count">' + cnt + '</span>' +
+        '<span class="proj-right">' + (late ? '<span class="proj-late" title="' + late + ' gecikmiş görev">' + late + '</span>' : '') + '<span class="proj-count">' + cnt + '</span>' +
         '<span class="proj-x" data-del="' + p.id + '">&#10005;</span></span></div>';
     }).join('');
 
@@ -2099,6 +2200,7 @@
       body: body,
       tags: tags,
       cover: null,    // kapak resmi (data URL); başlangıçta yok
+      due: el('cDue').value || null, // son tarih ('YYYY-AA-GG'), isteğe bağlı
       done: false,    // görev başlangıçta tamamlanmamış
       pinned: false,  // başlangıçta sabitlenmemiş
       created: Date.now()
@@ -2107,7 +2209,7 @@
     await saveItem(item);
 
     // Kutuları temizle ki yeni giriş yapılabilsin
-    el('cTitle').value = ''; el('cBody').value = ''; el('cTags').value = '';
+    el('cTitle').value = ''; el('cBody').value = ''; el('cTags').value = ''; el('cDue').value = '';
     renderProjects(); renderMain(); renderBoard();
     el('cTitle').focus(); // imleci tekrar başlığa al
   }
@@ -2117,6 +2219,41 @@
   async function toggleDone(id) { const i = items.find(x => x.id === id); i.done = !i.done; await saveItem(i); renderMain(); renderBoard(); }   // görev tamam/değil
   async function togglePin(id) { const i = items.find(x => x.id === id); i.pinned = !i.pinned; await saveItem(i); renderMain(); renderBoard(); } // sabitle/çöz
   async function removeItem(id) { await deleteItemStore(id); items = items.filter(i => i.id !== id); renderProjects(); renderMain(); renderBoard(); } // sil
+
+  /* ---- SON TARİH YARDIMCILARI ----
+     Tarihler cihazın yerel gününe göre 'YYYY-AA-GG' metni olarak saklanır. */
+  const pad2 = n => String(n).padStart(2, '0');
+  function dateStr(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function todayStr() { return dateStr(new Date()); }
+  /* Bugünden kaç gün sonra (geçmişse eksi) */
+  function dayDiff(due) {
+    const [y, m, d] = due.split('-').map(Number), t = new Date();
+    return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(t.getFullYear(), t.getMonth(), t.getDate())) / 86400000);
+  }
+  function parseDay(due) { const [y, m, d] = due.split('-').map(Number); return new Date(y, m - 1, d); }
+  function fmtDay(due) {
+    const d = parseDay(due), sameYear = d.getFullYear() === new Date().getFullYear();
+    return d.toLocaleDateString('tr-TR', sameYear ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  function fmtLongDay(due) { return parseDay(due).toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); }
+  /* Son tarihin durumu: late (gecikmiş görev), today, soon (7 gün içinde), later, done */
+  function dueInfo(i) {
+    if (!i.due) return null;
+    const k = dayDiff(i.due), task = i.type === 'task';
+    let cls = 'later', txt = fmtDay(i.due);
+    if (task && i.done) cls = 'done';
+    else if (k < 0 && task) { cls = 'late'; txt = (-k) + ' gün gecikti'; }
+    else if (k === 0) { cls = 'today'; txt = 'Bugün'; }
+    else if (k === 1) { cls = 'soon'; txt = 'Yarın'; }
+    else if (k > 1 && k <= 7) { cls = 'soon'; txt = k + ' gün kaldı'; }
+    return { cls: cls, txt: txt, k: k };
+  }
+  function dueChip(i) {
+    const d = dueInfo(i);
+    return d ? '<span class="due ' + d.cls + '" title="Son tarih: ' + escAttr(fmtLongDay(i.due)) + '">' + esc(d.txt) + '</span>' : '';
+  }
+  const isLate = i => i.type === 'task' && !i.done && i.due && dayDiff(i.due) < 0;
+  let dueFilter = null; // liste süzgeci: null | 'late' | 'today' | 'week'
 
   /* ---- ANA ALANI ÇİZ (en sık çalışan fonksiyon) ----
      1) Aktif projenin adını yazar.
@@ -2129,6 +2266,7 @@
     el('projTitle').textContent = p ? p.name : '—';
 
     let mine = items.filter(i => i.projectId === activeProject); // sadece bu projenin öğeleri
+    renderCalendar(); // takvim açıksa o da güncellensin
 
     // --- İlerleme çubuğu ---
     const tasks = mine.filter(i => i.type === 'task');
@@ -2137,7 +2275,8 @@
       const pct = Math.round(done / tasks.length * 100);   // tamamlanma yüzdesi
       el('progressWrap').style.display = 'block';
       el('progressFill').style.width = pct + '%';
-      el('progressLabel').textContent = done + '/' + tasks.length + ' görev tamamlandı · %' + pct;
+      const late = tasks.filter(isLate).length;
+      el('progressLabel').textContent = done + '/' + tasks.length + ' görev tamamlandı · %' + pct + (late ? ' · ' + late + ' gecikmiş' : '');
     } else {
       el('progressWrap').style.display = 'none'; // görev yoksa çubuğu gizle
     }
@@ -2152,12 +2291,32 @@
       });
     }
 
-    // --- Sıralama: önce sabitlenmişler, sonra en yeni ---
-    mine.sort((a,b) => (b.pinned - a.pinned) || (b.created - a.created));
+    // --- Son tarih süzgeci (gecikenler / bugün / 7 gün) ---
+    const open = i => !(i.type === 'task' && i.done);
+    const groups = {
+      late: x => isLate(x),
+      today: x => x.due && open(x) && dayDiff(x.due) === 0,
+      week: x => x.due && open(x) && dayDiff(x.due) >= 0 && dayDiff(x.due) <= 7
+    };
+    const all = items.filter(i => i.projectId === activeProject);
+    if (all.some(i => i.due)) {
+      const chip = (k, label) => {
+        const n = all.filter(groups[k]).length;
+        if (!n && dueFilter !== k) return '';
+        return '<button class="df ' + k + '" type="button" data-df="' + k + '" aria-pressed="' + (dueFilter === k) + '">' + label + '<b>' + n + '</b></button>';
+      };
+      el('dueFilters').innerHTML = '<button class="df" type="button" data-df="" aria-pressed="' + (!dueFilter) + '">Tümü</button>' +
+        chip('late', 'Gecikenler') + chip('today', 'Bugün') + chip('week', '7 gün içinde');
+    } else { el('dueFilters').innerHTML = ''; dueFilter = null; }
+    if (dueFilter && groups[dueFilter]) mine = mine.filter(groups[dueFilter]);
+
+    // --- Sıralama: önce sabitlenmişler, sonra en yeni (süzgeç açıkken son tarihe göre) ---
+    if (dueFilter) mine.sort((a, b) => a.due.localeCompare(b.due) || (b.pinned - a.pinned));
+    else mine.sort((a,b) => (b.pinned - a.pinned) || (b.created - a.created));
 
     // Hiç öğe yoksa uygun mesaj göster
     if (mine.length === 0) {
-      el('list').innerHTML = '<div class="empty">' + (q ? 'Eşleşen öğe yok.' : 'Bu projede henüz öğe yok.') + '</div>';
+      el('list').innerHTML = '<div class="empty">' + (q || dueFilter ? 'Eşleşen öğe yok.' : 'Bu projede henüz öğe yok.') + '</div>';
       return;
     }
 
@@ -2180,7 +2339,7 @@
       '<h3>' + esc(i.title) + '</h3>' +
       (i.body ? '<p>' + esc(i.body) + '</p>' : '') +
       tagsHTML(i.tags) +
-      '<div class="meta"><span class="date">' + fmtDate(i.created) + '</span>' +
+      '<div class="meta"><span class="meta-left"><span class="date">' + fmtDate(i.created) + '</span>' + dueChip(i) + '</span>' +
       '<div class="actions">' +
       '<button data-pin="' + i.id + '">' + (i.pinned?'Sabit ✓':'Sabitle') + '</button>' +
       '<button data-del="' + i.id + '">Sil</button></div></div></div>';
@@ -2198,7 +2357,7 @@
       '<div class="task-text">' + esc(i.title || i.body) + '</div>' +
       (i.title && i.body ? '<p>' + esc(i.body) + '</p>' : '') +
       tagsHTML(i.tags) +
-      '<div class="meta"><span class="date">' + fmtDate(i.created) + '</span>' +
+      '<div class="meta"><span class="meta-left"><span class="date">' + fmtDate(i.created) + '</span>' + dueChip(i) + '</span>' +
       '<div class="actions">' +
       '<button data-pin="' + i.id + '">' + (i.pinned?'Sabit ✓':'Sabitle') + '</button>' +
       '<button data-del="' + i.id + '">Sil</button></div></div></div></div>';
@@ -2248,7 +2407,7 @@
       cover +
       '<div class="card-pad">' +
         '<div class="card-row">' + check + '<div class="card-title">' + title + '</div></div>' +
-        bodyPrev + tags +
+        bodyPrev + tags + (i.due ? '<div class="card-due">' + dueChip(i) + '</div>' : '') +
       '</div>' +
     '</div>';
   }
@@ -2903,6 +3062,8 @@
     el('modalDesc').value = i.body || '';
     el('modalTags').value = (i.tags || []).join(', ');
     el('modalType').value = i.type || 'note';
+    el('modalDue').value = i.due || '';
+    updateModalDueHint();
 
     // Sütun açılır listesini bu projenin sütunlarıyla doldur
     const cols = projectColumns(i.projectId);
@@ -2916,6 +3077,15 @@
     updateModalCover(i.cover);
 
     el('cardModal').classList.add('open');
+  }
+
+  /* Penceredeki son tarihin yanındaki açıklama: "3 gün kaldı", "2 gün gecikti" */
+  function updateModalDueHint() {
+    const v = el('modalDue').value;
+    el('modalDueClear').style.display = v ? '' : 'none';
+    if (!v) { el('modalDueHint').textContent = ''; return; }
+    const k = dayDiff(v);
+    el('modalDueHint').textContent = fmtLongDay(v) + ' · ' + (k === 0 ? 'bugün' : k === 1 ? 'yarın' : k > 0 ? k + ' gün kaldı' : (-k) + ' gün önce');
   }
 
   /* Görev onay kutusunun görünürlüğünü ve durumunu ayarlar. */
@@ -2955,6 +3125,7 @@
     i.tags = el('modalTags').value.split(',').map(t => t.trim()).filter(Boolean);
     i.type = newType;
     i.done = (newType === 'task') ? el('modalCheck').checked : false;
+    i.due = el('modalDue').value || null;
     // Sütun değiştiyse kart yeni sütunun sonuna gitsin (eskiden rastgele bir sıraya düşüyordu)
     placeInColumn(i, el('modalColumn').value);
     // Not: kapak (cover) resim seç/kaldır anında doğrudan i.cover'a yazılır.
@@ -2973,6 +3144,81 @@
   }
 
   /* ===================================================================
+     TAKVİM GÖRÜNÜMÜ — son tarihi olan not ve görevler (Pazartesi ile başlayan aylık takvim)
+     Bir güne tıklayınca altta o günün listesi açılır; oradan görev eklenir, tamamlanır, açılır.
+     =================================================================== */
+  let calMonth = null;   // { y, m } gösterilen ay
+  let calSel = null;     // seçili gün 'YYYY-AA-GG'
+  let calAll = false;    // tüm projeler mi
+  const CAL_DOW = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+
+  function calItems() {
+    return items.filter(i => i.due && (calAll || i.projectId === activeProject));
+  }
+  function calCls(i) { return i.type !== 'task' ? 'note' : i.done ? 'done' : isLate(i) ? 'late' : ''; }
+
+  function renderCalendar() {
+    if (currentView !== 'calendar') return;
+    const t = new Date();
+    if (!calMonth) calMonth = { y: t.getFullYear(), m: t.getMonth() };
+    if (!calSel) calSel = todayStr();
+    const first = new Date(calMonth.y, calMonth.m, 1);
+    const lead = (first.getDay() + 6) % 7; // Pazartesi = 0
+    const days = new Date(calMonth.y, calMonth.m + 1, 0).getDate();
+    const total = Math.ceil((lead + days) / 7) * 7;
+    const byDay = {};
+    calItems().forEach(i => { (byDay[i.due] = byDay[i.due] || []).push(i); });
+    Object.values(byDay).forEach(l => l.sort((a, b) => (calCls(a) === 'done') - (calCls(b) === 'done') || a.created - b.created));
+    el('calTitle').textContent = first.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+    el('calAll').checked = calAll;
+    const today = todayStr();
+    let h = CAL_DOW.map(d => '<div class="cal-dow" role="columnheader">' + d + '</div>').join('');
+    for (let k = 0; k < total; k++) {
+      const d = new Date(calMonth.y, calMonth.m, k - lead + 1), ds = dateStr(d), list = byDay[ds] || [];
+      const cls = 'cal-cell' + (d.getMonth() !== calMonth.m ? ' out' : '') + (ds === today ? ' today' : '') + (ds === calSel ? ' sel' : '');
+      const label = d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }) + (list.length ? ', ' + list.length + ' öğe' : '');
+      h += '<button class="' + cls + '" type="button" role="gridcell" data-day="' + ds + '" aria-label="' + escAttr(label) + '">' +
+        '<span class="cal-num">' + d.getDate() + '</span>' +
+        list.slice(0, 3).map(i => '<span class="cal-item ' + calCls(i) + '" data-open="' + i.id + '" title="' + escAttr(i.title || i.body) + '">' + esc(i.title || i.body || '(başlıksız)') + '</span>').join('') +
+        (list.length > 3 ? '<span class="cal-more">+' + (list.length - 3) + ' daha</span>' : '') +
+        (list.length ? '<span class="cal-dots">' + list.slice(0, 6).map(i => '<i class="' + calCls(i) + '"></i>').join('') + '</span>' : '') +
+      '</button>';
+    }
+    el('calGrid').innerHTML = h;
+    renderCalDay(byDay[calSel] || []);
+  }
+
+  /* Seçili günün listesi */
+  function renderCalDay(list) {
+    const pname = id => (projects.find(p => p.id === id) || {}).name || '';
+    const k = dayDiff(calSel);
+    const rel = k === 0 ? 'Bugün' : k === 1 ? 'Yarın' : k === -1 ? 'Dün' : '';
+    el('calDay').innerHTML =
+      '<h4><span>' + esc(fmtLongDay(calSel)) + (rel ? ' · ' + rel : '') + '</span>' +
+      '<button class="er-btn" type="button" data-caladd>+ Bu güne görev ekle</button></h4>' +
+      (list.length ? list.map(i =>
+        '<div class="cal-row" data-open="' + i.id + '">' +
+          (i.type === 'task' ? '<input type="checkbox" data-caldone="' + i.id + '"' + (i.done ? ' checked' : '') + ' aria-label="Tamamlandı">' : '<span aria-hidden="true">&#9998;</span>') +
+          '<span class="t' + (i.type === 'task' && i.done ? ' done' : '') + '">' + esc(i.title || i.body || '(başlıksız)') + '</span>' +
+          (calAll ? '<span class="pj">' + esc(pname(i.projectId)) + '</span>' : '') + dueChip(i) +
+        '</div>').join('')
+      : '<p class="cal-empty">Bu güne tarihlenmiş bir şey yok.</p>');
+  }
+
+  async function calAddTask() {
+    const title = prompt(fmtLongDay(calSel) + ' için yeni görev:', '');
+    if (title === null || !title.trim()) return;
+    const cols = projectColumns(activeProject);
+    const colId = cols.length ? cols[0].id : null;
+    const inCol = items.filter(x => x.columnId === colId);
+    const item = { id: uid(), projectId: activeProject, columnId: colId, order: (inCol.length ? Math.max(...inCol.map(x => x.order ?? x.created)) : 0) + 10,
+                   type: 'task', title: title.trim(), body: '', tags: [], cover: null, due: calSel, done: false, pinned: false, created: Date.now() };
+    items.push(item);
+    await saveItem(item);
+    renderProjects(); renderMain(); renderBoard();
+  }
+
+  /* ===================================================================
      GÖRÜNÜM GEÇİŞİ — Liste / Pano / Şema / Akış
      body'ye "view-board", "view-schema" veya "view-flow" sınıfı eklenince CSS ilgili görünümü gösterir.
      Tercih localStorage'a kaydedilir, böylece sonraki açılışta hatırlanır.
@@ -2982,6 +3228,9 @@
     const board = (view === 'board');
     const schema = (view === 'schema');
     const flow = (view === 'flow');
+    const cal = (view === 'calendar');
+    document.body.classList.toggle('view-calendar', cal);
+    el('viewCal').classList.toggle('sel', cal);
     document.body.classList.toggle('view-board', board);
     document.body.classList.toggle('view-schema', schema);
     document.body.classList.toggle('view-flow', flow);
@@ -2993,6 +3242,7 @@
     if (schema) renderSchema();
     if (flow) renderFlow();
     else flStopRun(); // görünümden çıkınca oynatma dursun
+    if (cal) renderCalendar();
     if (storageOK) await sSet('pref:view', view);
   }
 
@@ -8698,7 +8948,7 @@
       const tasks = mine.filter(i => i.type==='task');
       if (tasks.length) {
         out += '## Görevler\n';
-        tasks.forEach(t => { out += '- [' + (t.done?'x':' ') + '] ' + (t.title || t.body) + (t.tags.length?' ('+t.tags.map(x=>'#'+x).join(' ')+')':'') + '\n'; });
+        tasks.forEach(t => { out += '- [' + (t.done?'x':' ') + '] ' + (t.title || t.body) + (t.due ? ' (son tarih: ' + t.due + ')' : '') + (t.tags.length?' ('+t.tags.map(x=>'#'+x).join(' ')+')':'') + '\n'; });
         out += '\n';
       }
       if (notes.length) {
@@ -8725,7 +8975,7 @@
       const notes = mine.filter(i => i.type==='note');
       if (tasks.length) {
         out += 'GÖREVLER\n';
-        tasks.forEach(t => { out += '  [' + (t.done?'X':' ') + '] ' + (t.title || t.body) + (t.tags.length?'  ('+t.tags.join(', ')+')':'') + '\n'; });
+        tasks.forEach(t => { out += '  [' + (t.done?'X':' ') + '] ' + (t.title || t.body) + (t.due ? '  [son tarih: ' + fmtDay(t.due) + ']' : '') + (t.tags.length?'  ('+t.tags.join(', ')+')':'') + '\n'; });
         out += '\n';
       }
       if (notes.length) {
@@ -8783,7 +9033,7 @@
       const notes = mine.filter(i=>i.type==='note');
       if (tasks.length){
         b += '<h2>Görevler</h2>';
-        tasks.forEach(t => { b += '<div class="task ' + (t.done?'done':'') + '">' + (t.done?'☑':'☐') + ' ' + esc(t.title||t.body) + ' ' + t.tags.map(x=>'<span class="tag">#'+esc(x)+'</span>').join('') + '</div>'; });
+        tasks.forEach(t => { b += '<div class="task ' + (t.done?'done':'') + '">' + (t.done?'☑':'☐') + ' ' + esc(t.title||t.body) + (t.due ? ' <span class="date">(' + esc(fmtDay(t.due)) + ')</span>' : '') + ' ' + t.tags.map(x=>'<span class="tag">#'+esc(x)+'</span>').join('') + '</div>'; });
       }
       if (notes.length){
         b += '<h2>Notlar</h2>';
@@ -8847,6 +9097,7 @@
       i.body = typeof i.body === 'string' ? i.body : '';
       i.tags = Array.isArray(i.tags) ? i.tags.filter(t => typeof t === 'string') : [];
       i.type = i.type === 'task' ? 'task' : 'note';
+      i.due = typeof i.due === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(i.due) ? i.due : null;
       if (i.cover && !(typeof i.cover === 'string' && SAFE_COVER.test(i.cover))) i.cover = null;
       i.created = +i.created || Date.now();
       return i;
@@ -9016,6 +9267,36 @@
   el('viewBoard').addEventListener('click', () => setView('board'));
   el('viewSchema').addEventListener('click', () => setView('schema'));
   el('viewFlow').addEventListener('click', () => setView('flow'));
+  el('viewCal').addEventListener('click', () => setView('calendar'));
+
+  /* ---- TAKVİM olayları ---- */
+  const calShift = d => { calMonth = { y: calMonth.y, m: calMonth.m + d }; if (calMonth.m < 0) calMonth = { y: calMonth.y - 1, m: 11 }; if (calMonth.m > 11) calMonth = { y: calMonth.y + 1, m: 0 }; renderCalendar(); };
+  el('calPrev').addEventListener('click', () => calShift(-1));
+  el('calNext').addEventListener('click', () => calShift(1));
+  el('calToday').addEventListener('click', () => { const t = new Date(); calMonth = { y: t.getFullYear(), m: t.getMonth() }; calSel = todayStr(); renderCalendar(); });
+  el('calAll').addEventListener('change', () => { calAll = el('calAll').checked; renderCalendar(); });
+  el('calGrid').addEventListener('click', e => {
+    const it = e.target.closest('[data-open]');
+    if (it && window.matchMedia('(min-width: 721px)').matches) { openCard(it.dataset.open); return; }
+    const c = e.target.closest('[data-day]');
+    if (!c) return;
+    calSel = c.dataset.day;
+    const d = parseDay(calSel);
+    if (d.getMonth() !== calMonth.m) calMonth = { y: d.getFullYear(), m: d.getMonth() };
+    renderCalendar();
+  });
+  el('calDay').addEventListener('click', e => {
+    if (e.target.closest('[data-caladd]')) { calAddTask(); return; }
+    if (e.target.closest('[data-caldone]')) return; // değişiklik olayı işler
+    const r = e.target.closest('[data-open]');
+    if (r) openCard(r.dataset.open);
+  });
+  el('calDay').addEventListener('change', e => { const c = e.target.closest('[data-caldone]'); if (c) toggleDone(c.dataset.caldone); });
+
+  /* ---- SON TARİH olayları ---- */
+  el('dueFilters').addEventListener('click', e => { const b = e.target.closest('[data-df]'); if (!b) return; dueFilter = b.dataset.df || null; renderMain(); });
+  el('modalDue').addEventListener('change', updateModalDueHint);
+  el('modalDueClear').addEventListener('click', () => { el('modalDue').value = ''; updateModalDueHint(); });
 
   // Panoda fare tekerleği: sütun içi kartlar kaymıyorsa panoyu yatay kaydırsın
   el('boardWrap').addEventListener('wheel', e => {
@@ -9179,7 +9460,7 @@
   async function loadView() {
     let view = 'list';
     const saved = await sGet('pref:view');
-    if (saved && ['board', 'list', 'schema', 'flow'].includes(saved.value)) {
+    if (saved && ['board', 'list', 'schema', 'flow', 'calendar'].includes(saved.value)) {
       view = saved.value;
     }
     await setView(view);
