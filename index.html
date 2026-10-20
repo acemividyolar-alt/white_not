@@ -20,9 +20,16 @@
 <title>White Note</title>                                 <!-- Tarayıcı sekmesinde görünen başlık -->
 <meta name="description" content="Not, görev, Trello tarzı pano, SQLite veritabanı şema tasarımcısı ve algoritma / akış şeması tasarımcısı. Tek dosya, tarayıcıda çalışır, veriler cihazda kalır.">
 <!-- Sekmedeki simge (ayrı dosya gerekmesin diye SVG olarak buraya gömülü) -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='5' y='3' width='22' height='26' rx='4' fill='%23c2410c'/%3E%3Cpath d='M10 11h12M10 16h12M10 21h8' stroke='%23fffdf7' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E %3Crect width=%22512%22 height=%22512%22 rx=%22116%22 fill=%22%232747C9%22/%3E %3Crect x=%22144%22 y=%22100%22 width=%22224%22 height=%22312%22 rx=%2226%22 fill=%22%23FFFFFF%22/%3E %3Crect x=%22170%22 y=%22226%22 width=%22172%22 height=%2246%22 rx=%2210%22 fill=%22%23FFE45C%22/%3E %3Cpath d=%22M190 178H322M190 249H322M190 320H280%22 stroke=%22%23172036%22 stroke-width=%2218%22 stroke-linecap=%22round%22/%3E%3C/svg%3E">
 <!-- Telefonda tarayıcı çubuğunun rengi (tema değişince JS günceller) -->
 <meta name="theme-color" id="themeColor" content="#f4f1ea">
+<!-- Telefona / bilgisayara uygulama olarak yükleme (PWA): simgeler, ad, tam ekran açılış -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="White Note">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 
 <style>
   /* ===================================================================
@@ -1124,6 +1131,14 @@
   button.tag:hover { box-shadow: inset 0 0 0 1px currentColor; }
   button.tag.on { background: var(--accent); color: #fff; }
 
+  /* ---- Uygulama olarak yükle penceresi ---- */
+  .install-steps { display: grid; gap: 0.6rem; }
+  .install-steps section { border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 0.9rem; }
+  .install-steps section.here { border-color: var(--accent); background: var(--accent-soft); }
+  .install-steps h4 { font-size: 0.95rem; margin-bottom: 0.3rem; }
+  .install-steps ol { padding-left: 1.2rem; font-size: 0.9rem; line-height: 1.55; }
+  .install-file a { color: var(--accent); }
+
   /* ---- Yedek yükleme penceresi ---- */
   .bk-modes { display: grid; gap: 0.5rem; margin-bottom: 1rem; }
   .bk-mode { display: flex; gap: 0.7rem; align-items: flex-start; padding: 0.7rem 0.85rem; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
@@ -1345,6 +1360,9 @@
             <div class="menu-group-label">Yedek</div>
             <button data-act="json-export">JSON yedeği indir</button>
             <button data-act="json-import">JSON yedeği yükle&hellip;</button>
+            <div class="sep install-only"></div>
+            <div class="menu-group-label install-only">Uygulama</div>
+            <button data-act="install" class="install-only">Telefona / bilgisayara yükle&hellip;</button>
           </div>
           <!-- Gizli dosya seçici; "JSON yedeği yükle" tıklanınca tetiklenir -->
           <input type="file" id="importFile" accept="application/json,.json" style="display:none">
@@ -1869,6 +1887,28 @@
     </div>
     <div class="gs-list" id="gsList" role="listbox" aria-label="Sonuçlar"></div>
     <div class="gs-foot"><span><kbd>↑</kbd><kbd>↓</kbd> seç</span><span><kbd>Enter</kbd> aç</span><span class="gs-foot-k"><kbd>Ctrl</kbd>+<kbd>K</kbd> her yerden açar</span></div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     UYGULAMA OLARAK YÜKLE: tarayıcı doğrudan yükleyemiyorsa adımlar gösterilir
+     =================================================================== -->
+<div class="modal-overlay" id="installModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-heading">Uygulama olarak yükle</div>
+      <button class="modal-close" id="installClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-note">Yükleyince White Note ana ekranda kendi simgesiyle, tarayıcı çubukları olmadan açılır ve internet olmadan da çalışır. Notların yine bu cihazda kalır.</p>
+      <p class="modal-note install-file" id="installFile">Bu sayfa bir dosyadan açılmış; dosyadan açılan sayfa yüklenemez. Önce internetteki adresini aç: <a href="https://acemividyolar-alt.github.io/white_not/" target="_blank" rel="noopener">acemividyolar-alt.github.io/white_not</a></p>
+      <div class="install-steps">
+        <section data-os="ios"><h4>iPhone / iPad (Safari)</h4><ol><li>Alttaki <b>Paylaş</b> düğmesine dokun (kutudan çıkan ok).</li><li><b>Ana Ekrana Ekle</b>’yi seç, sonra <b>Ekle</b>.</li></ol></section>
+        <section data-os="android"><h4>Android (Chrome)</h4><ol><li>Sağ üstteki <b>⋮</b> menüsünü aç.</li><li><b>Uygulamayı yükle</b> ya da <b>Ana ekrana ekle</b>’yi seç.</li></ol></section>
+        <section data-os="desktop"><h4>Bilgisayar (Chrome / Edge)</h4><ol><li>Adres çubuğunun sağındaki <b>yükle</b> simgesine tıkla.</li><li>Yoksa menüden <b>Uygulamayı yükle</b> / <b>Uygulamalar → Bu siteyi yükle</b>.</li></ol></section>
+      </div>
+      <div class="modal-actions"><span></span><button class="modal-btn primary" id="installDone">Tamam</button></div>
+    </div>
   </div>
 </div>
 
@@ -2581,6 +2621,34 @@
       if (activeChartId(r.pid) !== r.cid) await flSwitchChart(r.cid);
       if (r.kind === 'node') requestAnimationFrame(() => { flSel = { type: 'node', id: r.id }; renderFlow(); flJumpTo(r.id, true); });
     }
+  }
+
+  /* ===================================================================
+     UYGULAMA OLARAK YÜKLEME (PWA)
+     sw.js sayfayı ve dosyaları cihazda saklar; böylece internet yokken de açılır.
+     Chrome / Edge "beforeinstallprompt" verirse tek dokunuşla yüklenir; vermezse
+     (iPhone Safari gibi) adımları gösteren pencere açılır.
+     =================================================================== */
+  let installEvt = null;
+  function isInstalled() { return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; }
+  function updateInstallUI() { document.querySelectorAll('.install-only').forEach(n => { n.hidden = isInstalled(); }); }
+  async function installApp() {
+    if (installEvt) {
+      const e = installEvt; installEvt = null;
+      e.prompt();
+      try { const r = await e.userChoice; if (r && r.outcome === 'accepted') showSnack('White Note yükleniyor…'); } catch (err) {}
+      return;
+    }
+    const ua = navigator.userAgent;
+    const os = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'ios' : /Android/.test(ua) ? 'android' : 'desktop';
+    el('installModal').querySelectorAll('[data-os]').forEach(n => n.classList.toggle('here', n.dataset.os === os));
+    el('installFile').style.display = location.protocol === 'file:' ? '' : 'none';
+    el('installModal').classList.add('open');
+  }
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; updateInstallUI(); });
+  window.addEventListener('appinstalled', () => { installEvt = null; updateInstallUI(); showSnack('White Note yüklendi. Ana ekrandan açabilirsin.'); });
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
   }
 
   /* ---- PROJE SİL ----
@@ -9386,6 +9454,7 @@
       if (el('flNodeModal').classList.contains('open')) closeFlNodeModal();
       else if (el('flHelpModal').classList.contains('open')) closeFlHelp();
       else if (el('trashModal').classList.contains('open')) el('trashModal').classList.remove('open');
+      else if (el('installModal').classList.contains('open')) el('installModal').classList.remove('open');
       else if (el('backupModal').classList.contains('open')) closeBackupModal();
       else if (el('flAlgoModal').classList.contains('open')) el('flAlgoModal').classList.remove('open');
       else if (currentView === 'flow' && flSel && !document.querySelector('.modal-overlay.open')) flSelect(null);
@@ -10032,6 +10101,7 @@
       case 'all-pdf': exportPDF('all'); break;
       case 'json-export': exportJSON(); break;
       case 'json-import': el('importFile').click(); break; // gizli dosya seçiciyi aç
+      case 'install': installApp(); break;
     }
   }
 
@@ -10159,6 +10229,12 @@
     all.forEach(c => { c.checked = on; });
     updateBackupUI();
   });
+
+  /* ---- UYGULAMA YÜKLEME penceresi ---- */
+  el('installClose').addEventListener('click', () => el('installModal').classList.remove('open'));
+  el('installDone').addEventListener('click', () => el('installModal').classList.remove('open'));
+  el('installModal').addEventListener('click', e => { if (e.target === el('installModal')) el('installModal').classList.remove('open'); });
+  updateInstallUI();
 
   /* ---- ÇÖP KUTUSU olayları ---- */
   el('trashBtn').addEventListener('click', openTrash);
