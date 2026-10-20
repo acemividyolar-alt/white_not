@@ -256,6 +256,8 @@
   .item.done .task-text { text-decoration: line-through; color: var(--muted); } /* Tamamlanan görevin üstü çizili */
   .item h3 { font-size: 1.15rem; margin-bottom: 0.3rem; word-break: break-word; }
   .item p { font-size: 0.97rem; line-height: 1.6; white-space: pre-wrap; color: #443e38; word-break: break-word; }
+  .item .md { margin-top: 0.15rem; }
+  .item .md p { white-space: normal; }
   body.dark .item p { color: var(--ink); } /* Karanlık temada not içeriği açık renk olsun ki koyu zeminde okunsun */
   .task-text { font-size: 1rem; word-break: break-word; }
 
@@ -1000,6 +1002,46 @@
   .fl-syntax td:first-child { white-space: nowrap; color: var(--ink); }
 
   /* ===================================================================
+     MARKDOWN (notlar) ve KONTROL LİSTESİ
+     =================================================================== */
+  .md { font-size: 0.97rem; line-height: 1.6; color: var(--ink); word-break: break-word; }
+  .md > :first-child { margin-top: 0; }
+  .md > :last-child { margin-bottom: 0; }
+  .md p { margin: 0.35rem 0; white-space: normal; }
+  .md h5 { font-size: 1.02rem; margin: 0.6rem 0 0.25rem; }
+  .md h5.md-h1 { font-size: 1.12rem; }
+  .md h5.md-h3 { font-size: 0.95rem; color: var(--muted); }
+  .md ul, .md ol { margin: 0.35rem 0; padding-left: 1.3rem; }
+  .md li { margin: 0.12rem 0; }
+  .md ul.md-checks { padding-left: 0.2rem; }
+  .md li.md-check { list-style: none; display: flex; align-items: flex-start; gap: 0.45rem; }
+  .md li.md-check input { width: 17px; height: 17px; margin-top: 0.22rem; accent-color: var(--green); cursor: pointer; flex-shrink: 0; }
+  .md li.md-check.done span { text-decoration: line-through; color: var(--muted); }
+  .md code { font-family: monospace; font-size: 0.86em; background: var(--accent-soft); color: var(--ink); border-radius: 4px; padding: 0.05rem 0.3rem; }
+  .md pre { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 0.55rem 0.7rem; overflow-x: auto; margin: 0.45rem 0; }
+  .md pre code { background: none; padding: 0; font-size: 0.85rem; }
+  .md blockquote { margin: 0.4rem 0; padding: 0.1rem 0 0.1rem 0.7rem; border-left: 3px solid var(--line); color: var(--muted); }
+  .md hr { border: 0; border-top: 1px solid var(--line); margin: 0.6rem 0; }
+  .md a { color: var(--accent); }
+  .md del { color: var(--muted); }
+  .md-prog { font-family: monospace; font-size: 0.72rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0.02rem 0.45rem; white-space: nowrap; }
+  .md-prog.full { color: var(--green); border-color: color-mix(in srgb, var(--green) 45%, var(--line)); }
+  .card-meta-row { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin-top: 0.4rem; }
+  .card-meta-row .due { margin: 0; }
+  .md-tools { display: flex; gap: 2px; flex-wrap: wrap; }
+  .md-tools button {
+    font-family: inherit; font-size: 0.8rem; min-width: 1.9rem; height: 1.7rem; padding: 0 0.35rem; cursor: pointer;
+    background: transparent; border: 1px solid transparent; border-radius: 5px; color: var(--muted);
+  }
+  .md-tools button:hover { border-color: var(--line); color: var(--ink); background: var(--bg); }
+  .composer .md-tools { margin-top: 0.2rem; }
+  .md-label { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+  .md-label .md-tools { text-transform: none; letter-spacing: 0; }
+  .md-preview-btn { border-color: var(--line) !important; margin-left: 0.3rem; }
+  .md-preview { min-height: 90px; cursor: default; }
+  .md-preview:empty::before { content: "Açıklama yok."; color: var(--muted); font-style: italic; }
+
+  /* ===================================================================
      SON TARİH ve TAKVİM
      =================================================================== */
   .c-due { display: inline-flex; align-items: center; gap: 0.3rem; border: 1px solid var(--line); border-radius: 5px; padding: 0.15rem 0.4rem; color: var(--muted); cursor: pointer; }
@@ -1216,7 +1258,15 @@
         <div class="col-composer">
           <div class="composer">
             <input class="c-title" id="cTitle" type="text" placeholder="Başlık" maxlength="120">
-            <textarea id="cBody" placeholder="İçerik..."></textarea>
+            <textarea id="cBody" placeholder="İçerik... Markdown: **kalın**, - madde, - [ ] yapılacak"></textarea>
+            <div class="md-tools" data-mdfor="cBody" role="toolbar" aria-label="Biçimlendirme">
+              <button type="button" data-md="bold" title="Kalın (**metin**)"><b>B</b></button>
+              <button type="button" data-md="italic" title="İtalik (*metin*)"><i>I</i></button>
+              <button type="button" data-md="h" title="Başlık (# )">H</button>
+              <button type="button" data-md="ul" title="Madde (- )">&bull;</button>
+              <button type="button" data-md="check" title="Yapılacak maddesi (- [ ] )">&#9744;</button>
+              <button type="button" data-md="code" title="Kod (`metin`)">&lt;/&gt;</button>
+            </div>
             <input class="c-tags" id="cTags" type="text" placeholder="Etiketler (virgülle): tasarım, acil">
             <div class="c-row">
               <div class="type-toggle">
@@ -1430,8 +1480,19 @@
       <button class="modal-close" id="modalClose" aria-label="Kapat">&times;</button>
     </div>
     <div class="modal-body">
-      <div class="modal-section-label">Açıklama</div>
-      <textarea class="modal-desc" id="modalDesc" placeholder="Daha ayrıntılı bir açıklama ekle..."></textarea>
+      <div class="modal-section-label md-label"><span>Açıklama</span>
+        <span class="md-tools" data-mdfor="modalDesc" role="toolbar" aria-label="Biçimlendirme">
+          <button type="button" data-md="bold" title="Kalın (**metin**)"><b>B</b></button>
+          <button type="button" data-md="italic" title="İtalik (*metin*)"><i>I</i></button>
+          <button type="button" data-md="h" title="Başlık (# )">H</button>
+          <button type="button" data-md="ul" title="Madde (- )">&bull;</button>
+          <button type="button" data-md="check" title="Yapılacak maddesi (- [ ] )">&#9744;</button>
+          <button type="button" data-md="code" title="Kod (`metin`)">&lt;/&gt;</button>
+          <button type="button" class="md-preview-btn" id="modalPreviewBtn" title="Önizleme ile düzenleme arasında geç">Önizle</button>
+        </span>
+      </div>
+      <textarea class="modal-desc" id="modalDesc" placeholder="Daha ayrıntılı bir açıklama ekle... Markdown: **kalın**, - madde, - [ ] yapılacak"></textarea>
+      <div class="modal-desc md md-preview" id="modalPreview" style="display:none"></div>
 
       <div class="modal-section-label">Etiketler (virgülle ayır)</div>
       <input class="modal-tags-input" id="modalTags" placeholder="tasarım, acil">
@@ -2220,6 +2281,112 @@
   async function togglePin(id) { const i = items.find(x => x.id === id); i.pinned = !i.pinned; await saveItem(i); renderMain(); renderBoard(); } // sabitle/çöz
   async function removeItem(id) { await deleteItemStore(id); items = items.filter(i => i.id !== id); renderProjects(); renderMain(); renderBoard(); } // sil
 
+  /* ---- MARKDOWN ----
+     Not içeriği güvenli biçimde HTML'e çevrilir: önce bütün metin kaçışlanır (esc), etiketler
+     sadece bilinen kalıplardan üretilir; bağlantılar yalnızca http(s) olabilir. Kontrol listesi
+     maddeleri ("- [ ] süt al") tıklanabilir onay kutusu olur; tıklayınca nottaki satır güncellenir. */
+  const MD_LINK_ATTR = '" target="_blank" rel="noopener noreferrer">';
+  function mdInline(s) { // s zaten kaçışlanmış
+    return s.split(/(`[^`]+`)/g).map(p => {
+      if (/^`[^`]+`$/.test(p)) return '<code>' + p.slice(1, -1) + '</code>';
+      return p
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, t, u) => '<a href="' + u.replace(/"/g, '&quot;') + MD_LINK_ATTR + t + '</a>')
+        .replace(/(^|[\s(])(https?:\/\/[^\s<]*[^\s<.,;:!?)])/g, (m, pre, u) => pre + '<a href="' + u.replace(/"/g, '&quot;') + MD_LINK_ATTR + u + '</a>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?![\w*])/g, '$1<em>$2</em>')
+        .replace(/(^|[^\w])_([^_\s][^_]*?)_(?!\w)/g, '$1<em>$2</em>')
+        .replace(/~~([^~]+)~~/g, '<del>$1</del>');
+    }).join('');
+  }
+  /* checkable: onay kutuları tıklanabilsin mi (data-mdline = içerikteki satır numarası) */
+  function mdToHTML(text, checkable) {
+    const lines = String(text || '').replace(/\r/g, '').split('\n');
+    let out = '', list = null, para = [], quote = [];
+    const flushPara = () => { if (para.length) { out += '<p>' + para.map(mdInline).join('<br>') + '</p>'; para = []; } };
+    const flushQuote = () => { if (quote.length) { out += '<blockquote>' + quote.map(mdInline).join('<br>') + '</blockquote>'; quote = []; } };
+    const closeList = () => { if (list) { out += '</' + list + '>'; list = null; } };
+    const openList = (tag, cls) => { if (list !== tag) { closeList(); out += '<' + tag + (cls ? ' class="' + cls + '"' : '') + '>'; list = tag; } };
+    const flushAll = () => { flushPara(); flushQuote(); closeList(); };
+    for (let i = 0; i < lines.length; i++) {
+      const raw = lines[i];
+      let m;
+      if (/^\s*```/.test(raw)) {
+        flushAll();
+        const buf = [];
+        for (i++; i < lines.length && !/^\s*```/.test(lines[i]); i++) buf.push(esc(lines[i]));
+        out += '<pre><code>' + buf.join('\n') + '</code></pre>';
+        continue;
+      }
+      if (!raw.trim()) { flushAll(); continue; }
+      if ((m = raw.match(/^\s*[-*+]\s+\[([ xX])\]\s*(.*)$/))) {
+        flushPara(); flushQuote(); openList('ul', 'md-checks');
+        const on = m[1] !== ' ';
+        out += '<li class="md-check' + (on ? ' done' : '') + '"><input type="checkbox"' + (checkable ? ' data-mdline="' + i + '"' : ' disabled') + (on ? ' checked' : '') +
+               ' aria-label="Tamamlandı"><span>' + mdInline(esc(m[2])) + '</span></li>';
+        continue;
+      }
+      if ((m = raw.match(/^\s*[-*+]\s+(.*)$/)) && !/^\s*([-*])\s*\1\s*\1[\s\1]*$/.test(raw)) { flushPara(); flushQuote(); openList('ul'); out += '<li>' + mdInline(esc(m[1])) + '</li>'; continue; }
+      if ((m = raw.match(/^\s*\d+[.)]\s+(.*)$/))) { flushPara(); flushQuote(); openList('ol'); out += '<li>' + mdInline(esc(m[1])) + '</li>'; continue; }
+      if ((m = raw.match(/^(#{1,3})\s+(.*)$/))) { flushAll(); out += '<h5 class="md-h' + m[1].length + '">' + mdInline(esc(m[2])) + '</h5>'; continue; }
+      if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(raw)) { flushAll(); out += '<hr>'; continue; }
+      if ((m = raw.match(/^\s*>\s?(.*)$/))) { flushPara(); closeList(); quote.push(esc(m[1])); continue; }
+      flushQuote(); closeList();
+      para.push(esc(raw));
+    }
+    flushAll();
+    return out;
+  }
+  /* Kontrol listesi ilerlemesi: { done, total } */
+  function mdChecks(text) {
+    const all = String(text || '').match(/^\s*[-*+]\s+\[[ xX]\]/gm) || [];
+    return { done: all.filter(x => /\[[xX]\]/.test(x)).length, total: all.length };
+  }
+  function mdProgress(text) {
+    const c = mdChecks(text);
+    return c.total ? '<span class="md-prog' + (c.done === c.total ? ' full' : '') + '" title="Kontrol listesi">&#9745; ' + c.done + '/' + c.total + '</span>' : '';
+  }
+  /* Pano kartı önizlemesi için düz metin */
+  function mdPlain(text) {
+    return String(text || '').replace(/^\s*[-*+]\s+\[[xX]\]\s*/gm, '☑ ').replace(/^\s*[-*+]\s+\[ \]\s*/gm, '☐ ')
+      .replace(/^#{1,3}\s+/gm, '').replace(/^\s*[-*+]\s+/gm, '• ').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/(^|[^*\w])\*([^*\s][^*]*?)\*/g, '$1$2').replace(/`([^`]+)`/g, '$1')
+      .replace(/~~([^~]+)~~/g, '$1').replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '$1').replace(/```/g, '');
+  }
+  /* İçerikteki n. satırın onay kutusunu çevirir */
+  function mdToggleLine(text, n) {
+    const lines = String(text).split('\n');
+    if (lines[n] == null) return text;
+    lines[n] = lines[n].replace(/^(\s*[-*+]\s+\[)([ xX])(\])/, (m, a, c, b) => a + (c === ' ' ? 'x' : ' ') + b);
+    return lines.join('\n');
+  }
+  async function toggleMdCheck(itemId, n) {
+    const it = items.find(x => x.id === itemId);
+    if (!it) return;
+    it.body = mdToggleLine(it.body, n);
+    await saveItem(it);
+    renderMain(); renderBoard();
+  }
+  /* Biçimlendirme düğmeleri: seçili metni sarar ya da satır başına işaret koyar */
+  function mdApply(ta, kind) {
+    const v = ta.value, a = ta.selectionStart, b = ta.selectionEnd, sel = v.slice(a, b);
+    const wrap = (l, r, ph) => {
+      const t = sel || ph;
+      ta.setRangeText(l + t + r, a, b, 'end');
+      if (!sel) ta.setSelectionRange(a + l.length, a + l.length + t.length);
+    };
+    if (kind === 'bold') wrap('**', '**', 'kalın');
+    else if (kind === 'italic') wrap('*', '*', 'italik');
+    else if (kind === 'code') wrap('`', '`', 'kod');
+    else {
+      const prefix = { h: '# ', ul: '- ', check: '- [ ] ' }[kind];
+      const ls = v.lastIndexOf('\n', a - 1) + 1;           // seçimin ilk satırının başı
+      const le = v.indexOf('\n', b); const end = le < 0 ? v.length : le;
+      const block = v.slice(ls, end).split('\n').map(l => l.startsWith(prefix) ? l.slice(prefix.length) : prefix + l.replace(/^(#+\s|-\s\[[ xX]\]\s|-\s)/, '')).join('\n');
+      ta.setRangeText(block, ls, end, 'end');
+    }
+    ta.focus();
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
   /* ---- SON TARİH YARDIMCILARI ----
      Tarihler cihazın yerel gününe göre 'YYYY-AA-GG' metni olarak saklanır. */
   const pad2 = n => String(n).padStart(2, '0');
@@ -2337,9 +2504,9 @@
     return '<div class="item ' + (i.pinned?'pinned':'') + '" data-item="' + i.id + '" title="Düzenlemek için tıkla">' +
       cover +
       '<h3>' + esc(i.title) + '</h3>' +
-      (i.body ? '<p>' + esc(i.body) + '</p>' : '') +
+      (i.body ? '<div class="md" data-mditem="' + i.id + '">' + mdToHTML(i.body, true) + '</div>' : '') +
       tagsHTML(i.tags) +
-      '<div class="meta"><span class="meta-left"><span class="date">' + fmtDate(i.created) + '</span>' + dueChip(i) + '</span>' +
+      '<div class="meta"><span class="meta-left"><span class="date">' + fmtDate(i.created) + '</span>' + dueChip(i) + mdProgress(i.body) + '</span>' +
       '<div class="actions">' +
       '<button data-pin="' + i.id + '">' + (i.pinned?'Sabit ✓':'Sabitle') + '</button>' +
       '<button data-del="' + i.id + '">Sil</button></div></div></div>';
@@ -2355,9 +2522,9 @@
       '<input type="checkbox" class="task-check" data-check="' + i.id + '" ' + (i.done?'checked':'') + '>' +
       '<div class="task-body">' +
       '<div class="task-text">' + esc(i.title || i.body) + '</div>' +
-      (i.title && i.body ? '<p>' + esc(i.body) + '</p>' : '') +
+      (i.title && i.body ? '<div class="md" data-mditem="' + i.id + '">' + mdToHTML(i.body, true) + '</div>' : '') +
       tagsHTML(i.tags) +
-      '<div class="meta"><span class="meta-left"><span class="date">' + fmtDate(i.created) + '</span>' + dueChip(i) + '</span>' +
+      '<div class="meta"><span class="meta-left"><span class="date">' + fmtDate(i.created) + '</span>' + dueChip(i) + mdProgress(i.body) + '</span>' +
       '<div class="actions">' +
       '<button data-pin="' + i.id + '">' + (i.pinned?'Sabit ✓':'Sabitle') + '</button>' +
       '<button data-del="' + i.id + '">Sil</button></div></div></div></div>';
@@ -2370,6 +2537,7 @@
      tıklama/değişiklik olaylarını bağlar. */
   function bindItemEvents() {
     el('list').querySelectorAll('[data-check]').forEach(c => c.addEventListener('change', () => toggleDone(c.dataset.check)));
+    el('list').querySelectorAll('[data-mdline]').forEach(c => c.addEventListener('change', () => toggleMdCheck(c.closest('[data-mditem]').dataset.mditem, +c.dataset.mdline)));
     el('list').querySelectorAll('[data-pin]').forEach(b => b.addEventListener('click', () => togglePin(b.dataset.pin)));
     // Silmeden önce sor (pano penceresindeki "Kartı sil" ile aynı davranış)
     el('list').querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
@@ -2399,7 +2567,7 @@
       ? '<input type="checkbox" class="card-check" data-check="' + i.id + '" ' + (i.done?'checked':'') + ' title="Tamamlandı">'
       : '';
     const title = esc(i.title || i.body || '(başlıksız)');
-    const bodyPrev = (i.title && i.body) ? '<div class="card-body-preview">' + esc(i.body) + '</div>' : '';
+    const bodyPrev = (i.title && i.body) ? '<div class="card-body-preview">' + esc(mdPlain(i.body)) + '</div>' : '';
     const tags = i.tags && i.tags.length
       ? '<div class="card-tags">' + i.tags.map(t => '<span class="card-tag">#' + esc(t) + '</span>').join('') + '</div>'
       : '';
@@ -2407,7 +2575,7 @@
       cover +
       '<div class="card-pad">' +
         '<div class="card-row">' + check + '<div class="card-title">' + title + '</div></div>' +
-        bodyPrev + tags + (i.due ? '<div class="card-due">' + dueChip(i) + '</div>' : '') +
+        bodyPrev + tags + ((i.due || mdChecks(i.body).total) ? '<div class="card-meta-row">' + dueChip(i) + mdProgress(i.body) + '</div>' : '') +
       '</div>' +
     '</div>';
   }
@@ -3064,6 +3232,8 @@
     el('modalType').value = i.type || 'note';
     el('modalDue').value = i.due || '';
     updateModalDueHint();
+    // İçinde kontrol listesi olan açıklama önizlemeyle açılsın (maddeler hemen işaretlenebilsin)
+    setModalPreview(mdChecks(i.body).total > 0);
 
     // Sütun açılır listesini bu projenin sütunlarıyla doldur
     const cols = projectColumns(i.projectId);
@@ -3077,6 +3247,17 @@
     updateModalCover(i.cover);
 
     el('cardModal').classList.add('open');
+  }
+
+  /* Kart penceresinde açıklamanın önizlemesi (onay kutuları burada da tıklanır) */
+  let modalPreview = false;
+  function setModalPreview(on) {
+    modalPreview = on;
+    el('modalDesc').style.display = on ? 'none' : '';
+    el('modalPreview').style.display = on ? '' : 'none';
+    el('modalPreviewBtn').textContent = on ? 'Düzenle' : 'Önizle';
+    document.querySelectorAll('[data-mdfor="modalDesc"] [data-md]').forEach(b => { b.disabled = on; });
+    if (on) el('modalPreview').innerHTML = mdToHTML(el('modalDesc').value, true);
   }
 
   /* Penceredeki son tarihin yanındaki açıklama: "3 gün kaldı", "2 gün gecikti" */
@@ -9037,7 +9218,7 @@
       }
       if (notes.length){
         b += '<h2>Notlar</h2>';
-        notes.forEach(n => { b += '<h3>' + esc(n.title || '(başlıksız)') + '</h3>' + (n.body?'<div>'+esc(n.body).replace(/\n/g,'<br>')+'</div>':'') + (n.tags.length?'<div>'+n.tags.map(x=>'<span class="tag">#'+esc(x)+'</span>').join('')+'</div>':''); });
+        notes.forEach(n => { b += '<h3>' + esc(n.title || '(başlıksız)') + '</h3>' + (n.body?'<div class="md">'+mdToHTML(n.body, false)+'</div>':'') + (n.tags.length?'<div>'+n.tags.map(x=>'<span class="tag">#'+esc(x)+'</span>').join('')+'</div>':''); });
       }
       const hasSchema = projectTables(p.id).length > 0;
       if (hasSchema) b += '<h2>Veritabanı şeması (SQLite)</h2><pre style="font-size:.78rem;white-space:pre-wrap;background:#f4f1ea;padding:.8rem;border-radius:6px;">' + esc(buildSQLiteSQL(p.id)) + '</pre>';
@@ -9251,7 +9432,7 @@
     el('tNote').classList.toggle('sel', t==='note'); // seçili düğmeyi vurgula
     el('tTask').classList.toggle('sel', t==='task');
     // Seçime göre kutu ipuçlarını (placeholder) değiştir
-    el('cBody').placeholder = t==='task' ? 'Görev açıklaması (opsiyonel)...' : 'İçerik...';
+    el('cBody').placeholder = t==='task' ? 'Görev açıklaması (opsiyonel)... Kontrol listesi için - [ ] madde' : 'İçerik... Markdown: **kalın**, - madde, - [ ] yapılacak';
     el('cTitle').placeholder = t==='task' ? 'Görev' : 'Başlık';
   }
 
@@ -9292,6 +9473,23 @@
     if (r) openCard(r.dataset.open);
   });
   el('calDay').addEventListener('change', e => { const c = e.target.closest('[data-caldone]'); if (c) toggleDone(c.dataset.caldone); });
+
+  /* ---- MARKDOWN olayları ---- */
+  document.querySelectorAll('.md-tools').forEach(bar => bar.addEventListener('click', e => {
+    const b = e.target.closest('[data-md]');
+    if (!b) return;
+    e.preventDefault();
+    mdApply(el(bar.dataset.mdfor), b.dataset.md);
+  }));
+  // Butona basınca odak metin kutusundan gitmesin (seçim korunur)
+  document.querySelectorAll('.md-tools [data-md]').forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
+  el('modalPreviewBtn').addEventListener('click', () => setModalPreview(!modalPreview));
+  el('modalPreview').addEventListener('change', e => {
+    const c = e.target.closest('[data-mdline]');
+    if (!c) return;
+    el('modalDesc').value = mdToggleLine(el('modalDesc').value, +c.dataset.mdline);
+    setModalPreview(true);
+  });
 
   /* ---- SON TARİH olayları ---- */
   el('dueFilters').addEventListener('click', e => { const b = e.target.closest('[data-df]'); if (!b) return; dueFilter = b.dataset.df || null; renderMain(); });
