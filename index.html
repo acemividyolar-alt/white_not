@@ -982,6 +982,13 @@
   }
   .fl-tab.sel { color: var(--ink); border-bottom-color: var(--accent); font-weight: bold; }
   .fl-algo-out { font-family: monospace; font-size: 0.85rem; line-height: 1.6; min-height: 240px; white-space: pre-wrap; }
+  .fl-code-out { white-space: pre; min-height: 340px; tab-size: 4; overflow: auto; }
+  .fl-code-bar { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+  .fl-langs { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  .fl-lang { font-family: inherit; font-size: 0.86rem; background: transparent; border: 0; color: var(--muted); padding: 0.4rem 0.85rem; cursor: pointer; }
+  .fl-lang + .fl-lang { border-left: 1px solid var(--line); }
+  .fl-lang[aria-checked="true"] { background: var(--ink); color: var(--paper); }
+  .fl-code-meta { font-family: monospace; font-size: 0.75rem; color: var(--muted); }
   .fl-syntax { font-size: 0.82rem; color: var(--muted); line-height: 1.6; margin: 0.6rem 0; }
   .fl-syntax summary { cursor: pointer; color: var(--ink); }
   .fl-syntax table { border-collapse: collapse; margin-top: 0.4rem; width: 100%; }
@@ -1252,6 +1259,7 @@
                 <button data-flact="png">Akış şeması resmi (.png)</button>
                 <button data-flact="svg">Akış şeması vektör (.svg)</button>
                 <button data-flact="txt">Algoritma adımları (.txt)</button>
+                <button data-flact="code">Koda çevir (C#, Python)&hellip;</button>
                 <div class="sep"></div>
                 <button data-flact="clear" class="danger">Şemayı temizle&hellip;</button>
               </div>
@@ -1570,6 +1578,7 @@
       <div class="fl-tabs">
         <button class="fl-tab sel" data-fltab="steps">Şemadan algoritma</button>
         <button class="fl-tab" data-fltab="parse">Algoritmadan şema</button>
+        <button class="fl-tab" data-fltab="code">Koda çevir</button>
       </div>
 
       <div id="flTabSteps">
@@ -1580,6 +1589,26 @@
           <div class="modal-actions-right">
             <button class="modal-btn" id="flAlgoDownload">.txt indir</button>
             <button class="modal-btn primary" id="flAlgoCopy">Kopyala</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="flTabCode" style="display:none">
+        <div class="fl-code-bar">
+          <div class="fl-langs" role="radiogroup" aria-label="Dil">
+            <button class="fl-lang" type="button" role="radio" data-lang="csharp">C#</button>
+            <button class="fl-lang" type="button" role="radio" data-lang="python">Python</button>
+            <button class="fl-lang" type="button" role="radio" data-lang="pseudo">Sözde kod</button>
+          </div>
+          <span class="fl-code-meta" id="flCodeMeta"></span>
+        </div>
+        <textarea class="modal-desc fl-algo-out fl-code-out" id="flCodeOut" readonly spellcheck="false" wrap="off"></textarea>
+        <p class="fl-help" id="flCodeHelp"></p>
+        <div class="modal-actions">
+          <span></span>
+          <div class="modal-actions-right">
+            <button class="modal-btn" id="flCodeDownload">İndir</button>
+            <button class="modal-btn primary" id="flCodeCopy">Kopyala</button>
           </div>
         </div>
       </div>
@@ -7511,6 +7540,772 @@
     if (n && !R.done) flJumpTo(n.id, false, true);
   }
 
+  /* ===================================================================
+     KODA ÇEVİRME — akış şemasından C#, Python ya da sözde kod
+     1) Her şeklin yazısı çözülür: atama, okuma, yazdırma, koşul. White Note'un ifade dilbilgisiyle
+        ayrıştırılamayan yazılar ("müşteriyi kaydet", "tel kayıtlı mı") doldurulacak metot olur.
+     2) Şemanın grafı düz bloklara ayrılır: baskınlar (dominator) ile döngüler bulunur
+        (geri dönen ok = döngü), ardıl baskın (post-dominator) ile Eğer/Değilse'nin birleştiği yer
+        bulunur. İken / İçin / Tekrarla...olana kadar / sonsuz döngü ayırt edilir.
+     3) Ortaya çıkan ağaç seçilen dile yazılır. Bloklara ayrılamayan atlamalar C#'ta goto,
+        Python'da açıklama olur; sözde kodda numaralı adım biçimine geçilir.
+     =================================================================== */
+
+  /* ---------- İfade ağacı (flEval ile aynı dilbilgisi, ama hesaplamaz) ---------- */
+  function flParseExpr(src) {
+    const toks = flTokenize(String(src));
+    if (!toks.length) throw flErr('Boş ifade.');
+    let p = 0;
+    const isOp = v => toks[p] && toks[p].t === 'op' && toks[p].v === v;
+    const take = v => { if (!isOp(v)) throw flErr('"' + v + '" bekleniyordu.'); p++; };
+    const bin = (op, a, b) => ({ t: 'bin', op: op, a: a, b: b });
+    function or() { let a = and(); while (isOp('||')) { p++; a = bin('||', a, and()); } return a; }
+    function and() { let a = not(); while (isOp('&&')) { p++; a = bin('&&', a, not()); } return a; }
+    function not() { if (isOp('!')) { p++; return { t: 'un', op: '!', a: not() }; } return cmp(); }
+    function cmp() {
+      let a = add();
+      while (toks[p] && toks[p].t === 'op' && ['=', '<>', '<', '>', '<=', '>='].includes(toks[p].v)) { const op = toks[p++].v; a = bin(op, a, add()); }
+      return a;
+    }
+    function add() { let a = mul(); while (isOp('+') || isOp('-')) { const op = toks[p++].v; a = bin(op, a, mul()); } return a; }
+    function mul() { let a = unary(); while (isOp('*') || isOp('/') || isOp('%') || isOp('div')) { const op = toks[p++].v; a = bin(op, a, unary()); } return a; }
+    function unary() {
+      if (isOp('-')) { p++; return { t: 'un', op: '-', a: unary() }; }
+      if (isOp('+')) { p++; return unary(); }
+      return pow();
+    }
+    function pow() { const a = primary(); if (isOp('^')) { p++; return bin('^', a, unary()); } return a; }
+    function primary() {
+      const t = toks[p];
+      if (!t) throw flErr('İfade yarım kalmış.');
+      if (t.t === 'num') { p++; return { t: 'num', v: t.v }; }
+      if (t.t === 'str') { p++; return { t: 'str', v: t.v }; }
+      if (t.t === 'bool') { p++; return { t: 'bool', v: t.v }; }
+      if (isOp('(')) { p++; const v = or(); take(')'); return v; }
+      if (t.t === 'id') {
+        p++;
+        if (isOp('(')) {
+          p++;
+          let key = flFold(t.v), fn = FL_FUNCS[key];
+          if (typeof fn === 'string') key = fn;
+          if (!FL_FUNCS[key]) throw flErr('Bilinmeyen fonksiyon: ' + t.v);
+          const args = [];
+          if (!isOp(')')) { args.push(or()); while (isOp(',')) { p++; args.push(or()); } }
+          take(')');
+          return { t: 'call', fn: key, args: args };
+        }
+        if (flFold(t.v) === 'pi') return { t: 'pi' };
+        return { t: 'id', name: t.v };
+      }
+      throw flErr('Beklenmeyen "' + t.v + '".');
+    }
+    const v = or();
+    if (p < toks.length) throw flErr('Fazladan "' + toks[p].v + '" var.');
+    return v;
+  }
+  function flTryExpr(src) { try { return flParseExpr(src); } catch (e) { return null; } }
+
+  /* ---------- Bir şeklin yazısını komutlara ayırır ---------- */
+  const FL_OUT_PREFIX = /^(?:ekrana yazdir|ekrana yaz|yazdir|yaz|goster|print|output|write|cikti|cikis)\b\s*:?\s*/;
+  const FL_OUT_SUFFIX = /\s*(?:degerini\s+)?(?:ekrana\s+)?(?:yaz|yazdir|goster)$/;
+  function flCondText(t) {
+    let c = t.slice((flFold(t).match(/^(?:eger|if)\s+/) || [''])[0].length);
+    return c.slice(0, c.length - (flFold(c).match(/\s*(?:\s(?:ise|then))?\s*[?:]*\s*$/) || [''])[0].length).trim();
+  }
+  function flAnalyzeNode(n) {
+    const t = n.text.trim().replace(/\s*\n\s*/g, '; ');
+    const desc = { kind: 'call', text: t || FL_KINDS[n.kind].name };
+    if (n.kind === 'decision') {
+      const c = flCondText(t);
+      const ast = flTryExpr(c);
+      return ast ? { kind: 'cond', ast: ast, text: c } : { kind: 'condcall', text: c || t };
+    }
+    if (n.kind === 'loop') {
+      const h = parseLoopHeader(t);
+      const a = h && flTryExpr(h.a), b = h && flTryExpr(h.b), st = h && h.step ? flTryExpr(h.step) : { t: 'num', v: 1 };
+      return (h && a && b && st) ? { kind: 'for', v: h.v, a: a, b: b, step: st, text: t } : { kind: 'condcall', text: t };
+    }
+    if (n.kind === 'input') {
+      const names = flInputVars(t);
+      return names.length ? { kind: 'input', names: names, text: t } : desc;
+    }
+    if (n.kind === 'output') {
+      const f = flFold(t), pre = f.match(FL_OUT_PREFIX);
+      let s = t.slice(pre ? pre[0].length : 0);
+      s = s.slice(0, s.length - (flFold(s).match(FL_OUT_SUFFIX) || [''])[0].length);
+      const parts = s.trim() ? splitTopLevel(s, ',') : [];
+      const asts = [];
+      for (const part of parts) {
+        let a = flTryExpr(part);
+        if (!a && pre && /\s/.test(part.trim()) && !/["'“(]/.test(part)) a = { t: 'str', v: part.trim() }; // Yaz Merhaba Dünya
+        if (!a) return desc;
+        asts.push(a);
+      }
+      return asts.length ? { kind: 'print', parts: asts, text: t } : desc;
+    }
+    if (n.kind === 'process') {
+      const stmts = [];
+      for (const st of splitTopLevel(t, ';').filter(Boolean)) {
+        let m = st.match(/^([\p{L}_][\p{L}\p{N}_]*)\s*(=(?!=)|←|<-|:=|\+=|-=|\*=|\/=)\s*(.+)$/u);
+        if (m) {
+          const ast = flTryExpr(m[3]);
+          if (!ast) return desc;
+          const op = m[2].length === 2 && m[2][1] === '=' && m[2] !== ':=' ? m[2][0] : '';
+          stmts.push({ kind: 'assign', name: m[1], op: op, ast: ast });
+        } else if ((m = st.match(/^([\p{L}_][\p{L}\p{N}_]*)\s*(\+\+|--)$/u))) {
+          stmts.push({ kind: 'assign', name: m[1], op: m[2][0], ast: { t: 'num', v: 1 } });
+        } else return desc;
+      }
+      return stmts.length === 1 ? stmts[0] : { kind: 'multi', stmts: stmts };
+    }
+    return { kind: n.kind }; // start / end
+  }
+
+  /* ---------- Grafı düz bloklara ayırma ---------- */
+  function flStructure(pid, cid) {
+    const nodes = projectFlowNodes(pid, cid), edges = projectFlowEdges(pid, cid);
+    const byId = {}, succ = {}, pred = {};
+    nodes.forEach(n => { byId[n.id] = n; succ[n.id] = []; pred[n.id] = []; });
+    edges.slice().sort((a, b) => flLabelRank(a.label) - flLabelRank(b.label)).forEach(e => {
+      if (!byId[e.from] || !byId[e.to]) return;
+      succ[e.from].push(e); pred[e.to].push(e.from);
+    });
+    const branch = id => { // Karar / döngü: [evet, hayır]
+      const out = succ[id];
+      let y = out.find(e => e.label === 'Evet'), h = out.find(e => e.label === 'Hayır');
+      if (!y) y = out.find(e => e !== h);
+      if (!h) h = out.find(e => e !== y);
+      return [y ? y.to : null, h ? h.to : null];
+    };
+    const next = id => (succ[id][0] || {}).to || null;
+    const entry = (nodes.find(n => n.kind === 'start') || nodes[0] || {}).id;
+    if (!entry) return null;
+
+    // Ulaşılabilen şekiller
+    const reach = new Set([entry]), order = [entry];
+    for (let i = 0; i < order.length; i++) succ[order[i]].forEach(e => { if (!reach.has(e.to)) { reach.add(e.to); order.push(e.to); } });
+    const R = order;
+
+    // Baskınlar
+    const dom = {};
+    R.forEach(id => { dom[id] = id === entry ? new Set([id]) : new Set(R); });
+    for (let changed = true, k = 0; changed && k < 200; k++) {
+      changed = false;
+      R.forEach(id => {
+        if (id === entry) return;
+        let inter = null;
+        pred[id].filter(x => reach.has(x)).forEach(pId => { inter = inter ? new Set([...inter].filter(x => dom[pId].has(x))) : new Set(dom[pId]); });
+        inter = inter || new Set();
+        inter.add(id);
+        if (inter.size !== dom[id].size) { dom[id] = inter; changed = true; }
+      });
+    }
+    // Ardıl baskınlar (bitiş noktası: çıkışı olmayan şekiller)
+    const EXIT = '__exit__';
+    const pdom = {};
+    const outs = id => { const s = succ[id].map(e => e.to).filter(x => reach.has(x)); return s.length ? s : [EXIT]; };
+    const ALL = new Set(R.concat(EXIT));
+    pdom[EXIT] = new Set([EXIT]);
+    R.forEach(id => { pdom[id] = new Set(ALL); });
+    for (let changed = true, k = 0; changed && k < 200; k++) {
+      changed = false;
+      R.slice().reverse().forEach(id => {
+        let inter = null;
+        outs(id).forEach(s => { inter = inter ? new Set([...inter].filter(x => pdom[s].has(x))) : new Set(pdom[s]); });
+        inter.add(id);
+        if (inter.size !== pdom[id].size) { pdom[id] = inter; changed = true; }
+      });
+    }
+    const ipdom = id => {
+      if (pdom[id].size >= ALL.size) return null; // çıkışa hiç ulaşmayan (sonsuz) bölge
+      const target = pdom[id].size - 1;
+      for (const d of pdom[id]) if (d !== id && pdom[d] && pdom[d].size === target) return d === EXIT ? null : d;
+      return null;
+    };
+
+    // Döngüler: u -> h oku ve h, u'nun baskınıysa geri dönüş
+    const loops = {};
+    R.forEach(u => succ[u].forEach(e => {
+      const h = e.to;
+      if (!reach.has(h) || !dom[u].has(h)) return;
+      const L = loops[h] || (loops[h] = { header: h, body: new Set([h]), latches: [] });
+      L.latches.push(u);
+      const stack = [u];
+      while (stack.length) { const x = stack.pop(); if (L.body.has(x)) continue; L.body.add(x); pred[x].forEach(pp => { if (reach.has(pp)) stack.push(pp); }); }
+    }));
+    Object.values(loops).forEach(L => {
+      const H = byId[L.header], [y, h] = flBranches(H) ? branch(H.id) : [null, null];
+      const inY = y && L.body.has(y), inH = h && L.body.has(h);
+      if (H.kind === 'loop' && inY && !inH) { L.type = 'for'; L.inside = y; L.exit = h; }
+      else if (H.kind === 'decision' && inY !== inH && y && h) { L.type = 'while'; L.inside = inY ? y : h; L.exit = inY ? h : y; L.neg = !inY; }
+      else if (L.latches.length === 1 && byId[L.latches[0]].kind === 'decision' && L.latches[0] !== L.header) {
+        const u = L.latches[0], [uy, uh] = branch(u);
+        if ((uy === L.header) !== (uh === L.header) && !L.body.has(uy === L.header ? uh : uy)) {
+          L.type = 'dowhile'; L.latch = u; L.exit = uy === L.header ? uh : uy; L.neg = uy !== L.header;
+        }
+      }
+      if (!L.type) {
+        L.type = 'forever';
+        const ex = new Set();
+        L.body.forEach(x => succ[x].forEach(e => { if (!L.body.has(e.to)) ex.add(e.to); }));
+        L.exit = ipdom(L.header);
+        if (!L.exit || L.body.has(L.exit)) L.exit = [...ex][0] || null;
+      }
+    });
+
+    // Kapsam içinde ulaşılabilenler (ortak birleşme yoksa "erken çıkış" dalını seçmek için)
+    const reachIn = (start, ctx) => {
+      const seen = new Set(), st = [start];
+      while (st.length) {
+        const x = st.pop();
+        if (!x || seen.has(x)) continue;
+        if (ctx && (x === ctx.header || !ctx.body.has(x))) continue;
+        seen.add(x);
+        succ[x].forEach(e => st.push(e.to));
+      }
+      return seen;
+    };
+
+    const done = new Set(), gotoTargets = new Set();
+    let jumps = false; // break / continue / goto var mı (sözde kod bunları yazamaz)
+    const G = id => { gotoTargets.add(id); jumps = true; return { s: 'goto', node: id }; };
+
+    function seq(n, stop, ctx, out, enteringHeader) {
+      let guard = 0;
+      while (n && guard++ < 1000) {
+        if (!enteringHeader) {
+          if (n === stop) return;
+          if (ctx && n === ctx.header) {
+            if (ctx.type === 'dowhile') { out.push(G(n)); return; }
+            out.push({ s: 'continue' }); jumps = true; return;
+          }
+        }
+        if (ctx && !ctx.body.has(n)) {
+          if (n === ctx.exit) { out.push({ s: 'break' }); jumps = true; } else out.push(G(n));
+          return;
+        }
+        if (done.has(n)) { out.push(G(n)); return; }
+        const L = loops[n];
+        if (L && !(ctx && ctx.header === n)) { // yeni bir döngü başlıyor (kendi gövdesinin içindeysek sıradan şekildir)
+          const body = [];
+          if (L.type === 'for' || L.type === 'while') {
+            done.add(n);
+            seq(L.inside, n, L, body);
+            out.push({ s: L.type, node: n, neg: !!L.neg, body: body });
+          } else if (L.type === 'dowhile') {
+            seq(n, L.latch, L, body, true);
+            done.add(L.latch);
+            out.push({ s: 'dowhile', node: L.latch, neg: !!L.neg, body: body });
+          } else {
+            seq(n, n, L, body, true);
+            out.push({ s: 'forever', body: body });
+          }
+          n = L.exit;
+          enteringHeader = false;
+          continue;
+        }
+        enteringHeader = false;
+        done.add(n);
+        const N = byId[n];
+        if (N.kind === 'start') { n = next(n); continue; }
+        if (N.kind === 'end') { out.push({ s: 'end', node: n }); return; }
+        if (N.kind === 'decision' || N.kind === 'loop') {
+          const [y, h] = branch(n);
+          let m = ipdom(n);
+          if (ctx && m && !ctx.body.has(m)) m = null;
+          if (!m && y && h) {
+            // Ortak birleşme yok: dallardan biri kendi başına bitiyorsa (Bitir, döngüden çık, başa dön)
+            // onu "if" içine al ve diğeriyle aynı seviyede devam et. İçteki dal sessizce bitmemeli:
+            // durma noktasına (stop) ulaşan dal seçilmez, döngü başına dönüş açıkça "continue" olur.
+            const ry = reachIn(y, ctx), rh = reachIn(h, ctx);
+            if (![...ry].some(x => rh.has(x))) {
+              const okY = !(stop && ry.has(stop)), okH = !(stop && rh.has(stop));
+              const pick = okY && okH ? (ry.size <= rh.size ? 'y' : 'h') : okY ? 'y' : okH ? 'h' : null;
+              if (pick) {
+                const inner = [];
+                seq(pick === 'y' ? y : h, '__yok__', ctx, inner);
+                out.push({ s: 'if', node: n, neg: pick === 'h', then: inner, else: [] });
+                n = pick === 'y' ? h : y;
+                continue;
+              }
+            }
+          }
+          const st = m || stop;
+          const thenB = [], elseB = [];
+          if (y) seq(y, st, ctx, thenB);
+          if (h) seq(h, st, ctx, elseB);
+          if (!thenB.length && elseB.length) out.push({ s: 'if', node: n, neg: true, then: elseB, else: [] });
+          else out.push({ s: 'if', node: n, neg: false, then: thenB, else: elseB });
+          if (!m) return;
+          n = m;
+          continue;
+        }
+        out.push({ s: 'stmt', node: n });
+        n = next(n);
+      }
+    }
+
+    const tree = [];
+    seq(entry, null, null, tree);
+    // En dıştaki son "Bitir" yazılmaz (program zaten biter)
+    const last = tree[tree.length - 1];
+    if (last && last.s === 'end') tree.pop();
+    const unreachable = nodes.filter(n => !reach.has(n.id));
+    return { tree: tree, byId: byId, gotoTargets: gotoTargets, jumps: jumps, unreachable: unreachable,
+             entry: entry, reach: reach, branch: branch, next: next,
+             info: id => flAnalyzeNode(byId[id]) };
+  }
+
+  /* ---------- Ortak yardımcılar ---------- */
+  function flAscii(s) {
+    return String(s).replace(/[çÇ]/g, c => c === 'ç' ? 'c' : 'C').replace(/[ğĞ]/g, c => c === 'ğ' ? 'g' : 'G')
+      .replace(/ı/g, 'i').replace(/İ/g, 'I').replace(/[öÖ]/g, c => c === 'ö' ? 'o' : 'O').replace(/[şŞ]/g, c => c === 'ş' ? 's' : 'S')
+      .replace(/[üÜ]/g, c => c === 'ü' ? 'u' : 'U').replace(/[âÂ]/g, 'a').replace(/[îÎ]/g, 'i').replace(/[ûÛ]/g, 'u');
+  }
+  /* Açıklama yazısından metot adı: "Müşteriyi musteri tablosuna ekle" -> MusteriyiMusteriTablosunaEkle / musteriyi_musteri_tablosuna_ekle */
+  function flMethodName(text, style) {
+    let words = flAscii(text).replace(/[^A-Za-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+    let out = [], len = 0;
+    for (const w of words) { if (len + w.length > 48 && out.length) break; out.push(w); len += w.length; }
+    if (!out.length) out = ['Adim'];
+    let name = style === 'snake' ? out.map(w => w.toLowerCase()).join('_') : out.map(w => w[0].toUpperCase() + w.slice(1).toLowerCase()).join('');
+    if (/^\d/.test(name)) name = (style === 'snake' ? 'adim_' : 'Adim') + name;
+    return name;
+  }
+  const FL_CS_KEYWORDS = new Set(('abstract as base bool break byte case catch char checked class const continue decimal default delegate do double else enum event explicit ' +
+    'extern false finally fixed float for foreach goto if implicit in int interface internal is lock long namespace new null object operator out override params ' +
+    'private protected public readonly ref return sbyte sealed short sizeof stackalloc static string struct switch this throw true try typeof uint ulong unchecked ' +
+    'unsafe ushort using virtual void volatile while var Main Console Math Program').split(' '));
+  const FL_PY_KEYWORDS = new Set(('False None True and as assert async await break class continue def del elif else except finally for from global if import in is ' +
+    'lambda nonlocal not or pass raise return try while with yield print input int float str len abs round min max pow math random main').split(' '));
+
+  /* ---------- Tür çıkarımı (C# için; Python'da da sayı/metin okumayı seçer) ---------- */
+  function flInferTypes(S) {
+    const types = {}, declared = new Set(), counters = new Set(), names = {};
+    const key = v => flFold(v);
+    const note = v => { if (!names[key(v)]) names[key(v)] = v; return key(v); };
+    const typeOf = a => {
+      if (!a) return 'double';
+      switch (a.t) {
+        case 'num': case 'pi': return 'double';
+        case 'str': return 'string';
+        case 'bool': return 'bool';
+        case 'id': return types[key(a.name)] || 'double';
+        case 'un': return a.op === '!' ? 'bool' : 'double';
+        case 'call': return a.fn === 'metin' ? 'string' : 'double';
+        case 'bin':
+          if (['=', '<>', '<', '>', '<=', '>=', '&&', '||'].includes(a.op)) return 'bool';
+          if (a.op === '+' && (typeOf(a.a) === 'string' || typeOf(a.b) === 'string')) return 'string';
+          return 'double';
+      }
+      return 'double';
+    };
+    const used = new Set();
+    const walkIds = a => {
+      if (!a) return;
+      if (a.t === 'id') used.add(note(a.name));
+      if (a.a) walkIds(a.a); if (a.b) walkIds(a.b); if (a.args) a.args.forEach(walkIds);
+    };
+    const stmts = [];
+    S.reach.forEach(id => {
+      const inf = S.info(id);
+      if (inf.kind === 'multi') inf.stmts.forEach(s => stmts.push(s)); else stmts.push(inf);
+    });
+    // Okunan değişken string ile karşılaştırılıyorsa metindir
+    const strCmp = new Set();
+    const findStrCmp = a => {
+      if (!a) return;
+      if (a.t === 'bin' && ['=', '<>'].includes(a.op)) {
+        if (a.a.t === 'id' && a.b.t === 'str') strCmp.add(key(a.a.name));
+        if (a.b.t === 'id' && a.a.t === 'str') strCmp.add(key(a.b.name));
+      }
+      if (a.a) findStrCmp(a.a); if (a.b) findStrCmp(a.b); if (a.args) a.args.forEach(findStrCmp);
+    };
+    stmts.forEach(s => { ['ast', 'a', 'b', 'step'].forEach(k => { if (s[k]) { walkIds(s[k]); findStrCmp(s[k]); } }); (s.parts || []).forEach(p => { walkIds(p); findStrCmp(p); }); });
+    for (let pass = 0; pass < 4; pass++) {
+      stmts.forEach(s => {
+        if (s.kind === 'assign') { const k = note(s.name); declared.add(k); if (!types[k] || types[k] === 'double') types[k] = s.op ? (types[k] || typeOf(s.ast)) : typeOf(s.ast); }
+        if (s.kind === 'input') s.names.forEach(v => { const k = note(v); declared.add(k); types[k] = strCmp.has(k) || types[k] === 'string' ? 'string' : (types[k] || 'double'); });
+        if (s.kind === 'for') { const k = note(s.v); counters.add(k); types[k] = 'int'; }
+      });
+    }
+    const undeclared = [...used].filter(k => !declared.has(k) && !counters.has(k));
+    undeclared.forEach(k => { types[k] = types[k] || (strCmp.has(k) ? 'string' : 'double'); });
+    return { types: types, declared: declared, counters: counters, undeclared: undeclared, names: names, typeOf: typeOf, key: key };
+  }
+
+  /* ---------- Dil yazıcıları ---------- */
+  const FL_PREC = { '||': 1, '&&': 2, '=': 4, '<>': 4, '<': 4, '>': 4, '<=': 4, '>=': 4, '+': 5, '-': 5, '*': 6, '/': 6, '%': 6, 'div': 6, '^': 8 };
+  function flNumLit(v) { return Number.isInteger(v) ? String(v) : String(parseFloat(v.toPrecision(12))); }
+
+  function flCodeGen(pid, cid, lang) {
+    const S = flStructure(pid, cid);
+    const chart = findChart(cid);
+    const title = (chart ? chart.name : 'Akış') + ' — White Note akış şemasından üretildi';
+    if (!S) return lang === 'python' ? '# Şema boş.\n' : lang === 'pseudo' ? '' : '// Şema boş.\n';
+    if (lang === 'pseudo') return flPseudo(S, pid, cid);
+    const T = flInferTypes(S);
+    const py = lang === 'python';
+    const IND = '    ';
+    const stubs = new Map(); // yazı -> {name, bool}
+    let needRandom = false, needMath = false, needNum = false, needStr = false;
+    const varName = v => {
+      const n = T.names[T.key(v)] || v;
+      return (py ? FL_PY_KEYWORDS : FL_CS_KEYWORDS).has(n) ? n + '_' : n;
+    };
+    const stub = (text, isBool) => {
+      const k = (isBool ? '?' : '') + text;
+      if (!stubs.has(k)) {
+        let base = flMethodName(text, py ? 'snake' : 'pascal'), name = base, i = 2;
+        const taken = new Set([...stubs.values()].map(s => s.name));
+        while (taken.has(name)) name = base + (py ? '_' : '') + (i++);
+        stubs.set(k, { name: name, bool: isBool, text: text });
+      }
+      return stubs.get(k).name + '()';
+    };
+    const csStr = s => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+    const pyStr = s => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+
+    function ex(a, ctxPrec) {
+      ctxPrec = ctxPrec || 0;
+      let s, prec = 10;
+      switch (a.t) {
+        case 'num': s = flNumLit(a.v); break;
+        case 'str': s = py ? pyStr(a.v) : csStr(a.v); break;
+        case 'bool': s = py ? (a.v ? 'True' : 'False') : (a.v ? 'true' : 'false'); break;
+        case 'pi': s = 'Math.PI'; if (py) { s = 'math.pi'; needMath = true; } break;
+        case 'id': s = varName(a.name); break;
+        case 'un':
+          if (a.op === '-') { s = '-' + ex(a.a, 7); prec = 7; }
+          else { s = py ? 'not ' + ex(a.a, 3) : '!' + ex(a.a, 9); prec = py ? 3 : 7; }
+          break;
+        case 'call': s = call(a); break;
+        case 'bin': {
+          const op = a.op, p = FL_PREC[op];
+          const L = () => ex(a.a, p), Rr = () => ex(a.b, p + 1);
+          const strSide = T.typeOf(a.a) === 'string' || T.typeOf(a.b) === 'string';
+          prec = p;
+          if (op === '^') { s = py ? ex(a.a, 9) + ' ** ' + ex(a.b, 8) : 'Math.Pow(' + ex(a.a) + ', ' + ex(a.b) + ')'; prec = py ? 8 : 10; }
+          else if (op === 'div') { s = py ? L() + ' // ' + Rr() : 'Math.Truncate(' + ex(a.a) + ' / ' + ex(a.b) + ')'; if (!py) prec = 10; }
+          else if (['<', '>', '<=', '>='].includes(op) && strSide && !py) { s = 'string.Compare(' + ex(a.a) + ', ' + ex(a.b) + ') ' + op + ' 0'; }
+          else if (op === '+' && strSide && py) {
+            const w = x => T.typeOf(x) === 'string' ? ex(x, p) : 'str(' + ex(x) + ')';
+            s = w(a.a) + ' + ' + w(a.b);
+          }
+          else {
+            const map = py ? { '=': '==', '<>': '!=', '&&': 'and', '||': 'or' } : { '=': '==', '<>': '!=' };
+            s = L() + ' ' + (map[op] || op) + ' ' + Rr();
+          }
+          break;
+        }
+      }
+      return prec < ctxPrec ? '(' + s + ')' : s;
+    }
+    function call(a) {
+      const A = a.args.map(x => ex(x));
+      const m = py ? {
+        karekok: () => { needMath = true; return 'math.sqrt(' + A[0] + ')'; }, kare: () => '(' + A[0] + ') ** 2',
+        mutlak: () => 'abs(' + A[0] + ')', yuvarla: () => 'round(' + A.join(', ') + ')',
+        tam: () => { needMath = true; return 'math.trunc(' + A[0] + ')'; }, taban: () => { needMath = true; return 'math.floor(' + A[0] + ')'; },
+        tavan: () => { needMath = true; return 'math.ceil(' + A[0] + ')'; }, us: () => 'pow(' + A[0] + ', ' + A[1] + ')',
+        min: () => 'min(' + A.join(', ') + ')', max: () => 'max(' + A.join(', ') + ')', uzunluk: () => 'len(str(' + A[0] + '))',
+        rastgele: () => { needRandom = true; return 'random.randint(int(' + A[0] + '), int(' + A[1] + '))'; },
+        sayi: () => 'float(' + A[0] + ')', metin: () => 'str(' + A[0] + ')'
+      } : {
+        karekok: () => 'Math.Sqrt(' + A[0] + ')', kare: () => 'Math.Pow(' + A[0] + ', 2)', mutlak: () => 'Math.Abs(' + A[0] + ')',
+        yuvarla: () => 'Math.Round(' + A[0] + (A[1] ? ', (int)(' + A[1] + ')' : '') + ')', tam: () => 'Math.Truncate(' + A[0] + ')',
+        taban: () => 'Math.Floor(' + A[0] + ')', tavan: () => 'Math.Ceiling(' + A[0] + ')', us: () => 'Math.Pow(' + A[0] + ', ' + A[1] + ')',
+        min: () => A.slice(1).reduce((acc, x) => 'Math.Min(' + acc + ', ' + x + ')', A[0]), max: () => A.slice(1).reduce((acc, x) => 'Math.Max(' + acc + ', ' + x + ')', A[0]),
+        uzunluk: () => '(' + A[0] + ').ToString().Length', rastgele: () => { needRandom = true; return 'rnd.Next((int)(' + A[0] + '), (int)(' + A[1] + ') + 1)'; },
+        sayi: () => 'double.Parse(' + A[0] + ')', metin: () => '(' + A[0] + ').ToString()'
+      };
+      return (m[a.fn] || (() => a.fn + '(' + A.join(', ') + ')'))();
+    }
+    function cond(id, neg) {
+      const inf = S.info(id);
+      let c;
+      if (inf.kind === 'cond') c = ex(inf.ast, neg ? (py ? 4 : 9) : 0);
+      else if (inf.kind === 'for') c = 'true';
+      else c = stub(inf.text, true);
+      return neg ? (py ? 'not ' + c : '!' + (/^[\w.]+\(\)$/.test(c) || /^\(.*\)$/.test(c) ? c : '(' + c + ')')) : c;
+    }
+    function printLine(parts) {
+      if (py) return 'yaz(' + parts.map(p => ex(p)).join(', ') + ')';
+      if (parts.every(p => p.t === 'str')) return 'Console.WriteLine(' + csStr(parts.map(p => p.v).join(' ')) + ');';
+      let s = '$"';
+      parts.forEach((p, i) => {
+        if (i) s += ' ';
+        if (p.t === 'str') s += p.v.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/{/g, '{{').replace(/}/g, '}}');
+        else {
+          const t = T.typeOf(p);
+          s += '{' + (p.t === 'id' || p.t === 'num' ? ex(p) : '(' + ex(p) + ')') + (t === 'double' ? ':0.##########' : '') + '}';
+        }
+      });
+      return 'Console.WriteLine(' + s + '");';
+    }
+    function assignLine(s) {
+      const v = varName(s.name);
+      if (!s.op) return v + ' = ' + ex(s.ast) + (py ? '' : ';');
+      if (py && s.op === '+' && T.types[T.key(s.name)] === 'string' && T.typeOf(s.ast) !== 'string') return v + ' += str(' + ex(s.ast) + ')';
+      if (!py && (s.op === '+' || s.op === '-') && s.ast.t === 'num' && s.ast.v === 1) return v + s.op + s.op + ';';
+      return v + ' ' + s.op + '= ' + ex(s.ast) + (py ? '' : ';');
+    }
+    function stmtLines(id) {
+      const inf = S.info(id);
+      if (inf.kind === 'assign') return [assignLine(inf)];
+      if (inf.kind === 'multi') return inf.stmts.map(assignLine);
+      if (inf.kind === 'print') return [printLine(inf.parts)];
+      if (inf.kind === 'input') return inf.names.map(v => {
+        const t = T.types[T.key(v)], vn = varName(v), q = (py ? pyStr : csStr)(v + ' = ');
+        if (t === 'string') { needStr = true; return py ? vn + ' = input(' + q + ')' : vn + ' = MetinOku(' + q + ');'; }
+        needNum = true;
+        return py ? vn + ' = sayi_oku(' + q + ')' : vn + ' = ' + (t === 'int' ? '(int)' : '') + 'SayiOku(' + q + ');';
+      });
+      return [stub(inf.text, false) + (py ? '' : ';')];
+    }
+    const label = id => 'adim_' + (Object.keys(S.byId).indexOf(id) + 1);
+
+    function block(list, ind, out) {
+      list.forEach(x => {
+        if (x.node && S.gotoTargets.has(x.node) && !py) out.push(ind.slice(4) + label(x.node) + ':');
+        switch (x.s) {
+          case 'stmt': stmtLines(x.node).forEach(l => out.push(ind + l)); break;
+          case 'end': out.push(ind + 'return' + (py ? '' : ';')); break;
+          case 'break': out.push(ind + 'break' + (py ? '' : ';')); break;
+          case 'continue': out.push(ind + 'continue' + (py ? '' : ';')); break;
+          case 'goto': out.push(ind + (py ? 'pass  # Buradan "' + S.byId[x.node].text.replace(/\s+/g, ' ') + '" adımına gidilir (Python\'da goto yoktur)' : 'goto ' + label(x.node) + ';')); break;
+          case 'if': {
+            let cur = x, first = true;
+            for (;;) {
+              const c = cond(cur.node, cur.neg);
+              if (py) out.push(ind + (first ? 'if ' : 'elif ') + c + ':');
+              else out.push(ind + (first ? '' : '} else ') + 'if (' + c + ') {');
+              block(cur.then, ind + IND, out);
+              if (py && !cur.then.length) out.push(ind + IND + 'pass');
+              first = false;
+              if (cur.else.length === 1 && cur.else[0].s === 'if' && !S.gotoTargets.has(cur.else[0].node)) { cur = cur.else[0]; continue; }
+              if (cur.else.length) {
+                out.push(ind + (py ? 'else:' : '} else {'));
+                block(cur.else, ind + IND, out);
+              }
+              break;
+            }
+            if (!py) out.push(ind + '}');
+            break;
+          }
+          case 'while':
+            out.push(ind + (py ? 'while ' + cond(x.node, x.neg) + ':' : 'while (' + cond(x.node, x.neg) + ') {'));
+            block(x.body, ind + IND, out);
+            if (py && !x.body.length) out.push(ind + IND + 'pass');
+            if (!py) out.push(ind + '}');
+            break;
+          case 'for': {
+            const inf = S.info(x.node);
+            if (inf.kind !== 'for') { // anlaşılamayan döngü başlığı
+              out.push(ind + (py ? 'while ' + stub(inf.text, true) + ':' : 'while (' + stub(inf.text, true) + ') {'));
+            } else {
+              const v = varName(inf.v), neg = inf.step.t === 'un' && inf.step.op === '-' || (inf.step.t === 'num' && inf.step.v < 0);
+              const one = inf.step.t === 'num' && Math.abs(inf.step.v) === 1;
+              if (py) {
+                const asInt = a => a.t === 'num' && Number.isInteger(a.v) ? ex(a) : 'int(' + ex(a) + ')';
+                const stp = one ? (neg ? '-1' : '') : asInt(inf.step);
+                const end = inf.b.t === 'num' && Number.isInteger(inf.b.v) ? flNumLit(inf.b.v + (neg ? -1 : 1)) : asInt(inf.b) + (neg ? ' - 1' : ' + 1');
+                out.push(ind + 'for ' + v + ' in range(' + asInt(inf.a) + ', ' + end + (stp ? ', ' + stp : '') + '):');
+              } else {
+                const A = inf.a.t === 'num' && Number.isInteger(inf.a.v) ? ex(inf.a) : '(int)(' + ex(inf.a) + ')';
+                const inc = one ? v + (neg ? '--' : '++') : v + ' += ' + (neg ? '(int)(' + ex(inf.step) + ')' : '(int)(' + ex(inf.step) + ')');
+                out.push(ind + 'for (int ' + v + ' = ' + A + '; ' + v + (neg ? ' >= ' : ' <= ') + ex(inf.b, 5) + '; ' + inc + ') {');
+              }
+            }
+            block(x.body, ind + IND, out);
+            if (py && !x.body.length) out.push(ind + IND + 'pass');
+            if (!py) out.push(ind + '}');
+            break;
+          }
+          case 'dowhile':
+            if (py) {
+              out.push(ind + 'while True:');
+              block(x.body, ind + IND, out);
+              out.push(ind + IND + 'if not (' + cond(x.node, x.neg) + '):');
+              out.push(ind + IND + IND + 'break');
+            } else {
+              out.push(ind + 'do {');
+              block(x.body, ind + IND, out);
+              out.push(ind + '} while (' + cond(x.node, x.neg) + ');');
+            }
+            break;
+          case 'forever':
+            out.push(ind + (py ? 'while True:' : 'while (true) {'));
+            block(x.body, ind + IND, out);
+            if (py && !x.body.length) out.push(ind + IND + 'pass');
+            if (!py) out.push(ind + '}');
+            break;
+        }
+      });
+    }
+
+    /* Düz bloklara ayrılamayan (birbirine çapraz atlayan) şemalar için: her adım bir "durum",
+       "adim" değişkeni sıradakini tutar. Her şemada doğru çalışır ve her zaman derlenir. */
+    const machine = S.gotoTargets.size > 0;
+    function stateMachine(ind) {
+      const ids = flowOrder(pid, cid).order.map(n => n.id).filter(id => S.reach.has(id));
+      const num = {};
+      ids.forEach((id, i) => { num[id] = i + 1; });
+      const go = id => (id && num[id]) || 0;
+      const set = k => py ? 'adim = ' + k : 'adim = ' + k + ';';
+      const L = [];
+      const loopFlags = ids.filter(id => S.byId[id].kind === 'loop' && S.info(id).kind === 'for').map(id => 'dongu_' + num[id]);
+      loopFlags.forEach(f => L.push(ind + (py ? f + ' = False' : 'bool ' + f + ' = false;')));
+      if (py) L.push(ind + 'adim = ' + go(S.entry), ind + 'while adim != 0:');
+      else L.push(ind + 'int adim = ' + go(S.entry) + ';', ind + 'while (adim != 0)', ind + '{', ind + IND + 'switch (adim)', ind + IND + '{');
+      ids.forEach((id, i) => {
+        const N = S.byId[id], body = [];
+        if (N.kind === 'start') body.push(set(go(S.next(id))));
+        else if (N.kind === 'end') body.push(set(0));
+        else if (N.kind === 'decision' || (N.kind === 'loop' && S.info(id).kind !== 'for')) {
+          const [y, h] = S.branch(id), c = cond(id, false);
+          body.push(py ? 'adim = ' + go(y) + ' if ' + c + ' else ' + go(h) : 'adim = (' + c + ') ? ' + go(y) + ' : ' + go(h) + ';');
+        } else if (N.kind === 'loop') {
+          const inf = S.info(id), [y, h] = S.branch(id), f = 'dongu_' + num[id], v = varName(inf.v);
+          const neg = inf.step.t === 'un' && inf.step.op === '-' || (inf.step.t === 'num' && inf.step.v < 0);
+          if (py) {
+            body.push('if not ' + f + ':', IND + v + ' = ' + ex(inf.a), IND + f + ' = True', 'else:', IND + v + ' += ' + ex(inf.step));
+            body.push('if ' + v + (neg ? ' >= ' : ' <= ') + ex(inf.b, 5) + ':', IND + set(go(y)), 'else:', IND + f + ' = False', IND + set(go(h)));
+          } else {
+            body.push('if (!' + f + ') { ' + v + ' = (int)(' + ex(inf.a) + '); ' + f + ' = true; } else { ' + v + ' += (int)(' + ex(inf.step) + '); }');
+            body.push('if (' + v + (neg ? ' >= ' : ' <= ') + ex(inf.b, 5) + ') adim = ' + go(y) + '; else { ' + f + ' = false; adim = ' + go(h) + '; }');
+          }
+        } else {
+          stmtLines(id).forEach(l => body.push(l));
+          body.push(set(go(S.next(id))));
+        }
+        const note = N.text.replace(/\s+/g, ' ').trim() || FL_KINDS[N.kind].name;
+        if (py) { L.push(ind + IND + (i ? 'elif' : 'if') + ' adim == ' + num[id] + ':  # ' + note); body.forEach(l => L.push(ind + IND + IND + l)); }
+        else { L.push(ind + IND + IND + 'case ' + num[id] + ': // ' + note); body.forEach(l => L.push(ind + IND + IND + IND + l)); L.push(ind + IND + IND + IND + 'break;'); }
+      });
+      if (py) L.push(ind + IND + 'else:', ind + IND + IND + 'adim = 0');
+      else L.push(ind + IND + IND + 'default:', ind + IND + IND + IND + 'adim = 0;', ind + IND + IND + IND + 'break;', ind + IND + '}', ind + '}');
+      return L;
+    }
+
+    const bodyLines = machine ? stateMachine(IND + IND) : [];
+    if (!machine) block(S.tree, IND + IND, bodyLines); // C#: Main içinde 8 boşluk; Python'da aşağıda 4'e indirilir
+    const lines = [];
+    // Değişken bildirimleri
+    const decl = { double: [], string: [], bool: [], int: [] }, todo = [];
+    Object.keys(T.types).forEach(k => {
+      if (T.counters.has(k) && !machine) return;
+      const t = T.counters.has(k) ? 'int' : (T.types[k] in decl ? T.types[k] : 'double');
+      decl[t].push(k);
+      if (T.undeclared.includes(k)) todo.push(k);
+    });
+    const defVal = t => py ? (t === 'string' ? '""' : t === 'bool' ? 'False' : '0') : (t === 'string' ? '""' : t === 'bool' ? 'false' : '0');
+    const notes = [];
+    if (machine) notes.push((py ? '# ' : '// ') + 'Not: Bu şemadaki oklar birbirine çapraz atladığı için düz Eğer/İken bloklarına ayrılamadı.',
+                            (py ? '# ' : '// ') + '"adim" değişkeni sıradaki adımı tutar; her adım bir durumdur (durum makinesi).');
+    if (S.unreachable.length) notes.push((py ? '# ' : '// ') + 'Başla\'dan ulaşılamayan adımlar koda alınmadı: ' + S.unreachable.map(n => n.text.replace(/\s+/g, ' ')).join(' · '));
+
+    if (py) {
+      lines.push('# ' + title);
+      if (needMath) lines.push('import math');
+      if (needRandom) lines.push('import random');
+      if (needMath || needRandom) lines.push('');
+      if (needNum) lines.push('', 'def sayi_oku(soru):', IND + 'deger = float(input(soru).replace(",", "."))', IND + 'return int(deger) if deger.is_integer() else deger');
+      lines.push('', 'def yaz(*parcalar):', IND + '# Ondalıklı sayıları gereksiz sıfırlar olmadan yazar (2.80000001 -> 2.8)',
+                 IND + 'print(*[("%.10f" % p).rstrip("0").rstrip(".") if isinstance(p, float) else p for p in parcalar])');
+      stubs.forEach(st => {
+        lines.push('', 'def ' + st.name + '():', IND + '# TODO: ' + st.text, IND + (st.bool ? 'return False' : 'pass'));
+      });
+      lines.push('', '', 'def main():');
+      notes.forEach(n => lines.push(IND + n));
+      Object.keys(decl).forEach(t => decl[t].filter(k => todo.includes(k)).forEach(k => lines.push(IND + varName(T.names[k] || k) + ' = ' + defVal(t) + '  # TODO: değeri başka yerden gelir')));
+      bodyLines.forEach(l => lines.push(l.slice(4)));
+      if (!bodyLines.length) lines.push(IND + 'pass');
+      lines.push('', '', 'if __name__ == "__main__":', IND + 'main()');
+      return lines.join('\n') + '\n';
+    }
+    lines.push('// ' + title);
+    lines.push('using System;', 'using System.Globalization;', '', 'class Program', '{');
+    if (needRandom) lines.push(IND + 'static Random rnd = new Random();', '');
+    lines.push(IND + 'static void Main()', IND + '{');
+    notes.forEach(n => lines.push(IND + IND + n));
+    Object.keys(decl).forEach(t => {
+      const list = decl[t];
+      if (!list.length) return;
+      const normal = list.filter(k => !todo.includes(k)), later = list.filter(k => todo.includes(k));
+      if (normal.length) lines.push(IND + IND + t + ' ' + normal.map(k => varName(T.names[k] || k) + ' = ' + defVal(t)).join(', ') + ';');
+      later.forEach(k => lines.push(IND + IND + t + ' ' + varName(T.names[k] || k) + ' = ' + defVal(t) + '; // TODO: değeri başka yerden gelir'));
+    });
+    if (Object.values(decl).some(l => l.length)) lines.push('');
+    bodyLines.forEach(l => lines.push(l));
+    lines.push(IND + '}');
+    if (needNum) lines.push('', IND + 'static double SayiOku(string soru)', IND + '{', IND + IND + 'Console.Write(soru);',
+      IND + IND + 'return double.Parse(Console.ReadLine().Replace(\',\', \'.\'), CultureInfo.InvariantCulture);', IND + '}');
+    if (needStr) lines.push('', IND + 'static string MetinOku(string soru)', IND + '{', IND + IND + 'Console.Write(soru);', IND + IND + 'return Console.ReadLine();', IND + '}');
+    if (stubs.size) lines.push('', IND + '// ---- Doldurulacak adımlar (veritabanı, ekran vb.) ----');
+    stubs.forEach(st => {
+      lines.push('', IND + 'static ' + (st.bool ? 'bool' : 'void') + ' ' + st.name + '()', IND + '{', IND + IND + '// TODO: ' + st.text);
+      if (st.bool) lines.push(IND + IND + 'return false;');
+      lines.push(IND + '}');
+    });
+    lines.push('}');
+    return lines.join('\n') + '\n';
+  }
+
+  /* Sözde kod: White Note'un "Algoritmadan şema" yazımı (geri yapıştırılabilir) */
+  function flPseudo(S, pid, cid) {
+    if (S.jumps) {
+      return '# Bu şema düz bloklara ayrılamadı (atlamalar var); numaralı adım biçimi kullanıldı.\n' + flowToSteps(pid, cid) + '\n';
+    }
+    const out = [];
+    const txt = id => S.byId[id].text.trim().replace(/\s*\n\s*/g, '; ');
+    const condTxt = (id, neg) => {
+      const c = S.byId[id].kind === 'decision' ? flCondText(txt(id)) : txt(id);
+      return neg ? 'değil (' + c + ')' : c;
+    };
+    const IND = '    ';
+    out.push('Başla');
+    function block(list, ind) {
+      list.forEach(x => {
+        switch (x.s) {
+          case 'stmt': out.push(ind + txt(x.node)); break;
+          case 'end': out.push(ind + 'Bitir'); break;
+          case 'if': {
+            let cur = x, first = true;
+            for (;;) {
+              out.push(ind + (first ? 'Eğer ' : 'Değilse eğer ') + condTxt(cur.node, cur.neg) + ' ise');
+              block(cur.then, ind + IND);
+              first = false;
+              if (cur.else.length === 1 && cur.else[0].s === 'if') { cur = cur.else[0]; continue; }
+              if (cur.else.length) { out.push(ind + 'Değilse'); block(cur.else, ind + IND); }
+              break;
+            }
+            break;
+          }
+          case 'while': out.push(ind + 'İken ' + condTxt(x.node, x.neg)); block(x.body, ind + IND); break;
+          case 'for': out.push(ind + 'İçin ' + txt(x.node)); block(x.body, ind + IND); break;
+          case 'dowhile':
+            out.push(ind + 'Tekrarla');
+            block(x.body, ind + IND);
+            out.push(ind + condTxt(x.node, !x.neg) + ' olana kadar'); // devam koşulunun tersi = bitiş koşulu
+            break;
+          case 'forever': out.push(ind + 'İken doğru'); block(x.body, ind + IND); break;
+        }
+      });
+    }
+    block(S.tree, '');
+    // Akış kendiliğinden bitmiyorsa (her dal Bitir'le kapanmıyorsa) sona Bitir ekle
+    const ends = list => {
+      const z = list[list.length - 1];
+      if (!z) return false;
+      if (z.s === 'end') return true;
+      if (z.s === 'if') return ends(z.then) && z.else.length > 0 && ends(z.else);
+      return false;
+    };
+    if (!ends(S.tree)) out.push('Bitir');
+    return out.join('\n') + '\n';
+  }
+
   /* ---------- ÖRNEK ALGORİTMALAR ("Algoritmadan şema" sekmesindeki liste) ---------- */
   const FL_EXAMPLES = [
     ['İki sayının toplamı', 'Başla\nOku a, b\ntoplam = a + b\nYaz "Toplam:", toplam\nBitir'],
@@ -7614,6 +8409,7 @@
     else if (act === 'clear') flClear(true);
     else if (act === 'help') openFlHelp();
     else if (act === 'newchart') flNewChart();
+    else if (act === 'code') openFlAlgo('code');
     else if (act === 'duplicate') flDuplicateChart();
   }
   el('flFileBtn').addEventListener('click', e => { e.stopPropagation(); el('flFileMenu').classList.toggle('open'); });
@@ -7753,6 +8549,8 @@
     el('flAlgoModal').querySelectorAll('[data-fltab]').forEach(b => b.classList.toggle('sel', b.dataset.fltab === tab));
     el('flTabSteps').style.display = tab === 'steps' ? '' : 'none';
     el('flTabParse').style.display = tab === 'parse' ? '' : 'none';
+    el('flTabCode').style.display = tab === 'code' ? '' : 'none';
+    if (tab === 'code') renderFlCode();
     if (tab === 'steps') {
       const txt = flowToSteps(activeProject);
       el('flAlgoOut').value = txt || 'Şema boş. "Algoritmadan şema" sekmesinde algoritmanı yazarak oluşturabilir ya da şekilleri tek tek ekleyebilirsin.';
@@ -7830,6 +8628,46 @@
     flToast('Akış şeması oluşturuldu: ' + res.nodes.length + ' adım, ' + res.edges.length + ' ok.' +
             (res.warn.length ? ' ⚠ ' + res.warn[0] + (res.warn.length > 1 ? ' (+' + (res.warn.length - 1) + ' uyarı)' : '') : ' Geri almak için Ctrl+Z.'), res.warn.length ? 8000 : 4500);
   });
+
+  /* ---- KODA ÇEVİR sekmesi ---- */
+  let flCodeLang = 'csharp';
+  const FL_LANG_INFO = {
+    csharp: { ext: '.cs', help: 'Konsol uygulaması (Program.cs). Veritabanı ve ekran gibi adımlar en altta <code>// TODO</code> yazılı boş metotlar olarak çıkar; içlerini sen doldurursun. Sayılar <code>double</code>, karşılaştırılan metinler <code>string</code> olarak tanımlanır.' },
+    python: { ext: '.py', help: '<code>python3 dosya.py</code> ile çalışır. Veritabanı ve ekran gibi adımlar <code># TODO</code> yazılı boş fonksiyonlar olarak çıkar. Sayı okurken virgül de kabul edilir (4,5).' },
+    pseudo: { ext: '.txt', help: 'White Note\'un algoritma yazımı: şemadan geri üretilir, Algoritmadan şema sekmesine yapıştırılabilir. Elle çizilmiş şemalar da girintili Eğer / İken / İçin bloklarına dönüşür.' }
+  };
+  function renderFlCode() {
+    const has = projectFlowNodes(activeProject).length > 0;
+    let code = '';
+    try { code = has ? flCodeGen(activeProject, activeChartId(activeProject), flCodeLang) : ''; }
+    catch (e) { code = '// Kod üretilemedi: ' + e.message; }
+    el('flCodeOut').value = code || 'Şema boş. Önce şekil ekle ya da Algoritmadan şema ile oluştur.';
+    el('flCodeHelp').innerHTML = FL_LANG_INFO[flCodeLang].help;
+    el('flCodeDownload').textContent = FL_LANG_INFO[flCodeLang].ext + ' indir';
+    el('flCodeMeta').textContent = has ? code.split('\n').length - 1 + ' satır' : '';
+    el('flTabCode').querySelectorAll('[data-lang]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.lang === flCodeLang)));
+  }
+  el('flTabCode').addEventListener('click', async e => {
+    const b = e.target.closest('[data-lang]');
+    if (!b) return;
+    flCodeLang = b.dataset.lang;
+    renderFlCode();
+    if (storageOK) await sSet('pref:codelang', flCodeLang);
+  });
+  el('flCodeCopy').addEventListener('click', async () => {
+    const txt = el('flCodeOut').value;
+    let ok = false;
+    try { await navigator.clipboard.writeText(txt); ok = true; }
+    catch (err) { el('flCodeOut').select(); try { ok = document.execCommand('copy'); } catch (_) {} }
+    el('flCodeCopy').textContent = ok ? 'Kopyalandı ✓' : 'Kopyalanamadı';
+    setTimeout(() => { el('flCodeCopy').textContent = 'Kopyala'; }, 1600);
+  });
+  el('flCodeDownload').addEventListener('click', () => {
+    if (!projectFlowNodes(activeProject).length) { flToast('İndirilecek şema yok.'); return; }
+    const ext = FL_LANG_INFO[flCodeLang].ext;
+    download(el('flCodeOut').value, (flCodeLang === 'csharp' ? 'Program' : flFileName(flCodeLang === 'python' ? 'kod' : 'sozde-kod')) + ext, 'text/plain');
+  });
+  sGet('pref:codelang').then(v => { if (v && FL_LANG_INFO[v.value]) flCodeLang = v.value; });
 
   /* ---- ÇALIŞTIRMA PANELİ olayları ---- */
   el('flRunPlay').addEventListener('click', flPlay);
