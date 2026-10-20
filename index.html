@@ -1073,6 +1073,57 @@
   #snackX { background: transparent; color: inherit; opacity: 0.7; font-size: 1.1rem; padding: 0.2rem 0.45rem; }
   @media (prefers-reduced-motion: reduce) { .snack { transition: none; } }
 
+  /* ---- Tüm projelerde ara (Ctrl+K) ---- */
+  .gs-open {
+    display: flex; align-items: center; gap: 0.5rem; margin: 0 0.9rem 0.8rem; padding: 0.5rem 0.65rem; border-radius: 7px;
+    border: 1px solid var(--line); background: var(--paper); color: var(--muted); font-family: inherit; font-size: 0.9rem; cursor: pointer; text-align: left;
+  }
+  .gs-open:hover { color: var(--ink); border-color: var(--muted); }
+  .gs-open svg, .gs-top svg { width: 15px; height: 15px; flex-shrink: 0; display: block; }
+  .gs-open span { flex: 1; }
+  .gs-kbd, .gs-foot kbd, .gs-esc {
+    font-family: monospace; font-size: 0.7rem; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px;
+    padding: 0.05rem 0.3rem; color: var(--muted); background: var(--bg); line-height: 1.4;
+  }
+  .gs-overlay.open { align-items: flex-start; padding-top: min(12vh, 90px); }
+  .gs-box {
+    width: 100%; max-width: 640px; background: var(--paper); border-radius: 12px; box-shadow: 0 24px 70px rgba(0,0,0,0.45);
+    display: flex; flex-direction: column; max-height: min(640px, calc(100dvh - 4rem)); overflow: hidden; border: 1px solid var(--line);
+  }
+  .gs-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 1rem; border-bottom: 1px solid var(--line); color: var(--muted); }
+  .gs-head svg { width: 18px; height: 18px; flex-shrink: 0; }
+  #gsInput { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--ink); font-family: inherit; font-size: 1.1rem; }
+  .gs-esc { cursor: pointer; }
+  .gs-list { overflow-y: auto; padding: 0.35rem 0; flex: 1; }
+  .gs-group { display: flex; justify-content: space-between; padding: 0.6rem 1rem 0.25rem; font-family: monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .gs-item {
+    display: grid; grid-template-columns: 1.9rem minmax(0, 1fr) auto; gap: 0.65rem; align-items: center; width: 100%; padding: 0.5rem 1rem;
+    border: 0; background: transparent; color: var(--ink); font-family: inherit; font-size: 0.95rem; text-align: left; cursor: pointer;
+  }
+  .gs-item.sel { background: var(--accent-soft); }
+  .gs-ic { width: 1.9rem; height: 1.9rem; border-radius: 7px; display: grid; place-items: center; background: var(--bg); color: var(--muted); }
+  .gs-item.sel .gs-ic { color: var(--accent); background: var(--paper); }
+  .gs-ic svg { width: 15px; height: 15px; }
+  .gs-t { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gs-t.done { text-decoration: line-through; color: var(--muted); }
+  .gs-s { display: block; font-size: 0.8rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 0.1rem; }
+  .gs-meta { font-size: 0.75rem; color: var(--muted); white-space: nowrap; max-width: 11rem; overflow: hidden; text-overflow: ellipsis; text-align: right; }
+  .gs-item mark { background: transparent; color: var(--accent); font-weight: bold; }
+  .gs-more { padding: 0.3rem 1rem 0.5rem 3.55rem; font-size: 0.78rem; color: var(--muted); font-style: italic; }
+  .gs-empty { padding: 2rem 1rem; text-align: center; color: var(--muted); font-style: italic; }
+  .gs-foot { display: flex; gap: 1rem; padding: 0.5rem 1rem; border-top: 1px solid var(--line); font-size: 0.75rem; color: var(--muted); }
+  .gs-foot kbd { margin-right: 0.15rem; }
+  @media (max-width: 760px) {
+    .gs-overlay.open { padding: 0.6rem; }
+    .gs-box { max-height: calc(100dvh - 1.2rem); }
+    .gs-foot, .gs-kbd { display: none; }
+    .gs-meta { max-width: 6.5rem; }
+  }
+  /* Etikete tıklayınca liste o etikete göre süzülür */
+  button.tag { border: 0; cursor: pointer; }
+  button.tag:hover { box-shadow: inset 0 0 0 1px currentColor; }
+  button.tag.on { background: var(--accent); color: #fff; }
+
   /* ---- Yedek yükleme penceresi ---- */
   .bk-modes { display: grid; gap: 0.5rem; margin-bottom: 1rem; }
   .bk-mode { display: flex; gap: 0.7rem; align-items: flex-start; padding: 0.7rem 0.85rem; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
@@ -1241,6 +1292,7 @@
   <!-- SOL KENAR ÇUBUĞU: projeler listesi -->
   <aside class="sidebar" id="sidebar">
     <h1>White Note</h1>
+    <button class="gs-open" id="gsSide" type="button" title="Tüm projelerde ara"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Her yerde ara</span><kbd class="gs-kbd">Ctrl K</kbd></button>
     <div class="proj-list" id="projList"></div>   <!-- Projeler JS tarafından buraya yazılır -->
     <button class="trash-btn" id="trashBtn" type="button" title="Silinenler 30 gün burada kalır">
       <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4h11M6 4V2.6h4V4M4 4l.7 9.4h6.6L12 4M6.6 6.6v4.6M9.4 6.6v4.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1272,6 +1324,8 @@
             <button id="viewFlow" title="Algoritma / akış şeması">Akış</button>
             <button id="viewCal" title="Son tarihi olan görevler takvimde">Takvim</button>
           </div>
+          <!-- Tüm projelerde ara (Ctrl+K) -->
+          <button class="theme-btn gs-top" id="gsBtn" aria-label="Tüm projelerde ara" title="Tüm projelerde ara (Ctrl+K)"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
           <!-- Tema değiştirme düğmesi (açık/karanlık) -->
           <button class="theme-btn" id="themeBtn" aria-label="Tema değiştir" title="Tema değiştir">&#9789;</button>
         <!-- Dışa/içe aktarma menüsü -->
@@ -1305,7 +1359,7 @@
       </div>
 
       <!-- Arama kutusu -->
-      <input class="search" id="search" type="text" placeholder="Ara (başlık, içerik, #etiket)...">
+      <input class="search" id="search" type="search" placeholder="Bu projede ara (başlık, içerik, #etiket)..." aria-label="Bu projede ara">
 
       <!-- İçerik: solda ekleme kutusu, sağda liste -->
       <div class="content">
@@ -1799,6 +1853,22 @@
         <button class="modal-btn primary" id="bkGo">Ekle</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     TÜM PROJELERDE ARA (Ctrl+K): not, görev, tablo, alan, akış şeması ve adımları
+     =================================================================== -->
+<div class="modal-overlay gs-overlay" id="gsModal">
+  <div class="gs-box" role="dialog" aria-modal="true" aria-label="Tüm projelerde ara">
+    <div class="gs-head">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <input id="gsInput" type="text" placeholder="Not, görev, tablo, alan, akış adımı ara…" autocomplete="off" spellcheck="false"
+             role="combobox" aria-expanded="true" aria-controls="gsList" aria-autocomplete="list">
+      <button class="gs-esc" id="gsClose" type="button" aria-label="Kapat">Esc</button>
+    </div>
+    <div class="gs-list" id="gsList" role="listbox" aria-label="Sonuçlar"></div>
+    <div class="gs-foot"><span><kbd>↑</kbd><kbd>↓</kbd> seç</span><span><kbd>Enter</kbd> aç</span><span class="gs-foot-k"><kbd>Ctrl</kbd>+<kbd>K</kbd> her yerden açar</span></div>
   </div>
 </div>
 
@@ -2358,6 +2428,161 @@
   }
   function hideSnack() { el('snack').classList.remove('show'); snackUndoFn = null; }
 
+  /* ===================================================================
+     TÜM PROJELERDE ARA (Ctrl+K)
+     Notlar/görevler, projeler, şema tabloları ve alanları, akış şemaları ve adımları
+     tek kutudan aranır. Türkçe harf ve büyük/küçük harf farkı gözetilmez (flFold);
+     her kelime ayrı aranır. Sonuca basınca ilgili proje ve görünüm açılır.
+     =================================================================== */
+  let gsResults = [], gsSel = 0;
+  const GS_ICON = {
+    proj: 'M2 4.5h4.5l1.2 1.5H14v7.5H2z',
+    note: 'M4 2.5h6l2 2v9H4zM6 7h4M6 9.5h4M6 12h2.5',
+    task: 'M3 3h10v10H3zM5.5 8l2 2 3.5-4',
+    table: 'M2.5 3h11v10h-11zM2.5 6.3h11M2.5 9.6h11M6.5 6.3V13',
+    chart: 'M8 1.8l3.2 3.2L8 8.2 4.8 5zM8 8.2v2.6M5 10.8h6v3H5z',
+    node: 'M3 5h10v6H3z'
+  };
+  const gsIcon = k => '<svg viewBox="0 0 16 16"><path d="' + GS_ICON[k] + '" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function gsWords(q) { return flFold(q).split(/\s+/).filter(Boolean); }
+  function gsHas(text, words) { const f = flFold(String(text || '')); return words.every(w => f.includes(w)); }
+  /* Metni güvenli hale getirip eşleşen yerleri <mark> ile işaretler; uzunsa ilk eşleşmenin çevresini gösterir.
+     flFold uzunluğu değiştirmediği için sadeleşmiş metindeki konumlar asıl metinde de geçerlidir. */
+  function gsMark(text, words, max) {
+    text = String(text || '');
+    const f = flFold(text), hits = [];
+    words.forEach(w => { let i = f.indexOf(w), n = 0; while (i >= 0 && n++ < 30) { hits.push([i, i + w.length]); i = f.indexOf(w, i + w.length); } });
+    hits.sort((a, b) => a[0] - b[0]);
+    let start = 0, end = text.length;
+    if (max && text.length > max) {
+      const first = hits.length ? hits[0][0] : 0;
+      start = Math.max(0, Math.min(first - Math.floor(max / 3), text.length - max));
+      end = Math.min(text.length, start + max);
+    }
+    let out = start > 0 ? '…' : '', pos = start;
+    for (const [a, b] of hits) {
+      if (b <= pos || a >= end) continue;
+      const x = Math.max(a, pos), y = Math.min(b, end);
+      out += esc(text.slice(pos, x)) + '<mark>' + esc(text.slice(x, y)) + '</mark>';
+      pos = y;
+    }
+    return out + esc(text.slice(pos, end)) + (end < text.length ? '…' : '');
+  }
+  function gsSearch(q) {
+    const words = gsWords(q);
+    const pname = id => (projects.find(p => p.id === id) || {}).name || '';
+    const groups = [
+      { key: 'proj', label: 'Projeler', max: 6, list: [] },
+      { key: 'item', label: 'Notlar ve görevler', max: 25, list: [] },
+      { key: 'table', label: 'Şema tabloları', max: 10, list: [] },
+      { key: 'flow', label: 'Akış şemaları', max: 15, list: [] }
+    ];
+    const G = Object.fromEntries(groups.map(g => [g.key, g.list]));
+    const itemRes = (i, plain, score) => ({
+      kind: 'item', id: i.id, pid: i.projectId, score: score, icon: i.type === 'task' ? 'task' : 'note', done: i.type === 'task' && i.done,
+      title: gsMark(i.title || plain.slice(0, 90) || '(başlıksız)', words, 90),
+      sub: plain && (i.title || plain.length > 90) ? gsMark(plain, words, 120) : '',
+      meta: pname(i.projectId) + (i.due ? ' · ' + fmtDay(i.due) : '')
+    });
+    if (!words.length) { // boş arama: projeler ve son eklenenler (hızlı geçiş)
+      projects.forEach(p => G.proj.push({ kind: 'proj', id: p.id, pid: p.id, icon: 'proj', title: esc(p.name), meta: items.filter(i => i.projectId === p.id).length + ' öğe' }));
+      items.slice().sort((a, b) => b.created - a.created).slice(0, 6)
+        .forEach(i => G.item.push(itemRes(i, mdPlain(i.body).replace(/\s+/g, ' ').trim(), 0)));
+      groups[1].label = 'Son eklenenler';
+      return groups;
+    }
+    projects.forEach(p => { if (gsHas(p.name, words)) G.proj.push({ kind: 'proj', id: p.id, pid: p.id, icon: 'proj', score: 0, title: gsMark(p.name, words), meta: items.filter(i => i.projectId === p.id).length + ' öğe' }); });
+    items.forEach(i => {
+      const plain = mdPlain(i.body).replace(/\s+/g, ' ').trim();
+      const tags = (i.tags || []).map(t => '#' + t).join(' ');
+      if (!gsHas((i.title || '') + ' ' + plain + ' ' + tags, words)) return;
+      const r = itemRes(i, plain, (gsHas(i.title, words) ? 100 : 0) + (i.projectId === activeProject ? 10 : 0) - (i.type === 'task' && i.done ? 20 : 0) + i.created / 1e13);
+      if (!r.sub && tags && !gsHas((i.title || '') + ' ' + plain, words)) r.sub = gsMark(tags, words);
+      G.item.push(r);
+    });
+    dbTables.forEach(t => {
+      const fields = t.fields.filter(f => gsHas(f.name, words));
+      const byName = gsHas(t.name + ' ' + (t.note || ''), words);
+      if (!byName && !fields.length) return;
+      G.table.push({ kind: 'table', id: t.id, pid: t.projectId, icon: 'table', score: byName ? 100 : 0,
+        title: byName ? gsMark(t.name, words) : esc(t.name),
+        sub: fields.length ? 'alan: ' + fields.slice(0, 4).map(f => gsMark(f.name, words)).join(', ') + (fields.length > 4 ? '…' : '') : esc(t.fields.length + ' alan' + (t.note ? ' · ' + t.note : '')),
+        meta: pname(t.projectId) });
+    });
+    flowCharts.forEach(c => {
+      if (gsHas(c.name, words)) G.flow.push({ kind: 'chart', id: c.id, cid: c.id, pid: c.projectId, icon: 'chart', score: 100, title: gsMark(c.name, words),
+        sub: esc(flowNodes.filter(n => n.chartId === c.id).length + ' adım'), meta: pname(c.projectId) });
+    });
+    flowNodes.forEach(n => {
+      if (!gsHas(n.text, words)) return;
+      const c = findChart(n.chartId);
+      if (!c) return;
+      G.flow.push({ kind: 'node', id: n.id, cid: c.id, pid: n.projectId, icon: 'node', score: 0, title: gsMark(n.text.replace(/\s+/g, ' '), words, 90),
+        sub: esc((FL_KINDS[n.kind] ? FL_KINDS[n.kind].name : 'Adım') + ' · ' + c.name), meta: pname(n.projectId) });
+    });
+    groups.forEach(g => g.list.sort((a, b) => b.score - a.score));
+    return groups;
+  }
+  function renderGs() {
+    const q = el('gsInput').value;
+    const groups = gsSearch(q);
+    gsResults = [];
+    let html = '';
+    groups.forEach(g => {
+      if (!g.list.length) return;
+      html += '<div class="gs-group"><span>' + g.label + '</span><span>' + g.list.length + '</span></div>';
+      g.list.slice(0, g.max).forEach(r => {
+        const k = gsResults.push(r) - 1;
+        html += '<button type="button" class="gs-item" role="option" id="gs' + k + '" data-gs="' + k + '">' +
+          '<span class="gs-ic" aria-hidden="true">' + gsIcon(r.icon) + '</span>' +
+          '<span style="min-width:0"><span class="gs-t' + (r.done ? ' done' : '') + '">' + r.title + '</span>' + (r.sub ? '<span class="gs-s">' + r.sub + '</span>' : '') + '</span>' +
+          '<span class="gs-meta">' + esc(r.meta || '') + '</span></button>';
+      });
+      if (g.list.length > g.max) html += '<div class="gs-more">+' + (g.list.length - g.max) + ' sonuç daha. Aramayı biraz daha belirginleştirin.</div>';
+    });
+    el('gsList').innerHTML = html || '<div class="gs-empty">' + (q.trim() ? '"' + esc(q.trim()) + '" hiçbir projede bulunamadı.' : 'Henüz bir şey yok.') + '</div>';
+    gsSel = 0;
+    gsHighlight();
+  }
+  function gsHighlight(scroll) {
+    el('gsList').querySelectorAll('.gs-item').forEach(b => b.classList.toggle('sel', +b.dataset.gs === gsSel));
+    const cur = el('gs' + gsSel);
+    el('gsInput').setAttribute('aria-activedescendant', cur ? cur.id : '');
+    if (cur && scroll) cur.scrollIntoView({ block: 'nearest' });
+  }
+  function openGs() {
+    closeDrawer();
+    el('gsModal').classList.add('open');
+    renderGs();
+    el('gsInput').focus();
+    el('gsInput').select();
+  }
+  function closeGs() { el('gsModal').classList.remove('open'); }
+  /* Projeye geç (kenar çubuğunda tıklamakla aynı) */
+  function switchProject(pid) {
+    if (!projects.some(p => p.id === pid) || pid === activeProject) return;
+    activeProject = pid;
+    el('search').value = '';
+    flCloseRun();
+    renderProjects(); renderMain(); renderBoard(); renderSchema(); renderFlow();
+  }
+  async function gsOpen(r) {
+    if (!r) return;
+    closeGs();
+    switchProject(r.pid);
+    if (r.kind === 'item') {
+      if (currentView === 'schema' || currentView === 'flow') await setView('list');
+      openCard(r.id);
+    } else if (r.kind === 'table') {
+      await setView('schema');
+      requestAnimationFrame(() => erJumpTo(r.id));
+    } else if (r.kind === 'chart' || r.kind === 'node') {
+      await setView('flow');
+      if (activeChartId(r.pid) !== r.cid) await flSwitchChart(r.cid);
+      if (r.kind === 'node') requestAnimationFrame(() => { flSel = { type: 'node', id: r.id }; renderFlow(); flJumpTo(r.id, true); });
+    }
+  }
+
   /* ---- PROJE SİL ----
      Önce onay sorar. Projeye ait tüm öğeleri ve projenin kendisini hem bellekten
      hem depodan siler. Hiç proje kalmazsa yeni "Genel" açar. */
@@ -2681,15 +2906,11 @@
       el('progressWrap').style.display = 'none'; // görev yoksa çubuğu gizle
     }
 
-    // --- Arama süzgeci ---
-    const q = el('search').value.trim().toLowerCase();
-    if (q) {
-      mine = mine.filter(i => {
-        // başlık + içerik + etiketleri tek metne birleştirip arama kelimesini içeriyor mu bak
-        const hay = ((i.title || '') + ' ' + (i.body || '') + ' ' + (i.tags || []).map(t=>'#'+t).join(' ')).toLowerCase();
-        return hay.includes(q.replace(/^#/, '')); // baştaki # işaretini yok say
-      });
-    }
+    // --- Arama süzgeci (Türkçe harf / büyük-küçük harf farkı gözetmez; "#etiket" o etikete süzer) ---
+    const q = el('search').value.trim();
+    const sf = searchFilter();
+    curTagFilter = sf ? sf.tag : null;
+    if (sf) mine = mine.filter(sf.test);
 
     // --- Son tarih süzgeci (gecikenler / bugün / 7 gün) ---
     const open = i => !(i.type === 'task' && i.done);
@@ -2725,10 +2946,39 @@
     bindItemEvents(); // yeni oluşan butonlara olayları bağla
   }
 
-  /* Etiketleri rozet HTML'ine çevirir. Etiket yoksa boş döner. */
+  /* Arama kutusundaki metinden süzgeç üretir (liste ve pano birlikte kullanır).
+     - Kelimeler ayrı ayrı aranır, hepsi geçmeli: "fatura ekim" → ikisini de içerenler
+     - Türkçe harf ve büyük/küçük harf farkı yok: "odev" → "Ödev"
+     - Tek başına "#etiket": yalnız o etiketi taşıyanlar (yazarken baştan eşleşenler) */
+  let curTagFilter = null; // etiket süzgeci açıksa sadeleşmiş etiket (rozeti vurgulamak için)
+  function searchFilter() {
+    const q = el('search').value.trim();
+    if (!q) return null;
+    const fold = t => flFold(String(t || ''));
+    if (/^#[^\s#]+$/.test(q)) {
+      const t = fold(q.slice(1));
+      const exact = items.some(i => (i.tags || []).some(x => fold(x) === t));
+      return { tag: t, test: i => (i.tags || []).some(x => exact ? fold(x) === t : fold(x).startsWith(t)) };
+    }
+    const words = fold(q).split(/\s+/).filter(Boolean);
+    return { tag: null, test: i => {
+      const hay = fold((i.title || '') + ' ' + (i.body || '') + ' ' + (i.tags || []).map(t => '#' + t).join(' '));
+      return words.every(w => hay.includes(w));
+    } };
+  }
+  /* Etikete tıklanınca: listeyi o etikete süz (aynı etikete tekrar tıklayınca süzgeç kalkar) */
+  function setTagFilter(tag) {
+    const on = curTagFilter === flFold(tag);
+    el('search').value = on ? '' : '#' + tag;
+    renderMain(); renderBoard();
+    if (!on) showSnack('#' + tag + ' etiketli öğeler gösteriliyor', null);
+  }
+
+  /* Etiketleri rozet HTML'ine çevirir (tıklanınca listeyi süzer). Etiket yoksa boş döner. */
   function tagsHTML(tags) {
     if (!tags.length) return '';
-    return '<div class="tags">' + tags.map(t => '<span class="tag">#' + esc(t) + '</span>').join('') + '</div>';
+    return '<div class="tags">' + tags.map(t => '<button type="button" class="tag' + (curTagFilter === flFold(t) ? ' on' : '') + '" data-tagf="' + escAttr(t) +
+      '" title="' + (curTagFilter === flFold(t) ? 'Süzgeci kaldır' : 'Bu etiketi taşıyanları göster') + '">#' + esc(t) + '</button>').join('') + '</div>';
   }
 
   /* Bir NOT nesnesini kart HTML'ine çevirir. */
@@ -2772,6 +3022,7 @@
     el('list').querySelectorAll('[data-check]').forEach(c => c.addEventListener('change', () => toggleDone(c.dataset.check)));
     el('list').querySelectorAll('[data-mdline]').forEach(c => c.addEventListener('change', () => toggleMdCheck(c.closest('[data-mditem]').dataset.mditem, +c.dataset.mdline)));
     el('list').querySelectorAll('[data-pin]').forEach(b => b.addEventListener('click', () => togglePin(b.dataset.pin)));
+    el('list').querySelectorAll('[data-tagf]').forEach(b => b.addEventListener('click', () => setTagFilter(b.dataset.tagf)));
     // Silmeden önce sor (pano penceresindeki "Kartı sil" ile aynı davranış)
     el('list').querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
       removeItem(b.dataset.del);
@@ -2820,18 +3071,13 @@
     if (!activeProject) { wrap.innerHTML = ''; return; }
 
     const cols = projectColumns(activeProject);
-    const q = el('search').value.trim().toLowerCase().replace(/^#/, ''); // arama panoyu da süzer
+    const sf = searchFilter(); // arama panoyu da süzer
 
     let html = '';
     cols.forEach(col => {
       // Bu sütundaki öğeler (sabitlenmişler önce, sonra yeniden eskiye)
       let cardsIn = items.filter(i => i.projectId === activeProject && i.columnId === col.id);
-      if (q) {
-        cardsIn = cardsIn.filter(i => {
-          const hay = ((i.title||'') + ' ' + (i.body||'') + ' ' + (i.tags||[]).map(t=>'#'+t).join(' ')).toLowerCase();
-          return hay.includes(q);
-        });
-      }
+      if (sf) cardsIn = cardsIn.filter(sf.test);
       // Sıralama: önce sabitlenmişler, sonra kullanıcının elle verdiği sıra (order),
       // order yoksa oluşturma zamanına göre. order kartları sürükleyince güncellenir.
       cardsIn.sort((a,b) =>
@@ -9870,6 +10116,37 @@
     if (r) openCard(r.dataset.open);
   });
   el('calDay').addEventListener('change', e => { const c = e.target.closest('[data-caldone]'); if (c) toggleDone(c.dataset.caldone); });
+
+  /* ---- TÜM PROJELERDE ARA olayları ---- */
+  el('gsBtn').addEventListener('click', openGs);
+  el('gsSide').addEventListener('click', openGs);
+  el('gsClose').addEventListener('click', closeGs);
+  el('gsModal').addEventListener('click', e => { if (e.target === el('gsModal')) closeGs(); });
+  el('gsInput').addEventListener('input', renderGs);
+  el('gsInput').addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!gsResults.length) return;
+      gsSel = (gsSel + (e.key === 'ArrowDown' ? 1 : -1) + gsResults.length) % gsResults.length;
+      gsHighlight(true);
+    } else if (e.key === 'Enter') { e.preventDefault(); gsOpen(gsResults[gsSel]); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeGs(); }
+  });
+  el('gsList').addEventListener('click', e => { const b = e.target.closest('[data-gs]'); if (b) gsOpen(gsResults[+b.dataset.gs]); });
+  el('gsList').addEventListener('mousemove', e => {
+    const b = e.target.closest('[data-gs]');
+    if (b && +b.dataset.gs !== gsSel) { gsSel = +b.dataset.gs; gsHighlight(); }
+  });
+  // Ctrl+K / Cmd+K her yerden; "/" yazı alanında değilken
+  document.addEventListener('keydown', e => {
+    const typing = e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]');
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      if (el('gsModal').classList.contains('open')) closeGs(); else openGs();
+    } else if (e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !document.querySelector('.modal-overlay.open')) {
+      e.preventDefault(); openGs();
+    }
+  });
 
   /* ---- YEDEK YÜKLEME penceresi ---- */
   el('bkClose').addEventListener('click', closeBackupModal);
