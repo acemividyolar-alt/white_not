@@ -5,9 +5,12 @@
    - Simgeler ve yazı tipleri: önce cihazdaki kopya, arkada tazelenir.
    - SQLite motoru (sql.js, internetten bir kez iner): indikten sonra cihazda saklanır,
      böylece şema konsolu ve .db dışa aktarma internetsiz de çalışır.
-   Notların kendisi burada değil, tarayıcının yerel deposundadır (localStorage).
+   - Firebase kütüphanesi (ekip modu, internetten bir kez iner): aynı şekilde cihazda saklanır,
+     böylece ekip alanı da internetsiz açılır.
+   Notların kendisi burada değil: kişisel alan tarayıcının yerel deposunda (localStorage),
+   ekip alanı Firebase'in cihazdaki kopyasında (IndexedDB) durur.
    ========================================================================== */
-const CACHE = 'white-note-v1';
+const CACHE = 'white-note-v2';
 const CORE = [
   './', './index.html', './manifest.webmanifest',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png',
@@ -46,8 +49,8 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // SQLite motoru: adresinde sürüm numarası var, değişmez; önce cihazdaki kopya
-  if (/\/sql\.js[@/]|sql-wasm\.(js|wasm)/.test(url.href)) {
+  // SQLite motoru ve Firebase kütüphanesi: adreslerinde sürüm numarası var, değişmez; önce cihazdaki kopya
+  if (/\/sql\.js[@/]|sql-wasm\.(js|wasm)/.test(url.href) || /^https:\/\/www\.gstatic\.com\/firebasejs\/\d+\.\d+\.\d+\//.test(url.href)) {
     event.respondWith(
       caches.match(req).then(hit => hit || fetch(req).then(res => (res.ok || res.type === 'opaque' ? put(req, res) : res)))
     );

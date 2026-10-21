@@ -1298,6 +1298,170 @@
   .bk-safe { margin-top: 0.2rem; white-space: normal; }
 
   /* ===================================================================
+     EKİP MODU: Ekip düğmesi, çalışma alanı, Ekip penceresi, açılış ekranı
+     =================================================================== */
+  [hidden] { display: none !important; }
+
+  /* Üst çubuktaki Ekip düğmesi: çevrimiçi kişiler + simge + ad. Simgenin köşesindeki nokta:
+     yeşil = kaydedildi, sarı = kaydediliyor, gri = çevrimdışı, kırmızı = sorun */
+  .team-btn {
+    display: inline-flex; align-items: center; gap: 0.45rem; height: var(--ctl-h); padding: 0 0.8rem 0 0.6rem;
+    border: 1px solid var(--line-2); border-radius: 999px; background: var(--paper); color: var(--ink);
+    font-family: var(--font-sans); font-size: 0.875rem; font-weight: 600; cursor: pointer; max-width: 220px; min-width: 0;
+  }
+  .team-btn:hover { background: var(--paper-2); border-color: var(--muted); }
+  .team-ico { position: relative; display: grid; place-items: center; color: var(--muted); flex-shrink: 0; }
+  .team-ico .ico { width: 18px; height: 18px; }
+  .team-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .sync-dot { position: absolute; right: -4px; bottom: -3px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--paper); display: none; }
+  .team-btn[data-sync="ok"] .sync-dot { display: block; background: var(--green); }
+  .team-btn[data-sync="saving"] .sync-dot { display: block; background: var(--warn); }
+  .team-btn[data-sync="offline"] .sync-dot { display: block; background: var(--muted); }
+  .team-btn[data-sync="error"] .sync-dot { display: block; background: var(--danger); }
+  body.team-mode .team-btn { border-color: color-mix(in srgb, var(--accent) 45%, var(--line-2)); background: var(--accent-soft); }
+  body.team-mode .team-btn .sync-dot { border-color: var(--accent-soft); }
+  body.team-mode .team-ico { color: var(--accent); }
+  .team-avatars { display: flex; }
+  .team-avatars:empty { display: none; }
+  .team-avatars .av { margin-left: -7px; box-shadow: 0 0 0 2px var(--paper); }
+  .team-avatars .av:first-child { margin-left: 0; }
+
+  /* Kişi rozeti: profil fotoğrafı ya da adının baş harfleri */
+  .av {
+    width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; flex-shrink: 0; object-fit: cover;
+    font-size: 0.66rem; font-weight: 720; color: #fff; line-height: 1; letter-spacing: 0; background: var(--muted);
+  }
+  .av.sm { width: 18px; height: 18px; font-size: 0.55rem; }
+  .av.lg { width: 42px; height: 42px; font-size: 1rem; }
+  .av.more { background: var(--paper-2); color: var(--ink-2); font-size: 0.62rem; box-shadow: inset 0 0 0 1px var(--line-2); }
+
+  /* Kenar çubuğunda: açık çalışma alanı ve projede şu an kimler var */
+  .ws-chip {
+    display: flex; align-items: center; gap: 0.6rem; margin: 0 0.8rem 0.75rem; padding: 0.45rem 0.55rem 0.45rem 0.6rem; text-align: left;
+    border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--paper-2); color: var(--ink); cursor: pointer; font-family: var(--font-sans);
+  }
+  .ws-chip:hover { border-color: var(--line-2); }
+  .ws-ico { width: 30px; height: 30px; border-radius: var(--r); display: grid; place-items: center; background: var(--paper); color: var(--muted); border: 1px solid var(--line); flex-shrink: 0; }
+  .ws-ico .ico { width: 17px; height: 17px; }
+  body.team-mode .ws-chip { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+  body.team-mode .ws-ico { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+  .ws-chip-txt { flex: 1; min-width: 0; display: grid; line-height: 1.3; }
+  .ws-chip-txt b, .ws-chip-txt small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ws-chip-txt b { font-size: 0.875rem; font-weight: 680; }
+  .ws-chip-txt small { font-size: 0.75rem; color: var(--muted); }
+  .ws-chev { width: 14px; height: 14px; color: var(--muted); }
+  .proj-people { display: inline-flex; }
+  .proj-people .av { margin-left: -5px; box-shadow: 0 0 0 1.5px var(--side-bg); }
+  .proj-people .av:first-child { margin-left: 0; }
+
+  /* Kart penceresi: son değiştiren ve "başkası değiştirdi" uyarısı */
+  .modal-meta { font-size: 0.78rem; color: var(--muted); margin: 0 0 0.35rem; }
+  .modal-remote {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.4rem 0.8rem; flex-wrap: wrap;
+    background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); border-radius: var(--r);
+    padding: 0.5rem 0.75rem; margin: 0.15rem 0 0.4rem; font-size: 0.85rem; line-height: 1.45; color: var(--ink);
+  }
+  /* Başkasının değiştirdiği kart bir an parlar */
+  @keyframes remoteFlash { 0%, 30% { box-shadow: 0 0 0 3px var(--hl); } 100% { box-shadow: 0 0 0 3px transparent; } }
+  .remote-flash { animation: remoteFlash 1.8s ease-out; }
+
+  /* Ekip penceresi */
+  .team-modal { max-width: 560px; }
+  .team-msg { border-radius: var(--r); padding: 0.6rem 0.8rem; font-size: 0.875rem; line-height: 1.5; margin-bottom: 0.9rem; background: var(--paper-2); border: 1px solid var(--line); }
+  .team-msg.err { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+  .team-msg.ok { background: var(--green-soft); border-color: color-mix(in srgb, var(--green) 40%, transparent); }
+  .team-loading { display: flex; align-items: center; justify-content: center; gap: 0.6rem; color: var(--muted); padding: 1.6rem 0; }
+  .team-spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line-2); border-top-color: var(--accent); animation: teamSpin 0.8s linear infinite; display: inline-block; flex-shrink: 0; }
+  @keyframes teamSpin { to { transform: rotate(360deg); } }
+  .team-callout { display: flex; gap: 0.6rem; align-items: flex-start; background: var(--accent-soft); border-radius: var(--r-lg); padding: 0.7rem 0.85rem; font-size: 0.875rem; line-height: 1.5; margin-bottom: 0.9rem; }
+  .team-callout .ico { width: 18px; height: 18px; color: var(--accent); margin-top: 1px; }
+  .team-steps { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 0.7rem 0.9rem; }
+  .team-steps summary { cursor: pointer; font-weight: 660; font-size: 0.9rem; }
+  .team-steps ol { padding-left: 1.25rem; margin: 0.65rem 0 0.3rem; font-size: 0.875rem; line-height: 1.6; color: var(--ink-2); display: grid; gap: 0.4rem; }
+  .team-steps a { color: var(--accent); }
+  .team-steps code, .team-foot code { font-size: 0.8rem; background: var(--paper-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 0.3rem; overflow-wrap: anywhere; }
+  .team-rules-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin: 0.7rem 0 0.35rem; font-size: 0.8125rem; font-weight: 640; color: var(--ink-2); }
+  .team-rules { max-height: 220px; overflow: auto; font-size: 0.72rem; line-height: 1.45; background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r); padding: 0.6rem 0.7rem; white-space: pre; }
+  .team-cfg { min-height: 130px; font-family: var(--font-mono); font-variation-settings: "MONO" 1; font-size: 0.8rem; }
+  .team-hint { font-size: 0.8rem; color: var(--muted); line-height: 1.5; margin: 0.4rem 0 0.5rem; }
+  .team-card { border: 1px solid var(--line-2); border-radius: var(--r-lg); padding: 0.8rem 0.95rem; margin-bottom: 0.9rem; display: grid; gap: 0.3rem; font-size: 0.9rem; }
+  .team-card.accent { border-color: var(--accent); background: var(--accent-soft); }
+  .team-card small { color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
+  .team-card-acts { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.45rem; flex-wrap: wrap; }
+  .team-google { width: 100%; height: 46px; font-size: 0.95rem; }
+  .team-google .ico { width: 18px; height: 18px; }
+  .team-or { display: flex; align-items: center; gap: 0.7rem; color: var(--muted); font-size: 0.8rem; margin: 0.95rem 0; }
+  .team-or::before, .team-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .team-form { display: grid; gap: 0.5rem; }
+  .team-form .modal-tags-input, .team-form .modal-btn { height: 44px; font-size: 0.95rem; }
+  .team-links { display: flex; gap: 0.5rem 1.2rem; justify-content: center; flex-wrap: wrap; margin-top: 0.8rem; font-size: 0.85rem; }
+  .team-foot { font-size: 0.78rem; color: var(--muted); margin-top: 1.2rem; display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+  .team-acct { display: flex; align-items: center; gap: 0.75rem; padding-bottom: 0.95rem; border-bottom: 1px solid var(--line); margin-bottom: 0.3rem; }
+  .team-acct-txt { flex: 1; min-width: 0; display: grid; line-height: 1.35; }
+  .team-acct-txt b, .team-acct-txt small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .team-acct-txt small { color: var(--muted); font-size: 0.8rem; }
+  .team-spaces { display: grid; gap: 0.4rem; }
+  .team-space {
+    display: flex; align-items: center; gap: 0.7rem; width: 100%; min-height: 54px; padding: 0.5rem 0.85rem; text-align: left;
+    border: 1px solid var(--line-2); border-radius: var(--r-lg); background: var(--paper); color: var(--ink); cursor: pointer; font-family: var(--font-sans);
+  }
+  .team-space:hover { border-color: var(--muted); background: var(--paper-2); }
+  .team-space.sel { border-color: var(--accent); background: var(--accent-soft); }
+  .team-space > .ico { width: 18px; height: 18px; color: var(--muted); }
+  .team-space.sel > .ico { color: var(--accent); }
+  .ts-txt { flex: 1; min-width: 0; display: grid; line-height: 1.35; }
+  .ts-txt b, .ts-txt small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ts-txt small { color: var(--muted); font-size: 0.78rem; font-weight: 500; }
+  .ts-state { font-size: 0.8rem; font-weight: 680; color: var(--accent); }
+  .team-space.sel .ts-state { color: var(--ink-2); font-weight: 560; }
+  .team-invite { display: flex; gap: 0.5rem; }
+  .team-invite input { flex: 1; min-width: 0; font-family: var(--font-mono); font-variation-settings: "MONO" 1; font-size: 0.78rem; color: var(--muted); }
+  .team-invite + .link-btn { margin-top: 0.6rem; font-size: 0.85rem; }
+  .team-members { border: 1px solid var(--line); border-radius: var(--r-lg); }
+  .team-member { display: flex; align-items: center; gap: 0.65rem; padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--line); }
+  .team-member:last-child { border-bottom: 0; }
+  .team-member > .av { width: 32px; height: 32px; font-size: 0.75rem; }
+  .tm-txt { flex: 1; min-width: 0; display: grid; line-height: 1.35; }
+  .tm-txt b, .tm-txt small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tm-txt small { color: var(--muted); font-size: 0.78rem; }
+  .tm-you { color: var(--muted); font-weight: 500; }
+  .tm-on { font-size: 0.75rem; color: var(--muted); display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
+  .tm-on::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--line-2); }
+  .tm-on.on { color: var(--green); }
+  .tm-on.on::before { background: var(--green); }
+  .tm-rm { height: 30px; padding: 0 0.6rem; font-size: 0.8rem; }
+  .team-row-acts { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.8rem; }
+  .team-new, .team-paste { display: flex; gap: 0.5rem; }
+  .team-new input, .team-paste input { flex: 1; min-width: 0; }
+  .team-callout + .team-paste { margin: -0.4rem 0 0.9rem; }
+
+  /* Ekip alanı açılırken (veriler gelene kadar) */
+  .team-boot { position: fixed; inset: 0; z-index: 90; background: var(--bg); display: grid; place-items: center; padding: 1.5rem; }
+  .team-boot-box { max-width: 440px; text-align: center; display: grid; gap: 0.75rem; justify-items: center; }
+  .team-boot .team-spin { width: 30px; height: 30px; border-width: 3px; }
+  .team-boot.err .team-spin { display: none; }
+  .team-boot-team { font-size: 1.35rem; font-weight: 760; letter-spacing: -0.015em; }
+  .team-boot-team:empty { display: none; }
+  .team-boot-msg { color: var(--muted); line-height: 1.6; }
+  .team-boot-acts { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-top: 0.3rem; }
+
+  @media (max-width: 900px) {
+    .team-label { display: none; }
+    .team-btn { padding: 0 0.55rem; }
+  }
+  @media (max-width: 760px) {
+    .team-btn { border-color: transparent; background: transparent; padding: 0 0.4rem; gap: 0.35rem; }
+    body.team-mode .team-btn { border-color: transparent; background: transparent; }
+    body.team-mode .team-btn .sync-dot { border-color: var(--bg); }
+    .team-avatars .av:nth-child(n+3):not(.more) { display: none; }
+    .team-avatars .av { box-shadow: 0 0 0 2px var(--bg); }
+    .ws-chip { margin-bottom: 0.9rem; }
+    .team-invite { flex-direction: column; }
+    .team-invite input { flex: none; height: 44px; }   /* alt alta dizilince kutu ezilmesin */
+    .team-invite .modal-btn { height: 44px; }
+  }
+
+  /* ===================================================================
      KOD YAZISI: kod, SQL, alan adları, değişkenler (aynı yazı tipinin "MONO" hali)
      =================================================================== */
   code, pre, kbd, .mono, .er-fname, .er-ftype, .er-badge, .er-ai, .er-card, .er-act, .elp-title, .tbl-in, .tbl-link-row,
@@ -1464,6 +1628,12 @@
   <!-- SOL KENAR ÇUBUĞU: projeler listesi -->
   <aside class="sidebar" id="sidebar">
     <div class="brand"><svg class="brand-mark" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="116" fill="#2747C9"/><rect x="144" y="100" width="224" height="312" rx="26" fill="#FFFFFF"/><rect x="170" y="226" width="172" height="46" rx="10" fill="#FFE45C"/><path d="M190 178H322M190 249H322M190 320H280" stroke="#172036" stroke-width="18" stroke-linecap="round"/></svg><h1>White Note</h1></div>
+    <!-- Açık çalışma alanı (Kişisel ya da bir ekip); tıklayınca Ekip penceresi açılır -->
+    <button class="ws-chip" id="wsChip" type="button" aria-haspopup="dialog">
+      <span class="ws-ico" id="wsIco"></span>
+      <span class="ws-chip-txt"><b id="wsName">Kişisel</b><small id="wsSub">Sadece bu cihazda</small></span>
+      <svg class="ws-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
     <button class="gs-open" id="gsSide" type="button" title="Tüm projelerde ara"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Her yerde ara</span><kbd class="gs-kbd">Ctrl K</kbd></button>
     <div class="side-label">Projeler</div>
     <div class="proj-list" id="projList"></div>   <!-- Projeler JS tarafından buraya yazılır -->
@@ -1488,6 +1658,12 @@
           <h2 id="projTitle" title="Yeniden adlandırmak için tıkla">&mdash;</h2>          <!-- Aktif projenin adı buraya yazılır -->
         </div>
         <div class="topbar-right">
+          <!-- Ekip: kişisel alan / ekip alanı, kim çevrimiçi, kaydedildi mi (renkli nokta) -->
+          <button class="team-btn" id="teamBtn" type="button" aria-haspopup="dialog" data-sync="personal">
+            <span class="team-avatars" id="teamAvatars"></span>
+            <span class="team-ico"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="5.4" r="2.4"/><path d="M1.6 13.2c.4-2.4 2.2-3.7 4.4-3.7s4 1.3 4.4 3.7"/><path d="M10.6 3.3a2.2 2.2 0 0 1 0 4.2M12.2 9.7c1.2.4 2 1.6 2.2 3.5"/></svg><span class="sync-dot" aria-hidden="true"></span></span>
+            <span class="team-label" id="teamLabel">Ekip</span>
+          </button>
           <!-- Tüm projelerde ara (Ctrl+K); masaüstünde aynı düğme kenar çubuğunda -->
           <button class="theme-btn gs-top" id="gsBtn" aria-label="Tüm projelerde ara" title="Tüm projelerde ara (Ctrl+K)"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
           <!-- Gece / gündüz görünümü (simgeyi JS yazar) -->
@@ -1772,6 +1948,9 @@
       <button class="modal-close" id="modalClose" aria-label="Kapat">&times;</button>
     </div>
     <div class="modal-body">
+      <!-- Ekip alanında: son değiştiren ve kart açıkken başkasının yaptığı değişiklik -->
+      <div class="modal-meta" id="modalMeta" hidden></div>
+      <div class="modal-remote" id="modalRemote" role="status" hidden></div>
       <div class="modal-section-label md-label"><span>Açıklama</span>
         <span class="md-tools" data-mdfor="modalDesc" role="toolbar" aria-label="Biçimlendirme">
           <button type="button" data-md="bold" title="Kalın (**metin**)"><b>B</b></button>
@@ -2016,7 +2195,7 @@
 <div class="modal-overlay" id="backupModal">
   <div class="modal">
     <div class="modal-head">
-      <div class="modal-heading">Yedeği yükle</div>
+      <div class="modal-heading" id="bkTitle">Yedeği yükle</div>
       <button class="modal-close" id="bkClose" aria-label="Kapat">&times;</button>
     </div>
     <div class="modal-body">
@@ -2075,6 +2254,30 @@
       </div>
       <div class="modal-actions"><span></span><button class="modal-btn primary" id="installDone">Tamam</button></div>
     </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     EKİP: kurulum, giriş, ekip kurma / katılma, davet bağlantısı, üyeler.
+     İçeriği JS çizer (renderTeamPanel).
+     =================================================================== -->
+<div class="modal-overlay" id="teamModal">
+  <div class="modal team-modal" role="dialog" aria-modal="true" aria-labelledby="teamTitle">
+    <div class="modal-head">
+      <div class="modal-heading" id="teamTitle">Ekip ile çalış</div>
+      <button class="modal-close" id="teamClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body" id="teamBody"></div>
+  </div>
+</div>
+
+<!-- Ekip alanı açılırken (veriler gelene kadar) gösterilen ekran -->
+<div class="team-boot" id="teamBoot" hidden>
+  <div class="team-boot-box" role="status" aria-live="polite">
+    <span class="team-spin" aria-hidden="true"></span>
+    <div class="team-boot-team" id="teamBootTeam"></div>
+    <p class="team-boot-msg" id="teamBootMsg"></p>
+    <div class="team-boot-acts" id="teamBootActs"></div>
   </div>
 </div>
 
@@ -2270,7 +2473,30 @@
      (sGet=oku, sSet=yaz, sDel=sil, sList=anahtarları listele) */
   const STORE_PREFIX = 'wn:'; // White Note
 
+  /* EKİP MODU: Bir ekip alanı açıkken kayıtlar bu cihaza değil, ekibin ortak deposuna
+     (Firebase Firestore) gider. Uygulamanın geri kalanı yine sGet/sSet/sDel/sList'i çağırır;
+     hangisinin kullanılacağına bu dört fonksiyon karar verir. Tercihler ("pref:" ile
+     başlayanlar: tema, görünüm, açık alan...) her zaman cihazda kalır.
+     Ayrıntılar aşağıda "EKİP MODU (Firebase)" bölümünde. */
+  const cloud = {
+    on: false,            // ekip alanı açık mı
+    team: null,           // { id, name, cfg }
+    fb: null,             // Firebase bağlantısı { app, auth, db, A, F }
+    user: null,           // giriş yapan kişi
+    ready: false,         // ilk veriler geldi mi
+    mirror: new Map(),    // anahtar -> JSON metni (ekibin bütün kayıtlarının bu cihazdaki kopyası)
+    meta: new Map(),      // anahtar -> { u: son değiştirenin kimliği, t: zaman }
+    queue: new Map(),     // gönderilmeyi bekleyen yazmalar: anahtar -> JSON metni (silme için null)
+    pendingRemote: new Map(), // başkalarından gelen, henüz ekrana uygulanmamış değişiklikler
+    members: new Map(),   // uid -> { name, email, photo, role }
+    presence: new Map(),  // uid -> { at, pid, view, away }
+    unsub: [], flushTimer: null, firstQueued: 0,
+    fromCache: true, hasPendingWrites: false, error: ''
+  };
+  const isLocalKey = k => String(k).indexOf('pref:') === 0;
+
   async function sGet(k){
+    if (cloud.on && !isLocalKey(k)) { const v = cloud.mirror.get(k); return v == null ? null : { value: v }; }
     try {
       const v = localStorage.getItem(STORE_PREFIX + k);
       // Eski kodla uyumlu olması için { value } biçiminde döndürüyoruz
@@ -2278,6 +2504,7 @@
     } catch(e){ return null; }
   }
   async function sSet(k,v){
+    if (cloud.on && !isLocalKey(k)) return cloudSet(k, v);
     try { localStorage.setItem(STORE_PREFIX + k, v); return true; }
     catch(e){
       // Depo dolu (çoğunlukla büyük kapak resimleri yüzünden). Sadece BU kayıt yapılamadı;
@@ -2312,13 +2539,16 @@
     return n * 2 / 1024 / 1024;
   }
   function updateStorageStatus() {
+    if (cloud.on) { updateSyncUI(); return; }
     if (!storageOK) return;
     el('status').textContent = 'Otomatik kayıt açık — notların bu cihaza kaydediliyor. (Kullanılan alan: ' + storageUsedMB().toFixed(1) + ' MB)';
   }
   async function sDel(k){
+    if (cloud.on && !isLocalKey(k)) { cloudDel(k); return; }
     try { localStorage.removeItem(STORE_PREFIX + k); } catch(e){}
   }
   async function sList(p){
+    if (cloud.on && !isLocalKey(p)) return [...cloud.mirror.keys()].filter(k => k.indexOf(p) === 0);
     try {
       const out = [];
       const full = STORE_PREFIX + p; // ör. "wn:proj:"
@@ -2434,9 +2664,10 @@
       updateStorageStatus();
     }
 
-    // Hiç proje yoksa varsayılan "Genel" projesini (sütunlarıyla birlikte) oluştur
+    // Hiç proje yoksa varsayılan "Genel" projesini (sütunlarıyla birlikte) oluştur.
+    // Ekip alanında sabit kimlik kullanılır: iki kişi aynı anda açsa bile tek "Genel" olur.
     if (projects.length === 0) {
-      await createProject('Genel');
+      await createProject('Genel', cloud.on ? 'genel' : null);
     } else {
       activeProject = projects[0].id; // Varsa ilk projeyi aç
     }
@@ -2478,8 +2709,8 @@
   /* ---- PROJE OLUŞTUR ----
      Yeni proje nesnesi yapar, varsayılan sütunlarını oluşturur, aktif yapar,
      kaydeder, ekranı tazeler. */
-  async function createProject(name) {
-    const p = { id: uid(), name: name, created: Date.now() };
+  async function createProject(name, fixedId) {
+    const p = { id: fixedId || uid(), name: name, created: Date.now() };
     projects.push(p);
     activeProject = p.id;
     await saveProject(p);
@@ -2487,7 +2718,7 @@
     // Varsayılan sütunları (Yapılacak / Yapılıyor / Bitti) oluştur
     let order = 0;
     for (const def of DEFAULT_COLUMNS) {
-      const c = { id: uid(), projectId: p.id, name: def.name, color: def.color, order: order++, created: Date.now() + order };
+      const c = { id: fixedId ? fixedId + '-c' + order : uid(), projectId: p.id, name: def.name, color: def.color, order: order++, created: Date.now() + order };
       columns.push(c);
       await saveColumn(c);
     }
@@ -2571,10 +2802,13 @@
     const ago = ts => { const d = Math.floor((Date.now() - ts) / 86400000); return d <= 0 ? 'bugün' : d === 1 ? 'dün' : d + ' gün önce'; };
     el('trashList').innerHTML = trash.slice().sort((a, b) => b.deleted - a.deleted).map(t => {
       const left = TRASH_DAYS - Math.floor((Date.now() - t.deleted) / 86400000);
+      // Ekip alanında kimin sildiği de yazar
+      const who = cloud.on ? memberName((cloud.meta.get('trash:' + t.id) || {}).u) : '';
+      const when = ago(t.deleted) + (who ? (who === 'Sen' ? ' sen sildin' : ' ' + who + ' sildi') : ' silindi');
       return '<div class="trash-row" data-tid="' + t.id + '">' +
         '<span class="trash-kind" aria-hidden="true">' + (TRASH_KINDS[t.kind] || ['?'])[0] + '</span>' +
         '<div style="min-width:0"><div class="trash-name">' + esc(t.label || '(başlıksız)') + '</div>' +
-        '<div class="trash-info">' + esc([t.kind === 'item' ? '' : (TRASH_KINDS[t.kind] || ['', ''])[1], t.info, ago(t.deleted) + ' silindi', left + ' gün kaldı'].filter(Boolean).join(' · ')) + '</div></div>' +
+        '<div class="trash-info">' + esc([t.kind === 'item' ? '' : (TRASH_KINDS[t.kind] || ['', ''])[1], t.info, when, left + ' gün kaldı'].filter(Boolean).join(' · ')) + '</div></div>' +
         '<div class="trash-acts"><button class="modal-btn" data-trestore="' + t.id + '">Geri al</button>' +
         '<button class="modal-btn danger" data-tpurge="' + t.id + '" title="Kalıcı olarak sil">Sil</button></div>' +
       '</div>';
@@ -2587,11 +2821,13 @@
     const t = trash.find(x => x.id === id);
     if (!t) return false;
     const d = t.data, has = pid => projects.some(p => p.id === pid);
+    // Ekip alanında kayıt bu arada başka biri tarafından geri getirilmiş olabilir: varsa üstüne yaz, çift olmasın
+    const put = (arr, x) => { const ex = arr.find(y => y.id === x.id); if (ex) Object.assign(ex, x); else arr.push(x); };
     if (t.kind === 'item') {
       const it = d.item;
       if (!has(it.projectId)) it.projectId = activeProject;
       if (!columns.some(c => c.id === it.columnId && c.projectId === it.projectId)) { const cols = projectColumns(it.projectId); it.columnId = cols.length ? cols[0].id : null; }
-      items.push(it); await saveItem(it);
+      put(items, it); await saveItem(it);
     } else if (t.kind === 'chart') {
       const pid = has(d.chart.projectId) ? d.chart.projectId : activeProject;
       // Son şema silinince kendiliğinden açılan boş "Akış N" şemasını kaldır (iki sekme kalmasın)
@@ -2599,20 +2835,20 @@
         if (x.created > t.deleted && /^Akış \d+$/.test(x.name) && !flowNodes.some(n => n.chartId === x.id)) await flDropChart(x, [], []);
       }
       const c = Object.assign({}, d.chart, { projectId: pid });
-      flowCharts.push(c); await saveFlowChart(c);
-      for (const n of d.nodes) { n.projectId = pid; flowNodes.push(n); await saveFlowNode(n); }
-      for (const e of d.edges) { e.projectId = pid; flowEdges.push(e); await saveFlowEdge(e); }
+      put(flowCharts, c); await saveFlowChart(c);
+      for (const n of d.nodes) { n.projectId = pid; put(flowNodes, n); await saveFlowNode(n); }
+      for (const e of d.edges) { e.projectId = pid; put(flowEdges, e); await saveFlowEdge(e); }
       flowSettings(pid).active = c.id; await saveFlowSettings(pid);
     } else if (t.kind === 'project') {
-      projects.push(d.project); projects.sort((a, b) => a.created - b.created); await saveProject(d.project);
-      for (const c of d.columns) { columns.push(c); await saveColumn(c); }
-      for (const i of d.items) { items.push(i); await saveItem(i); }
-      for (const x of d.tables) { dbTables.push(x); await saveDbTable(x); }
-      for (const x of d.links) { dbLinks.push(x); await saveDbLink(x); }
+      put(projects, d.project); projects.sort((a, b) => a.created - b.created); await saveProject(d.project);
+      for (const c of d.columns) { put(columns, c); await saveColumn(c); }
+      for (const i of d.items) { put(items, i); await saveItem(i); }
+      for (const x of d.tables) { put(dbTables, x); await saveDbTable(x); }
+      for (const x of d.links) { put(dbLinks, x); await saveDbLink(x); }
       if (d.dbSettings) { dbSettings[d.project.id] = d.dbSettings; await saveSchemaSettings(d.project.id); }
-      for (const c of d.charts) { flowCharts.push(c); await saveFlowChart(c); }
-      for (const n of d.nodes) { flowNodes.push(n); await saveFlowNode(n); }
-      for (const e of d.edges) { flowEdges.push(e); await saveFlowEdge(e); }
+      for (const c of d.charts) { put(flowCharts, c); await saveFlowChart(c); }
+      for (const n of d.nodes) { put(flowNodes, n); await saveFlowNode(n); }
+      for (const e of d.edges) { put(flowEdges, e); await saveFlowEdge(e); }
       if (d.flSettings) { flSettings[d.project.id] = d.flSettings; await saveFlowSettings(d.project.id); }
       activeProject = d.project.id;
     }
@@ -2884,7 +3120,7 @@
       const late = items.filter(i => i.projectId === p.id && isLate(i)).length; // gecikmiş görev
       return '<div class="proj ' + (p.id===activeProject?'active':'') + '" data-id="' + p.id + '" tabindex="0" role="button"' + (p.id === activeProject ? ' aria-current="true"' : '') + '>' +
         '<span class="proj-name">' + esc(p.name) + '</span>' +
-        '<span class="proj-right">' + (late ? '<span class="proj-late" title="' + late + ' gecikmiş görev">' + late + '</span>' : '') + '<span class="proj-count">' + cnt + '</span>' +
+        '<span class="proj-right">' + projectPeopleHTML(p.id) + (late ? '<span class="proj-late" title="' + late + ' gecikmiş görev">' + late + '</span>' : '') + '<span class="proj-count">' + cnt + '</span>' +
         '<span class="proj-x" data-del="' + p.id + '" title="Projeyi sil" role="button" aria-label="Projeyi sil">&times;</span></span></div>';
     }).join('');
 
@@ -3945,6 +4181,9 @@
     const i = items.find(x => x.id === id);
     if (!i) return;
     openCardId = id;
+    cardGhost = null;
+    el('modalRemote').hidden = true; // ekip alanı: "başkası değiştirdi" uyarısı
+    updateCardMeta(id);              // ekip alanı: son değiştiren
 
     el('modalTitle').value = i.title || '';
     el('modalDesc').value = i.body || '';
@@ -4017,7 +4256,14 @@
   /* Penceredeki tüm değerleri okuyup kartı (öğeyi) günceller ve kaydeder. */
   async function saveOpenCard() {
     if (!openCardId) return;
-    const i = items.find(x => x.id === openCardId);
+    let i = items.find(x => x.id === openCardId);
+    // Ekip alanı: kart açıkken başkası sildiyse, kaydedince bu kişinin hâliyle geri gelir
+    // (çöp kutusundaki kopyası da kalkar, yoksa iki kez geri alınabilirdi)
+    if (!i && cardGhost && cardGhost.id === openCardId) {
+      i = cardGhost; items.push(i);
+      for (const t of trash.filter(x => x.kind === 'item' && x.data && x.data.item && x.data.item.id === i.id)) await dropTrash(t.id);
+    }
+    cardGhost = null;
     if (!i) return;
 
     const newType = el('modalType').value;
@@ -10066,6 +10312,9 @@
     ).join('') || '<div class="bk-row" style="cursor:default;color:var(--muted)">Yedekte proje yok.</div>';
     document.querySelector('input[name="bkMode"][value="merge"]').checked = true;
     el('bkSafe').checked = true;
+    // Ekip alanında yedek yalnızca EKLENİR ("hepsini değiştir" ekibin bütün projelerini silerdi)
+    document.querySelector('input[name="bkMode"][value="replace"]').closest('.bk-mode').hidden = cloud.on;
+    el('bkTitle').textContent = pendingImport.personal ? 'Kişisel projeleri ekibe kopyala' : 'Yedeği yükle';
     updateBackupUI();
     el('backupModal').classList.add('open');
   }
@@ -10085,7 +10334,7 @@
   }
   async function runBackupImport() {
     if (!pendingImport) return;
-    const data = pendingImport.data, merge = backupMode() === 'merge', picked = backupPicked();
+    const data = pendingImport.data, merge = backupMode() === 'merge' || cloud.on, picked = backupPicked();
     if (merge && !picked.length) return;
     if (!merge && el('bkSafe').checked) exportJSON(); // değiştirmeden önce mevcut verinin yedeği
     closeBackupModal();
@@ -10189,7 +10438,7 @@
     renderProjects(); renderMain(); renderBoard(); renderSchema(); renderFlow();
     const msg = newProjects.length + ' proje eklendi (' + newItems.length + ' not/görev' +
       (newTables.length ? ', ' + newTables.length + ' tablo' : '') + (newCharts.length ? ', ' + newCharts.length + ' akış şeması' : '') + ').';
-    el('status').textContent = msg + ' (Kullanılan alan: ' + storageUsedMB().toFixed(1) + ' MB)';
+    if (cloud.on) updateSyncUI(); else el('status').textContent = msg + ' (Kullanılan alan: ' + storageUsedMB().toFixed(1) + ' MB)';
     showSnack(msg);
     return newProjects;
   }
@@ -10445,11 +10694,11 @@
     if (r) { await restoreTrash(r.dataset.trestore); showSnack('Geri alındı.'); }
     else if (x) {
       const t = trash.find(z => z.id === x.dataset.tpurge);
-      if (t && confirm('"' + (t.label || 'Kayıt') + '" kalıcı olarak silinsin mi? Bu geri alınamaz.')) { await dropTrash(t.id); renderTrash(); }
+      if (t && confirm('"' + (t.label || 'Kayıt') + '" kalıcı olarak silinsin mi? Bu geri alınamaz.' + (cloud.on ? ' (Ekipteki herkes için silinir.)' : ''))) { await dropTrash(t.id); renderTrash(); }
     }
   });
   el('trashEmpty').addEventListener('click', async () => {
-    if (!trash.length || !confirm('Çöp kutusundaki ' + trash.length + ' kayıt kalıcı olarak silinsin mi? Bu geri alınamaz.')) return;
+    if (!trash.length || !confirm('Çöp kutusundaki ' + trash.length + ' kayıt kalıcı olarak silinsin mi? Bu geri alınamaz.' + (cloud.on ? ' (Ekipteki herkes için silinir.)' : ''))) return;
     for (const t of trash.slice()) await dropTrash(t.id);
     renderTrash();
   });
@@ -10650,11 +10899,1305 @@
 
   el('themeBtn').addEventListener('click', toggleTheme);
 
+  /* ===================================================================
+     EKİP MODU (Firebase)
+     Ekip alanında projeler ekibin ortak deposunda (Google Firebase Firestore) durur ve
+     değişiklikler ekipteki herkesin ekranına anında yansır. Giriş Google hesabıyla ya da
+     e-posta + şifreyle yapılır (Firebase Authentication). Kişisel alan eskisi gibi
+     sadece bu cihazdadır; ikisi arasında üst çubuktaki "Ekip" düğmesiyle geçilir.
+
+     Firestore'daki yerleşim:
+       teams/{ekip}                 { name, owner, created }
+       teams/{ekip}/members/{uid}   { name, email, photo, role: 'owner' | 'member', joined }
+       teams/{ekip}/secret/invite   { code }  davet bağlantısındaki gizli kod
+       teams/{ekip}/records/{kayıt} { k: anahtar, d: JSON metni, t: zaman, u: son değiştiren }
+       teams/{ekip}/presence/{uid}  { at, pid, view, away }  kim çevrimiçi, hangi projede
+       users/{uid}                  { teams: { ekip: { name, role } } }  kişinin ekipleri
+     Her kayıt, kişisel alandaki localStorage anahtarının aynısıdır (ör. "item:abc"); yani
+     uygulama iki alana da aynı kodla yazar, sadece depo değişir (bkz. sGet / sSet).
+     Kim neyi okuyup yazabilir: firestore.rules (aşağıda FIRESTORE_RULES).
+     =================================================================== */
+  const FB_VERSION = '12.19.0';
+  const FB_URL = name => 'https://www.gstatic.com/firebasejs/' + FB_VERSION + '/firebase-' + name + '.js';
+  const REC_PREFIXES = ['proj:', 'col:', 'item:', 'tbl:', 'rel:', 'sch:', 'flc:', 'fln:', 'fle:', 'fls:', 'trash:'];
+  const SAFE_UID = /^[A-Za-z0-9_-]{1,128}$/;
+  const VIEWS = ['list', 'board', 'schema', 'flow', 'calendar'];
+  const VIEW_NAMES = { list: 'Liste', board: 'Pano', schema: 'Şema', flow: 'Akış', calendar: 'Takvim' };
+
+  /* Firestore güvenlik kuralları: Firebase konsolunda Firestore → Kurallar'a yapıştırılır.
+     (Depodaki firestore.rules dosyasıyla aynıdır.) */
+  const FIRESTORE_RULES = `rules_version = '2';
+// White Note ekip modu: sadece ekip üyeleri okur ve yazar.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function teamPath(t) { return /databases/$(database)/documents/teams/$(t); }
+    function isMember(t) {
+      return signedIn() && exists(/databases/$(database)/documents/teams/$(t)/members/$(request.auth.uid));
+    }
+    function isOwner(t) { return signedIn() && get(teamPath(t)).data.owner == request.auth.uid; }
+    function inviteCode(t) { return get(/databases/$(database)/documents/teams/$(t)/secret/invite).data.code; }
+
+    // Kişinin kendi ekip listesi
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /teams/{t} {
+      allow read: if isMember(t);
+      allow create: if signedIn() && request.resource.data.owner == request.auth.uid
+        && request.resource.data.name is string && request.resource.data.name.size() <= 60;
+      allow update: if isOwner(t) && request.resource.data.owner == resource.data.owner
+        && request.resource.data.name is string && request.resource.data.name.size() <= 60;
+
+      // Üyeler: sahip kendini ekler; diğerleri davet koduyla katılır
+      match /members/{uid} {
+        allow read: if isMember(t);
+        allow create: if signedIn() && uid == request.auth.uid && (
+          (get(teamPath(t)).data.owner == request.auth.uid && request.resource.data.role == 'owner')
+          || (request.resource.data.role == 'member' && request.resource.data.code == inviteCode(t)));
+        allow update: if signedIn() && uid == request.auth.uid && request.resource.data.role == resource.data.role;
+        allow delete: if isOwner(t) || (signedIn() && uid == request.auth.uid);
+      }
+
+      // Davet kodu: üyeler görür (bağlantıyı paylaşmak için), sadece sahip değiştirir
+      match /secret/{doc} {
+        allow read: if isMember(t);
+        allow write: if isOwner(t);
+      }
+
+      // Notlar, görevler, panolar, şemalar, akış şemaları
+      match /records/{rid} {
+        allow read: if isMember(t);
+        allow create, update: if isMember(t)
+          && request.resource.data.keys().hasOnly(['k', 'd', 't', 'u'])
+          && request.resource.data.k is string && request.resource.data.d is string
+          && request.resource.data.u == request.auth.uid && request.resource.data.t == request.time;
+        allow delete: if isMember(t);
+      }
+
+      // Kim çevrimiçi
+      match /presence/{uid} {
+        allow read: if isMember(t);
+        allow write: if isMember(t) && uid == request.auth.uid;
+      }
+    }
+  }
+}
+`;
+
+  /* ---------- Cihazdaki tercihler (her zaman localStorage'da) ---------- */
+  function localGet(k) { try { return localStorage.getItem(STORE_PREFIX + k); } catch (e) { return null; } }
+  function localSet(k, v) { try { if (v == null || v === '') localStorage.removeItem(STORE_PREFIX + k); else localStorage.setItem(STORE_PREFIX + k, v); } catch (e) {} }
+  function localJSON(k, def) { try { const v = JSON.parse(localGet(k)); return v == null ? def : v; } catch (e) { return def; } }
+
+  /* ---------- Firebase ayarları ve davet bağlantısı ---------- */
+  const CFG_KEYS = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
+  function cfgPick(c) { const o = {}; CFG_KEYS.forEach(k => { if (c && typeof c[k] === 'string' && c[k]) o[k] = c[k].trim(); }); return o; }
+  /* Ayarlar Firebase'in verdiği biçimde mi? (Davet bağlantısıyla gelen ayarlar da buradan geçer:
+     giriş penceresi sadece Firebase'in kendi adresinde, projeyle aynı adda açılabilir.) */
+  function cfgOk(c) {
+    return !!c && /^[A-Za-z0-9_-]{20,60}$/.test(c.apiKey || '') && /^[a-z0-9-]{4,40}$/.test(c.projectId || '') &&
+      (c.authDomain === c.projectId + '.firebaseapp.com' || c.authDomain === c.projectId + '.web.app') &&
+      /^\d+:\d+:web:[0-9a-f]+$/i.test(c.appId || '') &&
+      (!c.storageBucket || /^[a-z0-9.-]{3,120}$/.test(c.storageBucket)) && (!c.messagingSenderId || /^\d{1,30}$/.test(c.messagingSenderId));
+  }
+  /* Firebase konsolundaki "const firebaseConfig = { ... }" metninden ayarları çıkarır (JSON da olur). */
+  function parseFbConfig(text) {
+    const o = {}, re = /["']?(apiKey|authDomain|projectId|storageBucket|messagingSenderId|appId)["']?\s*:\s*["']([^"'\n]+)["']/g;
+    let m;
+    while ((m = re.exec(String(text || '')))) o[m[1]] = m[2];
+    return cfgPick(o);
+  }
+  function b64urlEncode(str) {
+    let bin = '';
+    new TextEncoder().encode(str).forEach(b => { bin += String.fromCharCode(b); });
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function b64urlDecode(s) {
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    const bin = atob(s), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  /* Davet bağlantısı: Firebase ayarları + ekip + gizli kod, adresin # kısmında.
+     (# sonrası sunucuya gönderilmez; bağlantıyı kim açarsa onun tarayıcısında kalır.) */
+  function inviteURL(team, code) {
+    const p = { v: 1, c: cfgPick(team.cfg), t: team.id, k: code, n: team.name };
+    return location.origin + location.pathname + '#davet=' + b64urlEncode(JSON.stringify(p));
+  }
+  function readInvite() {
+    const m = /[#&]davet=([A-Za-z0-9_-]+)/.exec(location.hash || '');
+    if (!m) return null;
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    return decodeInvite(m[1]);
+  }
+  function decodeInvite(b64) {
+    try {
+      const p = JSON.parse(b64urlDecode(b64));
+      const cfg = cfgPick(p && p.c);
+      if (!cfgOk(cfg) || !SAFE_ID.test(p.t || '') || !/^[A-Za-z0-9]{12,64}$/.test(p.k || '')) return { bad: true };
+      return { cfg: cfg, id: p.t, code: p.k, name: String(p.n || 'Ekip').slice(0, 60) };
+    } catch (e) { return { bad: true }; }
+  }
+  /* Elle yapıştırılan davet bağlantısı (ör. iPhone'da ana ekrana eklenen uygulama, Safari'de
+     açılan bağlantıyı göremez; bağlantı kopyalanıp uygulamada buraya yapıştırılır) */
+  function inviteFromText(text) {
+    const m = /davet=([A-Za-z0-9_-]+)/.exec(String(text || ''));
+    return m ? decodeInvite(m[1]) : { bad: true };
+  }
+  function invitePasteHTML() {
+    return '<div class="team-paste"><input class="modal-tags-input" id="teamInvPaste" autocomplete="off" spellcheck="false" placeholder="Davet bağlantısını buraya yapıştır" aria-label="Davet bağlantısı">' +
+      '<button class="modal-btn" type="button" data-tact="paste-invite">Aç</button></div>';
+  }
+  function randomCode() {
+    const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789', a = new Uint8Array(20);
+    crypto.getRandomValues(a);
+    return Array.from(a, b => abc[b % abc.length]).join('');
+  }
+
+  /* Bu cihazda bilinen ekipler: [{ id, name, cfg }] ve açık alan (boş = kişisel) */
+  function knownTeams() { return (Array.isArray(localJSON('pref:teams', [])) ? localJSON('pref:teams', []) : []).filter(t => t && SAFE_ID.test(t.id || '') && cfgOk(t.cfg)); }
+  function rememberTeam(t) {
+    const list = knownTeams().filter(x => x.id !== t.id);
+    list.push({ id: t.id, name: String(t.name || 'Ekip').slice(0, 60), cfg: cfgPick(t.cfg) });
+    localSet('pref:teams', JSON.stringify(list));
+  }
+  function forgetTeam(id) {
+    localSet('pref:teams', JSON.stringify(knownTeams().filter(x => x.id !== id)));
+    if (localGet('pref:ws') === id) localSet('pref:ws', null);
+  }
+
+  /* ---------- Firebase'i yükleme (sadece ekip kullanılınca, ilk seferde internetten) ---------- */
+  let fbModsP = null;
+  function fbModules() {
+    if (!fbModsP) {
+      fbModsP = Promise.all([import(FB_URL('app')), import(FB_URL('auth')), import(FB_URL('firestore'))])
+        .then(r => ({ P: r[0], A: r[1], F: r[2] }))
+        .catch(e => { fbModsP = null; throw e; });
+    }
+    return fbModsP;
+  }
+  const fbInstances = new Map();
+  async function fbOpen(cfg) {
+    const name = 'wn-' + cfg.projectId;
+    if (fbInstances.has(name)) return fbInstances.get(name);
+    const { P, A, F } = await fbModules();
+    if (fbInstances.has(name)) return fbInstances.get(name);
+    const app = P.getApps().find(a => a.name === name) || P.initializeApp(cfgPick(cfg), name);
+    const auth = A.getAuth(app);
+    auth.languageCode = 'tr'; // şifre sıfırlama e-postaları Türkçe gelsin
+    let db;
+    try {
+      // Veriler cihazda da saklanır: internet yokken açılır, değişiklikler bağlantı gelince gider
+      db = F.initializeFirestore(app, { localCache: F.persistentLocalCache({ tabManager: F.persistentMultipleTabManager() }) });
+    } catch (e) {
+      try { db = F.getFirestore(app); } catch (e2) { db = F.initializeFirestore(app, { localCache: F.memoryLocalCache() }); }
+    }
+    // Sadece geliştirme / test için: bilgisayarda çalışan Firebase emülatörleri
+    const emuA = localGet('dev:authEmu'), emuF = /^([\w.-]+):(\d+)$/.exec(localGet('dev:fsEmu') || '');
+    if (emuA && /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(emuA)) A.connectAuthEmulator(auth, emuA, { disableWarnings: true });
+    if (emuF && /^(127\.0\.0\.1|localhost)$/.test(emuF[1])) F.connectFirestoreEmulator(db, emuF[1], +emuF[2]);
+    const inst = { app: app, auth: auth, db: db, P: P, A: A, F: F, cfg: cfgPick(cfg), name: name };
+    fbInstances.set(name, inst);
+    return inst;
+  }
+  async function fbUser(inst) { await inst.auth.authStateReady(); return inst.auth.currentUser; }
+  function withTimeout(p, ms) {
+    return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), ms || 15000))]);
+  }
+
+  /* Firebase hata kodlarını anlaşılır Türkçe cümlelere çevirir */
+  function fbErr(e) {
+    const c = (e && e.code) || '';
+    const M = {
+      'auth/invalid-credential': 'E-posta ya da şifre yanlış.',
+      'auth/invalid-login-credentials': 'E-posta ya da şifre yanlış.',
+      'auth/wrong-password': 'Şifre yanlış.',
+      'auth/user-not-found': 'Bu e-postayla bir hesap yok. "Hesap oluştur"u dene.',
+      'auth/email-already-in-use': 'Bu e-postayla zaten bir hesap var. "Giriş yap"ı dene.',
+      'auth/weak-password': 'Şifre en az 6 karakter olmalı.',
+      'auth/invalid-email': 'E-posta adresi geçersiz.',
+      'auth/missing-password': 'Şifreyi yaz.',
+      'auth/missing-email': 'E-posta adresini yaz.',
+      'auth/popup-closed-by-user': 'Giriş penceresi kapatıldı.',
+      'auth/cancelled-popup-request': 'Giriş penceresi kapatıldı.',
+      'auth/popup-blocked': 'Tarayıcı giriş penceresini engelledi. Açılır pencerelere izin ver ya da e-posta ile giriş yap.',
+      'auth/unauthorized-domain': 'Bu site Firebase\'de izinli değil. Firebase konsolunda Authentication → Settings → Authorized domains bölümüne "' + location.hostname + '" ekle.',
+      'auth/operation-not-allowed': 'Bu giriş yöntemi Firebase\'de kapalı. Authentication → Sign-in method bölümünden Google\'ı ve E-posta/Şifre\'yi aç.',
+      'auth/configuration-not-found': 'Firebase\'de Authentication henüz açılmamış. Konsolda Authentication → Get started\'a bas.',
+      'auth/network-request-failed': 'İnternet bağlantısı yok gibi görünüyor.',
+      'auth/too-many-requests': 'Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene.',
+      'auth/invalid-api-key': 'Firebase ayarlarındaki apiKey geçersiz.',
+      'auth/api-key-not-valid.-please-pass-a-valid-api-key.': 'Firebase ayarlarındaki apiKey geçersiz.',
+      'auth/user-disabled': 'Bu hesap kapatılmış.',
+      'permission-denied': 'İzin yok: ekip üyesi değilsin ya da Firestore kuralları yayımlanmamış.',
+      'unavailable': 'Sunucuya ulaşılamıyor; internet bağlantını kontrol et.',
+      'not-found': 'Firestore veritabanı bulunamadı. Firebase konsolunda Firestore Database → Create database ile oluştur.',
+      'failed-precondition': 'Firestore veritabanı hazır değil ya da bu tarayıcıda başka bir sekme engelliyor.',
+      'resource-exhausted': 'Firebase\'in günlük ücretsiz kotası doldu; yarın sıfırlanır.',
+      'invalid-argument': 'Kayıt çok büyük ya da geçersiz (büyük bir kapak resmi olabilir).',
+      'unauthenticated': 'Oturum kapanmış; yeniden giriş yap.',
+      'timeout': 'Sunucu yanıt vermedi. İnternet bağlantını ve Firestore veritabanının oluşturulduğunu kontrol et.'
+    };
+    return M[c] || ('Bir sorun çıktı' + (c ? ' (' + c + ')' : '') + '.');
+  }
+
+  /* ---------- Kayıtlar: anahtar ↔ Firestore belgesi ---------- */
+  const recId = k => encodeURIComponent(k).replace(/\./g, '%2E'); // "/" ve "." belge adında kullanılamaz
+  const recKey = id => { try { return decodeURIComponent(id); } catch (e) { return null; } };
+  const prefixOf = k => { const i = String(k).indexOf(':'); return i > 0 ? k.slice(0, i + 1) : ''; };
+
+  /* Çöp kutusu paketindeki kayıtlar güvenli mi (geri alınınca sayfaya yazılacaklar)? */
+  function trashIdsOk(t) {
+    const d = t.data, arrs = ks => ks.every(k => Array.isArray(d[k]));
+    try {
+      if (t.kind === 'item') return !!d.item && backupIdsOk({ items: [d.item] }) && normalizeItems([d.item]).length === 1;
+      if (t.kind === 'chart') {
+        if (!d.chart || !arrs(['nodes', 'edges'])) return false;
+        if (!backupIdsOk({ flowCharts: [d.chart], flowNodes: d.nodes, flowEdges: d.edges })) return false;
+        d.nodes = normalizeFlowNodes(d.nodes); d.edges = normalizeFlowEdges(d.edges, d.nodes);
+        return normalizeFlowCharts([d.chart]).length === 1;
+      }
+      if (t.kind === 'project') {
+        if (!d.project || !arrs(['items', 'columns', 'tables', 'links', 'charts', 'nodes', 'edges'])) return false;
+        if (!backupIdsOk({ projects: [d.project], items: d.items, columns: d.columns, dbTables: d.tables, dbLinks: d.links,
+          flowCharts: d.charts, flowNodes: d.nodes, flowEdges: d.edges, flSettings: d.flSettings ? [d.flSettings] : [] })) return false;
+        if (!d.links.every(l => l.grp == null || SAFE_ID.test(l.grp))) return false;
+        d.items = normalizeItems(d.items); normalizeDbTables(d.tables); normalizeDbLinks(d.links);
+        d.charts = normalizeFlowCharts(d.charts); d.nodes = normalizeFlowNodes(d.nodes); d.edges = normalizeFlowEdges(d.edges, d.nodes);
+        if (d.dbSettings && (typeof d.dbSettings !== 'object' || d.dbSettings.projectId !== d.project.id)) d.dbSettings = null;
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+  /* Başka bir cihazdan gelen kayıt güvenli mi? Kimlikler sayfaya HTML olarak yazıldığı için (yedek
+     yüklemedeki gibi) sadece güvenli karakterlere izin verilir; bozuk / şüpheli kayıt yok sayılır. */
+  function cloudParse(key, json) {
+    const pre = prefixOf(key), id = key.slice(pre.length);
+    if (!REC_PREFIXES.includes(pre) || !SAFE_ID.test(id) || typeof json !== 'string' || json.length > 1048000) return null;
+    let o;
+    try { o = JSON.parse(json); } catch (e) { return null; }
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
+    const ok = (k, list) => { try { return backupIdsOk({ [k]: list }); } catch (e) { return false; } };
+    switch (pre) {
+      case 'proj:': return o.id === id && ok('projects', [o]) ? o : null;
+      case 'item:': return o.id === id && ok('items', [o]) ? o : null;
+      case 'col:': return o.id === id && ok('columns', [o]) ? o : null;
+      case 'tbl:': return o.id === id && ok('dbTables', [o]) ? o : null;
+      case 'rel:': return o.id === id && ok('dbLinks', [o]) && (o.grp == null || SAFE_ID.test(o.grp)) ? o : null;
+      case 'flc:': return o.id === id && ok('flowCharts', [o]) ? o : null;
+      case 'fln:': return o.id === id && ok('flowNodes', [o]) ? o : null;
+      case 'fle:': return o.id === id && ok('flowEdges', [o]) && (o.chartId == null || SAFE_ID.test(o.chartId)) ? o : null;
+      case 'sch:': return o.projectId === id ? o : null;
+      case 'fls:': return o.projectId === id && ok('flSettings', [o]) ? o : null;
+      case 'trash:': return o.id === id && TRASH_KINDS[o.kind] && o.data && typeof o.data === 'object' && +o.deleted > 0 && trashIdsOk(o) ? o : null;
+    }
+    return null;
+  }
+
+  /* ---------- Yazma: değişiklikler kısa süre biriktirilip toplu gönderilir ----------
+     Aynı kayda art arda gelen yazmalar (ör. adım metni yazarken her harf) tek yazmaya iner.
+     İnternet yoksa Firestore yazmaları cihazda saklar ve bağlantı gelince gönderir. */
+  const CLOUD_MAX = 1000000; // Firestore'da bir belge en fazla ~1 MB
+  function cloudSet(k, v) {
+    v = String(v);
+    if (v.length > CLOUD_MAX) {
+      alert('Bu kayıt ekip alanı için çok büyük (' + Math.round(v.length / 1024) + ' KB; en fazla yaklaşık 950 KB). Büyük bir kapak resmi varsa daha küçük bir resim seç.');
+      return false;
+    }
+    cloud.mirror.set(k, v);
+    cloud.meta.set(k, { u: cloud.user ? cloud.user.uid : '', t: Date.now() });
+    cloud.queue.set(k, v);
+    cloudSchedule();
+    return true;
+  }
+  function cloudDel(k) {
+    cloud.mirror.delete(k);
+    cloud.meta.delete(k);
+    cloud.queue.set(k, null);
+    cloudSchedule();
+  }
+  function cloudSchedule() {
+    if (!cloud.firstQueued) cloud.firstQueued = Date.now();
+    clearTimeout(cloud.flushTimer);
+    cloud.flushTimer = setTimeout(cloudFlush, Math.max(0, Math.min(400, 1500 - (Date.now() - cloud.firstQueued))));
+    updateSyncUI();
+  }
+  function cloudFlush() {
+    clearTimeout(cloud.flushTimer);
+    cloud.flushTimer = null;
+    cloud.firstQueued = 0;
+    if (!cloud.queue.size || !cloud.fb || !cloud.user || !cloud.team) return;
+    const F = cloud.fb.F, db = cloud.fb.db, uid = cloud.user.uid, entries = [...cloud.queue.entries()];
+    cloud.queue.clear();
+    for (let i = 0; i < entries.length; i += 450) {          // bir toplu yazmada en fazla 500 işlem
+      const batch = F.writeBatch(db);
+      entries.slice(i, i + 450).forEach(([k, v]) => {
+        const ref = F.doc(db, 'teams', cloud.team.id, 'records', recId(k));
+        if (v === null) batch.delete(ref);
+        else batch.set(ref, { k: k, d: v, t: F.serverTimestamp(), u: uid });
+      });
+      // İnternet yoksa bu söz bağlantı gelene kadar bekler (yazma o arada cihazda durur)
+      batch.commit().then(() => {
+        if (cloud.error && cloud.errorKind === 'write') { cloud.error = ''; updateSyncUI(); }
+      }).catch(cloudWriteFailed);
+    }
+    updateSyncUI();
+  }
+  function cloudWriteFailed(err) {
+    console.error('Ekip kaydı yazılamadı:', err);
+    if (err && err.code === 'permission-denied' && cloud.ready) { cloudLostAccess(); return; }
+    cloud.error = fbErr(err);
+    cloud.errorKind = 'write';
+    updateSyncUI();
+    showSnack('Değişiklik ekibe kaydedilemedi: ' + cloud.error);
+  }
+
+  /* ---------- Okuma: ekibin kayıtları canlı dinlenir ---------- */
+  function onRecords(snap) {
+    cloud.fromCache = snap.metadata.fromCache;
+    cloud.hasPendingWrites = snap.metadata.hasPendingWrites;
+    if (!snap.metadata.fromCache && cloud.error && cloud.errorKind === 'listen') cloud.error = '';
+    snap.docChanges().forEach(ch => {
+      const key = recKey(ch.doc.id);
+      if (!key || cloud.queue.has(key)) return; // henüz gönderilmemiş kendi değişikliğimiz öncelikli
+      if (ch.type === 'removed') { cloudRemote(key, null, null); return; }
+      const d = ch.doc.data();
+      cloudRemote(key, d && typeof d.d === 'string' ? d.d : null, d);
+    });
+    if (!cloud.ready) { if (!(snap.metadata.fromCache && snap.empty)) cloudBecomeReady(); }
+    else cloudApplySoon();
+    updateSyncUI();
+  }
+  function metaFrom(key, d) {
+    if (!d) return;
+    const old = cloud.meta.get(key) || {};
+    const t = d.t && typeof d.t.toMillis === 'function' ? d.t.toMillis() : (old.t || Date.now());
+    cloud.meta.set(key, { u: typeof d.u === 'string' && SAFE_UID.test(d.u) ? d.u : '', t: t });
+  }
+  function cloudRemote(key, json, d) {
+    const had = cloud.mirror.has(key);
+    if (json === null) {
+      if (!had) return;
+      cloud.mirror.delete(key);
+      cloud.meta.delete(key);
+      if (cloud.ready) cloud.pendingRemote.set(key, null);
+      return;
+    }
+    if (had && cloud.mirror.get(key) === json) { metaFrom(key, d); return; } // zaten bizde (ör. kendi yazmamızın dönüşü)
+    const obj = cloudParse(key, json);
+    if (!obj) { console.warn('Güvensiz ya da bozuk ekip kaydı yok sayıldı:', key); return; }
+    cloud.mirror.set(key, json);
+    metaFrom(key, d);
+    if (cloud.ready) cloud.pendingRemote.set(key, obj);
+  }
+
+  /* Başkalarının değişiklikleri ekrana uygulanır. Biri bir şeyi sürüklerken beklenir
+     (yoksa elindeki kart / şekil kayardı); bırakınca hemen uygulanır. */
+  let cloudApplyTimer = null, ptrDown = false, ptrDownAt = 0;
+  function cloudApplySoon(delay) {
+    if (!cloud.pendingRemote.size || cloudApplyTimer) return;
+    cloudApplyTimer = setTimeout(() => { cloudApplyTimer = null; cloudApplyNow(); }, delay == null ? 60 : delay);
+  }
+  function cloudApplyNow() {
+    if (!cloud.pendingRemote.size) return;
+    const busy = (ptrDown && Date.now() - ptrDownAt < 8000) || document.body.classList.contains('dragging-active');
+    if (busy) { cloudApplySoon(250); return; }
+    const changes = cloud.pendingRemote;
+    cloud.pendingRemote = new Map();
+    try { applyRemoteChanges(changes); }
+    catch (e) { console.error('Ekip değişikliği uygulanamadı', e); }
+  }
+  window.addEventListener('pointerdown', () => { ptrDown = true; ptrDownAt = Date.now(); }, true);
+  ['pointerup', 'pointercancel', 'blur'].forEach(ev => window.addEventListener(ev, () => {
+    ptrDown = false;
+    if (cloud.pendingRemote.size) cloudApplySoon(150);
+  }, true));
+
+  /* Diziyi değiştirmeden (aynı nesneyi güncelleyerek) ekle / güncelle — açık pencereler ve
+     sürükleme gibi o nesneyi tutan kodlar güncel veriyi görsün. */
+  function upsertIn(arr, obj) {
+    const cur = arr.find(x => x.id === obj.id);
+    if (!cur) { arr.push(obj); return obj; }
+    Object.keys(cur).forEach(k => { if (!(k in obj)) delete cur[k]; });
+    return Object.assign(cur, obj);
+  }
+  function removeIn(arr, id) {
+    const i = arr.findIndex(x => x.id === id);
+    return i >= 0 ? arr.splice(i, 1)[0] : null;
+  }
+
+  let cardGhost = null; // açık kart başkası tarafından silindiyse son hali (kaydedince geri gelir)
+  function applyRemoteChanges(changes) {
+    const T = { items: new Set(), charts: new Set(), schemaPids: new Set(), flow: false, trash: false, removedOpen: null };
+    const order = k => REC_PREFIXES.indexOf(prefixOf(k));
+    const keys = [...changes.keys()].sort((a, b) => order(a) - order(b));
+    const edgeObjs = [];
+    for (const key of keys) {
+      const obj = changes.get(key), pre = prefixOf(key), id = key.slice(pre.length);
+      if (pre === 'proj:') {
+        if (obj) { obj.name = String(obj.name || 'Proje'); obj.created = +obj.created || 0; upsertIn(projects, obj); }
+        else removeIn(projects, id);
+      } else if (pre === 'col:') {
+        if (obj) {
+          obj.name = String(obj.name || 'Sütun'); obj.order = +obj.order || 0;
+          if (!/^#[0-9a-f]{3,8}$/i.test(obj.color || '')) obj.color = '#2747C9';
+          upsertIn(columns, obj);
+        } else removeIn(columns, id);
+      } else if (pre === 'item:') {
+        T.items.add(id);
+        if (obj) { const n = normalizeItems([obj])[0]; if (n) upsertIn(items, n); }
+        else { const gone = removeIn(items, id); if (gone && id === openCardId) T.removedOpen = gone; }
+      } else if (pre === 'tbl:') {
+        const old = findTable(id);
+        if (old) T.schemaPids.add(old.projectId);
+        if (obj) { normalizeDbTables([obj]); upsertIn(dbTables, obj); T.schemaPids.add(obj.projectId); }
+        else removeIn(dbTables, id);
+      } else if (pre === 'rel:') {
+        const old = dbLinks.find(l => l.id === id);
+        if (old) T.schemaPids.add(old.projectId);
+        if (obj) { normalizeDbLinks([obj]); upsertIn(dbLinks, obj); T.schemaPids.add(obj.projectId); }
+        else removeIn(dbLinks, id);
+      } else if (pre === 'sch:') {
+        if (obj) dbSettings[id] = obj; else delete dbSettings[id];
+        T.schemaPids.add(id);
+      } else if (pre === 'flc:') {
+        T.charts.add(id); T.flow = true;
+        const n = obj && normalizeFlowCharts([obj])[0];
+        if (n) upsertIn(flowCharts, n); else if (!obj) removeIn(flowCharts, id);
+      } else if (pre === 'fln:') {
+        T.flow = true;
+        const old = findFlowNode(id);
+        if (old) T.charts.add(old.chartId);
+        const n = obj && normalizeFlowNodes([obj])[0];
+        if (n) { upsertIn(flowNodes, n); T.charts.add(n.chartId); } else if (!obj) removeIn(flowNodes, id);
+      } else if (pre === 'fle:') {
+        T.flow = true;
+        const old = flowEdges.find(e => e.id === id);
+        if (old) T.charts.add(old.chartId);
+        if (obj) edgeObjs.push(obj); else removeIn(flowEdges, id);
+      } else if (pre === 'fls:') {
+        if (obj) flSettings[id] = { projectId: id, active: typeof obj.active === 'string' ? obj.active : null };
+        else delete flSettings[id];
+        T.flow = true;
+      } else if (pre === 'trash:') {
+        T.trash = true;
+        if (obj) upsertIn(trash, obj); else removeIn(trash, id);
+      }
+    }
+    if (T.flow) {
+      // Oklar şekillerden sonra: iki ucu da olan oklar eklenir; ucu silinmiş oklar ekrandan kalkar
+      normalizeFlowEdges(edgeObjs, flowNodes).forEach(e => { upsertIn(flowEdges, e); T.charts.add(e.chartId); });
+      const have = new Set(flowEdges.map(e => e.id)), nodeIds = new Set(flowNodes.map(n => n.id));
+      for (const k of cloud.mirror.keys()) {          // önce oku gelen, sonra şekli gelen oklar
+        if (k.indexOf('fle:') !== 0 || have.has(k.slice(4))) continue;
+        const e = cloudParse(k, cloud.mirror.get(k));
+        if (e && nodeIds.has(e.from) && nodeIds.has(e.to)) { const n = normalizeFlowEdges([e], flowNodes)[0]; if (n) flowEdges.push(n); }
+      }
+      for (let i = flowEdges.length - 1; i >= 0; i--) if (!nodeIds.has(flowEdges[i].from) || !nodeIds.has(flowEdges[i].to)) flowEdges.splice(i, 1);
+    }
+    projects.sort((a, b) => a.created - b.created);
+    cloudAfterRemote(T);
+  }
+
+  /* Uzaktan gelen değişiklikten sonra: açık proje / pencere / seçim hâlâ geçerli mi, ekranı tazele */
+  function cloudAfterRemote(T) {
+    if (!projects.some(p => p.id === activeProject)) {
+      const had = !!activeProject;
+      activeProject = projects.length ? projects[0].id : null;
+      if (had && activeProject) showSnack('Açık olan proje başka biri tarafından silindi.');
+    }
+    // Açık kart
+    if (openCardId) {
+      if (T.removedOpen) { cardGhost = T.removedOpen; cardRemoteNotice('deleted'); }
+      else if (T.items.has(openCardId) && items.some(i => i.id === openCardId)) {
+        cardRemoteNotice('changed', (cloud.meta.get('item:' + openCardId) || {}).u);
+        updateCardMeta(openCardId); // "Son değişiklik: …" satırı da güncel olsun
+      }
+    }
+    // Açık tablo / adım penceresi silindiyse kapat
+    if (openTableId && !findTable(openTableId)) { el('tableModal').classList.remove('open'); openTableId = null; showSnack('Düzenlediğin tablo başka biri tarafından silindi.'); }
+    if (flOpenNode && !findFlowNode(flOpenNode)) { el('flNodeModal').classList.remove('open'); flOpenNode = null; showSnack('Düzenlediğin adım başka biri tarafından silindi.'); }
+    if (flSel && (flSel.type === 'node' ? !findFlowNode(flSel.id) : !flowEdges.some(e => e.id === flSel.id))) flSel = null;
+    if (selectedLinkId && !dbLinks.some(l => l.id === selectedLinkId)) selectedLinkId = null;
+    // Geri alma başkasının değişikliğini silmesin: değişen şemaların geçmişi sıfırlanır
+    T.charts.forEach(cid => { delete flHistory[cid]; });
+    T.schemaPids.forEach(pid => { delete erHistory[pid]; });
+    if (flRun && T.charts.has(flRun.pid)) { flCloseRun(); flToast('Akış şeması başka biri tarafından değiştirildi; çalıştırma durduruldu.', 5000); }
+    if (T.trash) { updateTrashBtn(); if (el('trashModal').classList.contains('open')) renderTrash(); }
+
+    renderProjects();
+    renderMain();
+    if (currentView === 'board') renderBoard();
+    if (currentView === 'schema') renderSchema();
+    if (currentView === 'flow') renderFlow();
+    try { updateUndoButtons(); updateFlUndoButtons(); } catch (e) {}
+    // Değişen kartlar kısa bir an parlasın (kimin neyi değiştirdiği gözden kaçmasın)
+    T.items.forEach(id => {
+      document.querySelectorAll('[data-item="' + id + '"], [data-card="' + id + '"]').forEach(n => {
+        n.classList.remove('remote-flash'); void n.offsetWidth; n.classList.add('remote-flash');
+      });
+    });
+  }
+
+  /* ---------- Açık kart başkası tarafından değiştirildi / silindi ---------- */
+  function memberName(uid) {
+    if (!uid) return '';
+    if (cloud.user && uid === cloud.user.uid) return 'Sen';
+    const m = cloud.members.get(uid);
+    return (m && (m.name || (m.email || '').split('@')[0])) || 'Bir ekip üyesi';
+  }
+  function cardRemoteNotice(kind, uid) {
+    const b = el('modalRemote'), who = memberName(uid) || 'Başka biri';
+    if (kind === 'deleted') {
+      b.innerHTML = '<span>Bu kart başka biri tarafından silindi. <b>Bitti</b>\'ye basarsan senin hâlinle geri gelir.</span>' +
+        '<button type="button" class="link-btn" data-mr="discard">Kaydetmeden kapat</button>';
+    } else {
+      b.innerHTML = '<span>' + esc(who === 'Sen' ? 'Bu kartı az önce başka bir cihazında değiştirdin.' : who + ' bu kartı az önce değiştirdi.') + ' Kaydedersen senin hâlin geçerli olur.</span>' +
+        '<button type="button" class="link-btn" data-mr="reload">Son hâlini göster</button>';
+    }
+    b.hidden = false;
+  }
+  el('modalRemote').addEventListener('click', e => {
+    const a = e.target.closest('[data-mr]');
+    if (!a) return;
+    if (a.dataset.mr === 'reload' && openCardId) openCard(openCardId);
+    if (a.dataset.mr === 'discard') { el('cardModal').classList.remove('open'); openCardId = null; cardGhost = null; }
+  });
+  function agoText(ts) {
+    const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+    if (s < 45) return 'az önce';
+    const m = Math.round(s / 60); if (m < 60) return m + ' dk önce';
+    const h = Math.round(m / 60); if (h < 24) return h + ' saat önce';
+    const d = Math.round(h / 24); return d <= 1 ? 'dün' : d + ' gün önce';
+  }
+  /* Kart penceresinde "Son değişiklik: Ayşe · 5 dk önce" (sadece ekip alanında) */
+  function updateCardMeta(id) {
+    const box = el('modalMeta'), m = cloud.on ? cloud.meta.get('item:' + id) : null;
+    if (!m || !m.u) { box.hidden = true; box.textContent = ''; return; }
+    box.textContent = 'Son değişiklik: ' + memberName(m.u) + ' · ' + agoText(m.t);
+    box.hidden = false;
+  }
+
+  /* ---------- Ekip alanını açma ---------- */
+  let bootTimer = null;
+  function bootShow(msg, sub) {
+    el('teamBoot').hidden = false;
+    el('teamBoot').classList.remove('err');
+    el('teamBootTeam').textContent = sub || '';
+    el('teamBootMsg').textContent = msg;
+    el('teamBootActs').innerHTML = '';
+  }
+  function bootHide() { el('teamBoot').hidden = true; clearTimeout(bootTimer); }
+  function bootError(msg, slow) {
+    el('teamBoot').hidden = false;
+    el('teamBoot').classList.toggle('err', !slow);
+    el('teamBootMsg').textContent = msg;
+    el('teamBootActs').innerHTML = (slow ? '' : '<button class="modal-btn" type="button" data-boot="retry">Tekrar dene</button>') +
+      '<button class="modal-btn' + (slow ? '' : ' primary') + '" type="button" data-boot="personal">Kişisel alana dön</button>';
+  }
+  el('teamBoot').addEventListener('click', e => {
+    const b = e.target.closest('[data-boot]');
+    if (!b) return;
+    if (b.dataset.boot === 'retry') location.reload();
+    if (b.dataset.boot === 'personal') switchWorkspace('');
+  });
+
+  async function startTeam(team) {
+    cloud.on = true;
+    cloud.team = { id: team.id, name: team.name, cfg: team.cfg, owner: null };
+    document.body.classList.add('team-mode');
+    updateSyncUI();
+    bootShow('Ekip açılıyor…', team.name);
+    let inst;
+    try { inst = await fbOpen(team.cfg); }
+    catch (e) { console.error(e); bootError('Firebase yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.'); return; }
+    let user = null;
+    try { user = await fbUser(inst); } catch (e) {}
+    if (!user) { await bootLeave(team, 'signin'); return; }
+    cloud.fb = inst;
+    cloud.user = user;
+    // Hâlâ üye miyim? (İnternet yoksa bu adım atlanır, cihazdaki kopya açılır.)
+    try {
+      const m = await withTimeout(inst.F.getDoc(inst.F.doc(inst.db, 'teams', team.id, 'members', user.uid)), 8000);
+      if (!m.exists()) { await dropTeamFromUser(inst, user, team.id); await bootLeave(team, 'notmember'); return; }
+    } catch (e) {
+      if (e && e.code === 'permission-denied') { await dropTeamFromUser(inst, user, team.id); await bootLeave(team, 'notmember'); return; }
+    }
+    const F = inst.F, db = inst.db;
+    cloud.unsub.push(F.onSnapshot(F.collection(db, 'teams', team.id, 'records'), { includeMetadataChanges: true }, onRecords, err => cloudListenError(err)));
+    bootShow('Ekip verileri yükleniyor…', team.name);
+    clearTimeout(bootTimer);
+    bootTimer = setTimeout(() => {
+      if (!cloud.ready) bootError('Sunucuya ulaşılamıyor. Bu cihazda ekibin verileri daha önce hiç açılmadıysa ilk açılış için internet gerekir. Bağlantı gelince kendiliğinden açılır.', true);
+    }, 8000);
+  }
+  /* Ekip açılamadı (giriş yok / üye değil): kişisel alanı aç, Ekip penceresinde nedenini söyle */
+  async function bootLeave(team, why) {
+    cloudReset();
+    localSet('pref:ws', null);
+    bootHide();
+    await loadAll();
+    await loadView();
+    updateSyncUI();
+    if (why === 'signin') openTeamPanel({ pendingTeam: team }); // pencere "… ekibini açmak için giriş yap" der
+    else openTeamPanel({ msg: '"' + team.name + '" ekibine erişimin yok: ekipten çıkarılmış olabilirsin. Yeniden katılmak için ekipten yeni bir davet bağlantısı iste.', kind: 'err', forget: team.id });
+  }
+  function cloudReset() {
+    cloud.unsub.forEach(u => { try { u(); } catch (e) {} });
+    cloud.unsub = [];
+    cloud.on = false; cloud.ready = false; cloud.team = null; cloud.fb = null; cloud.user = null; cloud.error = '';
+    cloud.mirror.clear(); cloud.meta.clear(); cloud.queue.clear(); cloud.pendingRemote.clear(); cloud.members.clear(); cloud.presence.clear();
+    document.body.classList.remove('team-mode');
+  }
+  function cloudListenError(err) {
+    console.error('Ekip verisi dinlenemedi:', err);
+    if (err && err.code === 'permission-denied') { cloudLostAccess(); return; }
+    cloud.error = fbErr(err);
+    cloud.errorKind = 'listen';
+    updateSyncUI();
+    if (!cloud.ready) bootError(cloud.error);
+  }
+  let lostShown = false;
+  async function cloudLostAccess() {
+    if (lostShown) return;
+    lostShown = true;
+    const name = cloud.team ? cloud.team.name : 'Ekip';
+    if (cloud.team) {
+      forgetTeam(cloud.team.id);
+      await dropTeamFromUser(cloud.fb, cloud.user, cloud.team.id);
+    }
+    alert('"' + name + '" ekibine erişimin kalmadı (ekipten çıkarılmış olabilirsin). Kişisel alana dönülüyor.');
+    switchWorkspace('');
+  }
+  /* Kişinin ekip listesinden (users/{uid}) bir ekibi siler; yoksa Ekip penceresi o ekibi
+     tekrar listeye eklerdi. Olmazsa (ör. internet yok) sorun değil: ekip açılmak istenince yine denenir. */
+  async function dropTeamFromUser(inst, user, tid) {
+    if (!inst || !user || !tid) return;
+    try { await withTimeout(inst.F.updateDoc(inst.F.doc(inst.db, 'users', user.uid), { ['teams.' + tid]: inst.F.deleteField() }), 5000); }
+    catch (e) {}
+  }
+  async function cloudBecomeReady() {
+    if (cloud.ready) return;
+    cloud.ready = true;
+    clearTimeout(bootTimer);
+    await loadAll();
+    await loadView();
+    bootHide();
+    const F = cloud.fb.F, db = cloud.fb.db, tid = cloud.team.id;
+    cloud.unsub.push(F.onSnapshot(F.collection(db, 'teams', tid, 'members'), snap => {
+      cloud.members.clear();
+      snap.forEach(d => {
+        if (!SAFE_UID.test(d.id)) return;
+        const x = d.data() || {};
+        cloud.members.set(d.id, {
+          name: String(x.name || '').slice(0, 60), email: String(x.email || '').slice(0, 120),
+          photo: /^https:\/\/[^\s"'<>]+$/.test(x.photo || '') ? String(x.photo).slice(0, 600) : '',
+          role: x.role === 'owner' ? 'owner' : 'member'
+        });
+      });
+      renderPresence();
+      teamPanelSafeRender();
+    }, err => { if (err && err.code === 'permission-denied') cloudLostAccess(); }));
+    cloud.unsub.push(F.onSnapshot(F.collection(db, 'teams', tid, 'presence'), snap => {
+      cloud.presence.clear();
+      snap.forEach(d => {
+        if (!SAFE_UID.test(d.id)) return;
+        const x = d.data() || {};
+        cloud.presence.set(d.id, {
+          at: x.at && typeof x.at.toMillis === 'function' ? x.at.toMillis() : Date.now(),
+          pid: typeof x.pid === 'string' && SAFE_ID.test(x.pid) ? x.pid : null,
+          view: VIEWS.includes(x.view) ? x.view : '', away: !!x.away
+        });
+      });
+      renderPresence();
+    }, () => {}));
+    cloud.unsub.push(F.onSnapshot(F.doc(db, 'teams', tid), d => {
+      const x = d.data();
+      if (!x) return;
+      if (typeof x.name === 'string' && x.name && x.name !== cloud.team.name) { cloud.team.name = x.name.slice(0, 60); rememberTeam(cloud.team); }
+      cloud.team.owner = typeof x.owner === 'string' ? x.owner : null;
+      updateSyncUI();
+      teamPanelSafeRender();
+    }, () => {}));
+    presenceStart();
+    updateSyncUI();
+  }
+
+  /* Uygulamanın açılışı: kişisel alan mı, ekip alanı mı? */
+  async function startApp() {
+    await loadTheme();
+    const inv = readInvite();
+    const wsId = localGet('pref:ws');
+    const team = wsId ? knownTeams().find(t => t.id === wsId) : null;
+    if (team && !inv && /^https?:$/.test(location.protocol)) { await startTeam(team); return; }
+    if (wsId && !team) localSet('pref:ws', null);
+    await loadAll();
+    await loadView();
+    updateSyncUI();
+    if (inv) openTeamPanel({ invite: inv });
+  }
+  async function switchWorkspace(id) {
+    if (cloud.on) { cloudFlush(); await new Promise(r => setTimeout(r, 350)); } // bekleyen yazmalar cihaza işlensin
+    localSet('pref:ws', id || null);
+    location.reload();
+  }
+  window.addEventListener('pagehide', () => { if (cloud.on) cloudFlush(); });
+  // Uygulama açıkken aynı sekmede bir davet bağlantısı açılırsa (sayfa yenilenmez) yine işlensin
+  window.addEventListener('hashchange', () => {
+    const inv = readInvite();
+    if (inv) openTeamPanel({ invite: inv });
+  });
+  window.addEventListener('online', updateSyncUI);
+  window.addEventListener('offline', updateSyncUI);
+
+  /* ---------- Kim çevrimiçi ---------- */
+  const PRESENCE_FRESH = 4 * 60000;
+  let presenceTimer = null, presenceLast = '', presenceTick = 0;
+  function presenceSend(force) {
+    if (!cloud.ready || !cloud.user || !cloud.fb) return;
+    const s = { pid: activeProject || null, view: currentView, away: document.visibilityState === 'hidden' };
+    const sig = JSON.stringify(s);
+    if (!force && sig === presenceLast) return;
+    presenceLast = sig;
+    const F = cloud.fb.F;
+    F.setDoc(F.doc(cloud.fb.db, 'teams', cloud.team.id, 'presence', cloud.user.uid), Object.assign({ at: F.serverTimestamp() }, s)).catch(() => {});
+  }
+  function presenceStart() {
+    presenceSend(true);
+    clearInterval(presenceTimer);
+    // 5 sn'de bir proje / görünüm değişti mi bakılır; açıkken 75 sn'de bir "buradayım" yazılır
+    presenceTimer = setInterval(() => {
+      presenceTick++;
+      presenceSend(document.visibilityState === 'visible' && presenceTick % 15 === 0);
+      if (presenceTick % 6 === 0) renderPresence(); // uzun süre ses vermeyenler listeden düşsün
+    }, 5000);
+    document.addEventListener('visibilitychange', () => {
+      presenceSend(true);
+      if (document.visibilityState === 'hidden') cloudFlush();
+    });
+  }
+  function onlineOthers() {
+    const now = Date.now(), out = [];
+    cloud.presence.forEach((p, uid) => {
+      if (!p.away && now - p.at < PRESENCE_FRESH && !(cloud.user && uid === cloud.user.uid) && cloud.members.has(uid)) out.push(Object.assign({ uid: uid }, p));
+    });
+    return out;
+  }
+  function isOnline(uid) {
+    if (cloud.user && uid === cloud.user.uid) return true;
+    const p = cloud.presence.get(uid);
+    return !!p && !p.away && Date.now() - p.at < PRESENCE_FRESH;
+  }
+  function uidColor(uid) {
+    let h = 0;
+    for (let i = 0; i < uid.length; i++) h = (h * 31 + uid.charCodeAt(i)) >>> 0;
+    return COLUMN_COLORS[h % COLUMN_COLORS.length];
+  }
+  function initials(name) {
+    const w = String(name || '?').trim().split(/\s+/).filter(Boolean);
+    return ((w[0] || '?')[0] + (w.length > 1 ? w[w.length - 1][0] : '')).toLocaleUpperCase('tr');
+  }
+  function avatarHTML(uid, cls) {
+    const m = cloud.members.get(uid) || {}, name = memberName(uid) === 'Sen' ? (m.name || 'Sen') : memberName(uid);
+    const c = 'av' + (cls ? ' ' + cls : '');
+    if (m.photo) return '<img class="' + c + '" src="' + escAttr(m.photo) + '" alt="" referrerpolicy="no-referrer" loading="lazy">';
+    return '<span class="' + c + '" style="background:' + uidColor(uid) + '" aria-hidden="true">' + esc(initials(name)) + '</span>';
+  }
+  function renderPresence() {
+    const box = el('teamAvatars');
+    if (!cloud.on || !cloud.ready) { box.innerHTML = ''; return; }
+    const others = onlineOthers();
+    box.innerHTML = others.slice(0, 3).map(p => avatarHTML(p.uid)).join('') + (others.length > 3 ? '<span class="av more">+' + (others.length - 3) + '</span>' : '');
+    updateSyncUI();
+    renderProjects();
+    teamPanelSafeRender(); // çevrimiçi noktaları
+  }
+  /* Kenar çubuğunda proje adının yanında o projede olan kişiler */
+  function projectPeopleHTML(pid) {
+    if (!cloud.on || !cloud.ready) return '';
+    const here = onlineOthers().filter(p => p.pid === pid);
+    if (!here.length) return '';
+    const names = here.map(p => memberName(p.uid) + (p.view ? ' (' + VIEW_NAMES[p.view] + ')' : '')).join(', ');
+    return '<span class="proj-people" title="' + escAttr('Şu an burada: ' + names) + '">' + here.slice(0, 2).map(p => avatarHTML(p.uid, 'sm')).join('') + '</span>';
+  }
+
+  /* ---------- Eşitleme durumu (üst çubuktaki Ekip düğmesi ve alttaki durum satırı) ---------- */
+  const SYNC_TEXT = { ok: 'Değişiklikler kaydedildi', saving: 'Kaydediliyor…', offline: 'Çevrimdışı: değişiklikler bu cihazda tutuluyor, bağlantı gelince gönderilecek', error: 'Eşitleme sorunu' };
+  function syncState() {
+    if (!cloud.on) return 'personal';
+    if (cloud.error) return 'error';
+    if (!navigator.onLine || (cloud.ready && cloud.fromCache)) return 'offline';
+    if (cloud.queue.size || cloud.hasPendingWrites || !cloud.ready) return 'saving';
+    return 'ok';
+  }
+  function updateSyncUI() {
+    const btn = el('teamBtn');
+    if (!btn) return;
+    const st = syncState();
+    btn.dataset.sync = st;
+    el('teamLabel').textContent = cloud.on && cloud.team ? cloud.team.name : 'Ekip';
+    const n = cloud.on ? onlineOthers().length : 0;
+    btn.title = cloud.on
+      ? cloud.team.name + ' · ' + (st === 'error' ? cloud.error : SYNC_TEXT[st]) + (n ? ' · ' + n + ' kişi çevrimiçi' : '')
+      : 'Ekip ile çalış: projeleri ekibinle birlikte düzenle';
+    btn.setAttribute('aria-label', btn.title);
+    if (cloud.on && cloud.ready) el('status').textContent = 'Ekip alanı: ' + cloud.team.name + ' · ' + (st === 'error' ? cloud.error : SYNC_TEXT[st]);
+    // Kenar çubuğundaki çalışma alanı kutusu
+    el('wsIco').innerHTML = cloud.on ? ICO_USERS : ICO_USER;
+    el('wsName').textContent = cloud.on && cloud.team ? cloud.team.name : 'Kişisel';
+    el('wsSub').textContent = !cloud.on ? 'Sadece bu cihazda · ekip kur ya da katıl'
+      : st === 'error' ? 'Eşitleme sorunu' : st === 'offline' ? 'Çevrimdışı' : !cloud.ready ? 'Açılıyor…'
+      : 'Ekip · ' + (n ? n + ' kişi çevrimiçi' : (cloud.members.size || 1) + ' üye');
+  }
+
+  /* ===================================================================
+     EKİP PENCERESİ: kurulum, giriş, ekip kurma / katılma, davet, üyeler
+     =================================================================== */
+  const tp = { invite: null, pendingTeam: null, inst: null, user: null, msg: '', msgKind: '', emailMode: 'signin', setup: false, busy: false, code: null, codeFor: null };
+  const teamPanelOpen = () => el('teamModal').classList.contains('open');
+  /* Arka planda gelen güncellemelerde (çevrimiçi listesi, üyeler) pencereyi yeniden çiz;
+     ama kişi o an pencerede bir kutuya yazıyorsa yazdığı silinmesin diye bekle. */
+  function teamPanelSafeRender() {
+    if (!teamPanelOpen()) return;
+    const a = document.activeElement;
+    if (a && el('teamBody').contains(a) && /^(INPUT|TEXTAREA)$/.test(a.tagName) && a.id !== 'teamInvite') return;
+    renderTeamPanel();
+  }
+  const ICO_USERS = '<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="5.4" r="2.4"/><path d="M1.6 13.2c.4-2.4 2.2-3.7 4.4-3.7s4 1.3 4.4 3.7"/><path d="M10.6 3.3a2.2 2.2 0 0 1 0 4.2M12.2 9.7c1.2.4 2 1.6 2.2 3.5"/></svg>';
+  const ICO_USER = '<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="5.2" r="2.7"/><path d="M2.8 14c.5-2.9 2.6-4.4 5.2-4.4s4.7 1.5 5.2 4.4"/></svg>';
+
+  function teamPanelCfg() {
+    if (tp.invite && !tp.invite.bad) return tp.invite.cfg;
+    if (tp.pendingTeam) return tp.pendingTeam.cfg;
+    if (cloud.on && cloud.team) return cloud.team.cfg;
+    const own = localJSON('pref:fbconfig', null);
+    if (own && cfgOk(own)) return own;
+    const k = knownTeams();
+    return k.length ? k[0].cfg : null;
+  }
+  async function openTeamPanel(opts) {
+    opts = opts || {};
+    if (opts.invite) tp.invite = opts.invite;
+    if (opts.pendingTeam) tp.pendingTeam = opts.pendingTeam;
+    tp.msg = opts.msg || ''; tp.msgKind = opts.kind || '';
+    if (opts.forget) forgetTeam(opts.forget);
+    tp.setup = false;
+    closeDrawer(); closeExportMenu();
+    el('teamModal').classList.add('open');
+    await teamPanelLoad();
+  }
+  function closeTeamPanel() { el('teamModal').classList.remove('open'); tp.msg = ''; }
+  async function teamPanelLoad() {
+    const cfg = teamPanelCfg();
+    tp.inst = null; tp.user = null;
+    if (cfg && /^https?:$/.test(location.protocol)) {
+      renderTeamPanel(true);
+      try { tp.inst = await fbOpen(cfg); tp.user = await fbUser(tp.inst); }
+      catch (e) { console.error(e); tp.inst = null; tp.msg = 'Firebase yüklenemedi; internet bağlantını kontrol et.'; tp.msgKind = 'err'; }
+    }
+    renderTeamPanel();
+    if (tp.user) teamPanelFetch();
+  }
+  /* Kişinin bu Firebase projesindeki ekipleri ve açık ekibin davet kodu */
+  async function teamPanelFetch() {
+    const inst = tp.inst, user = tp.user;
+    if (!inst || !user) return;
+    const F = inst.F, db = inst.db;
+    try {
+      const s = await withTimeout(F.getDoc(F.doc(db, 'users', user.uid)), 8000);
+      const teams = (s.exists() && s.data().teams) || {};
+      let changed = false;
+      Object.keys(teams).forEach(id => {
+        if (SAFE_ID.test(id) && !knownTeams().some(t => t.id === id)) {
+          rememberTeam({ id: id, name: String((teams[id] && teams[id].name) || 'Ekip'), cfg: inst.cfg });
+          changed = true;
+        }
+      });
+      if (changed) teamPanelSafeRender();
+    } catch (e) {}
+    if (cloud.on && cloud.ready && cloud.team && tp.codeFor !== cloud.team.id) {
+      try {
+        const s = await withTimeout(F.getDoc(F.doc(db, 'teams', cloud.team.id, 'secret', 'invite')), 8000);
+        tp.code = s.exists() ? String(s.data().code || '') : null;
+        tp.codeFor = cloud.team.id;
+      } catch (e) { tp.code = null; }
+      teamPanelSafeRender();
+    }
+  }
+
+  function renderTeamPanel(loading) {
+    const body = el('teamBody');
+    const msg = tp.msg ? '<div class="team-msg ' + (tp.msgKind || '') + '" role="status">' + esc(tp.msg) + '</div>' : '';
+    if (!/^https?:$/.test(location.protocol)) {
+      body.innerHTML = msg + '<p class="modal-note">Ekip modu, dosyadan açılan sayfada çalışmaz. Önce sitenin internetteki adresini aç: <a href="https://acemividyolar-alt.github.io/white_not/" target="_blank" rel="noopener">acemividyolar-alt.github.io/white_not</a></p>';
+      return;
+    }
+    if (tp.invite && tp.invite.bad) {
+      body.innerHTML = '<div class="team-msg err">Davet bağlantısı bozuk ya da eksik kopyalanmış. Bağlantıyı gönderen kişiden yeniden iste.</div>';
+      tp.invite = null;
+      return;
+    }
+    if (loading) { body.innerHTML = msg + '<div class="team-loading"><span class="team-spin" aria-hidden="true"></span>Bağlanıyor…</div>'; return; }
+    const cfg = teamPanelCfg();
+    if (!cfg || tp.setup) { body.innerHTML = msg + teamSetupHTML(); return; }
+    if (!tp.inst) { body.innerHTML = msg + '<p class="modal-note">Firebase\'e bağlanılamadı.</p><div class="modal-actions"><button class="modal-btn" data-tact="change-cfg">Firebase ayarlarını değiştir</button><button class="modal-btn primary" data-tact="retry">Tekrar dene</button></div>'; return; }
+    body.innerHTML = msg + (tp.user ? teamHomeHTML() : teamSigninHTML());
+    const f = body.querySelector('[data-autofocus]');
+    if (f && !('ontouchstart' in window)) f.focus();
+  }
+
+  function teamSetupHTML() {
+    const own = localJSON('pref:fbconfig', null);
+    return '<p class="modal-note">Ekip alanında projeleri ekibinle birlikte düzenlersiniz: biri kart eklediğinde, kartı taşıdığında ya da şemayı değiştirdiğinde herkesin ekranında anında görünür. Telefondan ve bilgisayardan aynı anda kullanılabilir; internet kesilirse değişiklikler bekletilir.</p>' +
+      '<div class="team-callout">' + ICO_USERS + '<span>Ekip arkadaşından bir <b>davet bağlantısı</b> aldıysan bu adımlara gerek yok: bağlantıyı aç, giriş yap, katıl. ' +
+        'Bağlantı başka bir yerde açıldıysa (ör. telefonda ana ekrana eklediğin uygulamadaysan) buraya yapıştır:</span></div>' +
+      invitePasteHTML() +
+      '<details class="team-steps"' + (own ? '' : ' open') + '><summary>1. Ücretsiz bir Firebase projesi kur (bir kez, yaklaşık 10 dakika)</summary><ol>' +
+        '<li><a href="https://console.firebase.google.com/" target="_blank" rel="noopener">console.firebase.google.com</a> adresini aç, Google hesabınla gir, <b>Proje oluştur</b>\'a (Create a project) bas. Ad olarak örneğin <code>white-note-ekip</code> yaz; Google Analytics\'i kapatabilirsin. Ücretsiz plan (Spark) yeter, kart bilgisi istemez.</li>' +
+        '<li>Sol menüden <b>Authentication</b> → <b>Başlayın</b> (Get started). <b>Sign-in method</b> sekmesinde <b>Google</b>\'ı aç (destek e-postası olarak kendi adresini seç), sonra <b>E-posta/Şifre</b>\'yi (Email/Password) aç.</li>' +
+        '<li>Authentication → <b>Settings</b> → <b>Authorized domains</b> → <b>Add domain</b>: <code>' + esc(location.hostname) + '</code></li>' +
+        '<li>Sol menüden <b>Firestore Database</b> → <b>Create database</b>. Sürüm sorarsa <b>Standard</b>\'ı, konum olarak Avrupa\'dan birini (örneğin <code>europe-west1</code>) seç, <b>production mode</b> ile başlat.</li>' +
+        '<li>Firestore\'da <b>Rules</b> (Kurallar) sekmesindeki her şeyi sil, aşağıdaki kuralları yapıştır ve <b>Publish</b>\'e bas.</li>' +
+        '<li>Proje ayarları (dişli simgesi) → <b>General</b> → <b>Your apps</b> → web simgesi <code>&lt;/&gt;</code>. Bir ad yaz (örneğin White Note) ve <b>Register app</b>\'e bas. Çıkan <code>firebaseConfig</code> kutusunu kopyala. (Sonradan da aynı yerde, <b>SDK setup and configuration → Config</b> altında durur.)</li>' +
+      '</ol>' +
+      '<p class="team-hint">Bir bölümü menüde bulamazsan konsolun üstündeki arama kutusuna adını yaz (örneğin "Firestore").</p>' +
+      '<div class="team-rules-head"><span>Firestore kuralları</span><button class="modal-btn" type="button" data-tact="copy-rules">Kuralları kopyala</button></div>' +
+      '<pre class="team-rules">' + esc(FIRESTORE_RULES) + '</pre></details>' +
+      '<div class="modal-section-label">2. Ayarları buraya yapıştır</div>' +
+      '<textarea class="modal-desc team-cfg" id="teamCfg" spellcheck="false" autocomplete="off" placeholder="const firebaseConfig = {&#10;  apiKey: &quot;...&quot;,&#10;  authDomain: &quot;...firebaseapp.com&quot;,&#10;  projectId: &quot;...&quot;,&#10;  appId: &quot;...&quot;&#10;};">' + (own ? esc('const firebaseConfig = ' + JSON.stringify(own, null, 2) + ';') : '') + '</textarea>' +
+      '<p class="team-hint">Bu bilgiler gizli değildir (her web sitesinde görünür); ekibin verilerini yukarıdaki kurallar korur.</p>' +
+      '<div class="modal-actions">' + (tp.setup ? '<button class="modal-btn" type="button" data-tact="setup-cancel">Vazgeç</button>' : '<span></span>') +
+      '<button class="modal-btn primary" type="button" data-tact="save-cfg">Kaydet ve devam et</button></div>';
+  }
+
+  function teamSigninHTML() {
+    const inv = tp.invite;
+    const mode = tp.emailMode;
+    const standaloneIOS = (navigator.standalone === true);
+    let h = '';
+    if (inv) h += '<div class="team-card accent"><div><b>' + esc(inv.name) + '</b> ekibine davet edildin.</div><small>Katılmak için giriş yap. Sunucu: ' + esc(inv.cfg.projectId) + '</small></div>';
+    else if (tp.pendingTeam) h += '<div class="team-card"><div><b>' + esc(tp.pendingTeam.name) + '</b> ekibini açmak için giriş yap.</div></div>';
+    else h += '<p class="modal-note">Ekip alanını kullanmak için giriş yap. Ekip arkadaşların da kendi hesaplarıyla girer.</p>';
+    h += '<button class="modal-btn team-google" type="button" data-tact="google">' + ICO_USER + 'Google hesabıyla giriş yap</button>';
+    if (standaloneIOS) h += '<p class="team-hint">Google penceresi açılmazsa e-postayla giriş yap ya da sayfayı Safari\'de aç.</p>';
+    h += '<div class="team-or"><span>ya da e-posta ile</span></div>';
+    h += '<form class="team-form" id="teamForm" novalidate>' +
+      (mode === 'signup' ? '<input class="modal-tags-input" id="tfName" autocomplete="name" maxlength="60" placeholder="Adın (ekipte görünür)" data-autofocus>' : '') +
+      '<input class="modal-tags-input" id="tfEmail" type="email" autocomplete="email" maxlength="120" placeholder="E-posta"' + (mode !== 'signup' ? ' data-autofocus' : '') + '>' +
+      (mode !== 'reset' ? '<input class="modal-tags-input" id="tfPass" type="password" autocomplete="' + (mode === 'signup' ? 'new-password' : 'current-password') + '" maxlength="100" placeholder="' + (mode === 'signup' ? 'Şifre (en az 6 karakter)' : 'Şifre') + '">' : '') +
+      '<button class="modal-btn primary" type="submit"' + (tp.busy ? ' disabled' : '') + '>' + (mode === 'signup' ? 'Hesap oluştur' : mode === 'reset' ? 'Sıfırlama bağlantısı gönder' : 'Giriş yap') + '</button>' +
+      '</form>' +
+      '<div class="team-links">' +
+        (mode !== 'signin' ? '<button class="link-btn" type="button" data-tact="mode-signin">Giriş yap</button>' : '') +
+        (mode !== 'signup' ? '<button class="link-btn" type="button" data-tact="mode-signup">Hesap oluştur</button>' : '') +
+        (mode !== 'reset' ? '<button class="link-btn" type="button" data-tact="mode-reset">Şifremi unuttum</button>' : '') +
+      '</div>';
+    if (!inv && !tp.pendingTeam) h += '<p class="team-foot">Firebase projesi: <code>' + esc(tp.inst.cfg.projectId) + '</code> · <button class="link-btn" type="button" data-tact="change-cfg">Ayarları değiştir</button></p>';
+    else h += '<div class="modal-actions"><span></span><button class="modal-btn" type="button" data-tact="invite-cancel">Vazgeç</button></div>';
+    return h;
+  }
+
+  function teamHomeHTML() {
+    const u = tp.user, inv = tp.invite, inst = tp.inst;
+    const sameProject = t => t.cfg.projectId === inst.cfg.projectId;
+    let h = '<div class="team-acct">' +
+      (u.photoURL && /^https:\/\//.test(u.photoURL) ? '<img class="av lg" src="' + escAttr(u.photoURL) + '" alt="" referrerpolicy="no-referrer">' : '<span class="av lg" style="background:' + uidColor(u.uid) + '">' + esc(initials(u.displayName || u.email)) + '</span>') +
+      '<div class="team-acct-txt"><b>' + esc(u.displayName || (u.email || '').split('@')[0]) + '</b><small>' + esc(u.email || '') + '</small></div>' +
+      '<button class="modal-btn" type="button" data-tact="signout">Çıkış yap</button></div>';
+
+    if (inv) {
+      const member = knownTeams().some(t => t.id === inv.id);
+      h += '<div class="team-card accent"><div><b>' + esc(inv.name) + '</b> ekibine davet edildin.</div>' +
+        '<small>Sunucu: ' + esc(inv.cfg.projectId) + '. Katılınca bu ekibin projelerini görür ve düzenlersin; diğer üyeler de adını ve e-postanı görür.</small>' +
+        '<div class="team-card-acts"><button class="modal-btn" type="button" data-tact="invite-cancel">Vazgeç</button>' +
+        '<button class="modal-btn primary" type="button" data-tact="join"' + (tp.busy ? ' disabled' : '') + '>' + (member ? 'Ekibi aç' : 'Ekibe katıl') + '</button></div></div>';
+    }
+
+    // Çalışma alanları
+    const wsNow = cloud.on && cloud.team ? cloud.team.id : '';
+    const teams = knownTeams();
+    h += '<div class="modal-section-label">Çalışma alanı</div><div class="team-spaces">' +
+      '<button class="team-space' + (wsNow ? '' : ' sel') + '" type="button" data-ws="">' + ICO_USER +
+        '<span class="ts-txt"><b>Kişisel</b><small>Sadece bu cihazda, kimse görmez</small></span><span class="ts-state">' + (wsNow ? 'Aç' : 'Açık') + '</span></button>' +
+      teams.map(t => '<button class="team-space' + (t.id === wsNow ? ' sel' : '') + '" type="button" data-ws="' + t.id + '">' + ICO_USERS +
+        '<span class="ts-txt"><b>' + esc(t.name) + '</b><small>Ekip' + (sameProject(t) ? '' : ' · ' + esc(t.cfg.projectId)) + '</small></span>' +
+        '<span class="ts-state">' + (t.id === wsNow ? 'Açık' : 'Aç') + '</span></button>').join('') +
+      '</div>';
+
+    // Açık ekip: davet ve üyeler
+    if (cloud.on && cloud.ready && cloud.team && sameProject(cloud.team)) {
+      const me = cloud.members.get(u.uid) || {}, owner = me.role === 'owner';
+      const link = tp.code && tp.codeFor === cloud.team.id ? inviteURL(cloud.team, tp.code) : '';
+      h += '<div class="modal-section-label">Ekip arkadaşı davet et</div>' +
+        '<p class="team-hint">Bu bağlantıyı açıp giriş yapan herkes <b>' + esc(cloud.team.name) + '</b> ekibine katılır. Sadece ekip arkadaşlarınla paylaş.</p>' +
+        '<div class="team-invite"><input class="modal-tags-input" id="teamInvite" readonly value="' + escAttr(link || 'Bağlantı hazırlanıyor…') + '" aria-label="Davet bağlantısı">' +
+        '<button class="modal-btn primary" type="button" data-tact="share-invite"' + (link ? '' : ' disabled') + '>' + (navigator.share ? 'Paylaş' : 'Kopyala') + '</button></div>' +
+        (owner ? '<button class="link-btn" type="button" data-tact="rotate">Yeni bağlantı oluştur (eskisi artık çalışmaz)</button>' : '');
+      const list = [...cloud.members.entries()].sort((a, b) => (b[1].role === 'owner') - (a[1].role === 'owner') || memberName(a[0]).localeCompare(memberName(b[0]), 'tr'));
+      h += '<div class="modal-section-label">Üyeler (' + list.length + ')</div><div class="team-members">' +
+        list.map(([uid, m]) => {
+          const p = cloud.presence.get(uid), on = isOnline(uid);
+          const where = on && p && p.pid ? (projects.find(x => x.id === p.pid) || {}).name : '';
+          return '<div class="team-member">' + avatarHTML(uid) +
+            '<div class="tm-txt"><b>' + esc(m.name || (m.email || '').split('@')[0] || 'Üye') + (uid === u.uid ? ' <span class="tm-you">(sen)</span>' : '') + '</b>' +
+            '<small>' + esc([m.role === 'owner' ? 'Ekip sahibi' : 'Üye', m.email].filter(Boolean).join(' · ')) + '</small></div>' +
+            '<span class="tm-on' + (on ? ' on' : '') + '" title="' + escAttr(on ? 'Çevrimiçi' + (where ? ' · ' + where + (p.view ? ' · ' + VIEW_NAMES[p.view] : '') : '') : 'Çevrimdışı') + '">' + (on ? 'çevrimiçi' : '') + '</span>' +
+            (owner && uid !== u.uid ? '<button class="modal-btn danger tm-rm" type="button" data-rm="' + uid + '" title="Ekipten çıkar">Çıkar</button>' : '') +
+          '</div>';
+        }).join('') + '</div>';
+      h += '<div class="team-row-acts"><button class="modal-btn" type="button" data-tact="copy-personal">Kişisel projelerimi bu ekibe kopyala…</button>' +
+        (owner ? '<button class="modal-btn" type="button" data-tact="rename">Ekibin adını değiştir</button>' : '<button class="modal-btn danger" type="button" data-tact="leave">Ekipten ayrıl</button>') + '</div>';
+    }
+
+    if (!inv) h += '<div class="modal-section-label">Davetle başka bir ekibe katıl</div>' + invitePasteHTML();
+    h += '<div class="modal-section-label">Yeni ekip kur</div>' +
+      '<div class="team-new"><input class="modal-tags-input" id="teamNewName" maxlength="40" placeholder="Ekip adı (örneğin Klinik ekibi)"><button class="modal-btn primary" type="button" data-tact="create"' + (tp.busy ? ' disabled' : '') + '>Kur</button></div>' +
+      '<p class="team-foot">Firebase projesi: <code>' + esc(inst.cfg.projectId) + '</code> · <button class="link-btn" type="button" data-tact="change-cfg">Ayarları değiştir</button></p>';
+    return h;
+  }
+
+  function memberDoc(inst, user, role, code) {
+    const o = {
+      name: String(user.displayName || (user.email || '').split('@')[0] || '').slice(0, 60),
+      email: String(user.email || '').slice(0, 120),
+      photo: /^https:\/\//.test(user.photoURL || '') ? user.photoURL : '',
+      role: role, joined: inst.F.serverTimestamp()
+    };
+    if (code) o.code = code;
+    return o;
+  }
+  async function createTeam(name) {
+    const inst = tp.inst, user = tp.user, F = inst.F, db = inst.db;
+    const ref = F.doc(F.collection(db, 'teams'));
+    await withTimeout(F.setDoc(ref, { name: name, owner: user.uid, created: F.serverTimestamp() }));
+    await withTimeout(F.setDoc(F.doc(db, 'teams', ref.id, 'members', user.uid), memberDoc(inst, user, 'owner')));
+    await withTimeout(F.setDoc(F.doc(db, 'teams', ref.id, 'secret', 'invite'), { code: randomCode() }));
+    await withTimeout(F.setDoc(F.doc(db, 'users', user.uid), { teams: { [ref.id]: { name: name, role: 'owner' } } }, { merge: true }));
+    rememberTeam({ id: ref.id, name: name, cfg: inst.cfg });
+    return ref.id;
+  }
+  async function joinTeam(inv) {
+    const inst = tp.inst, user = tp.user, F = inst.F, db = inst.db;
+    const mref = F.doc(db, 'teams', inv.id, 'members', user.uid);
+    let role = null;
+    try { const s = await withTimeout(F.getDoc(mref)); if (s.exists()) role = s.data().role === 'owner' ? 'owner' : 'member'; }
+    catch (e) { if (!e || e.code !== 'permission-denied') throw e; } // üye değilse okuyamaz: katılacak
+    if (!role) {
+      try { await withTimeout(F.setDoc(mref, memberDoc(inst, user, 'member', inv.code))); }
+      catch (e) { if (e && e.code === 'permission-denied') throw { code: 'bad-invite' }; throw e; }
+      role = 'member';
+    }
+    await withTimeout(F.setDoc(F.doc(db, 'users', user.uid), { teams: { [inv.id]: { name: inv.name, role: role } } }, { merge: true })).catch(() => {});
+    rememberTeam({ id: inv.id, name: inv.name, cfg: inv.cfg });
+  }
+
+  async function teamAction(act, node) {
+    const inst = tp.inst, F = inst && inst.F, db = inst && inst.db;
+    const fail = e => { console.error(e); tp.busy = false; tp.msg = e && e.code === 'bad-invite' ? 'Davet bağlantısı geçersiz ya da yenilenmiş. Ekip sahibinden yeni bir bağlantı iste.' : fbErr(e); tp.msgKind = 'err'; renderTeamPanel(); };
+    const after = () => { tp.busy = false; tp.msg = ''; };
+    switch (act) {
+      case 'copy-rules':
+        try { await navigator.clipboard.writeText(FIRESTORE_RULES); node.textContent = 'Kopyalandı ✓'; }
+        catch (e) { node.textContent = 'Kopyalanamadı'; }
+        setTimeout(() => { node.textContent = 'Kuralları kopyala'; }, 1600);
+        return;
+      case 'save-cfg': {
+        const cfg = parseFbConfig(el('teamCfg').value);
+        if (!cfgOk(cfg)) {
+          tp.msg = 'Ayarlar okunamadı. Firebase\'in verdiği firebaseConfig kutusunun tamamını yapıştır (apiKey, authDomain, projectId ve appId olmalı).';
+          tp.msgKind = 'err'; renderTeamPanel(); return;
+        }
+        localSet('pref:fbconfig', JSON.stringify(cfg));
+        tp.setup = false; tp.msg = 'Ayarlar kaydedildi. Şimdi giriş yap.'; tp.msgKind = 'ok';
+        await teamPanelLoad();
+        return;
+      }
+      case 'paste-invite': {
+        const inv = inviteFromText(el('teamInvPaste').value);
+        if (inv.bad) { tp.msg = 'Bu bir davet bağlantısı değil ya da eksik kopyalanmış. Bağlantının tamamını yapıştır (içinde "#davet=" olmalı).'; tp.msgKind = 'err'; renderTeamPanel(); return; }
+        tp.invite = inv; tp.pendingTeam = null; tp.setup = false; tp.msg = '';
+        await teamPanelLoad();
+        return;
+      }
+      case 'change-cfg': tp.setup = true; tp.msg = ''; renderTeamPanel(); return;
+      case 'setup-cancel': tp.setup = false; renderTeamPanel(); return;
+      case 'retry': await teamPanelLoad(); return;
+      case 'mode-signin': case 'mode-signup': case 'mode-reset':
+        tp.emailMode = act.slice(5); tp.msg = ''; renderTeamPanel(); return;
+      case 'google':
+        try {
+          const prov = new inst.A.GoogleAuthProvider();
+          prov.setCustomParameters({ prompt: 'select_account' });
+          await inst.A.signInWithPopup(inst.auth, prov);
+          await teamSignedIn();
+        } catch (e) { fail(e); }
+        return;
+      case 'signout':
+        try { await inst.A.signOut(inst.auth); } catch (e) {}
+        if (cloud.on) { switchWorkspace(''); return; }
+        tp.user = null; tp.msg = 'Çıkış yapıldı.'; tp.msgKind = ''; renderTeamPanel();
+        return;
+      case 'invite-cancel': tp.invite = null; tp.pendingTeam = null; tp.msg = ''; renderTeamPanel(); return;
+      case 'join':
+        tp.busy = true; renderTeamPanel();
+        try { await joinTeam(tp.invite); const id = tp.invite.id; after(); await switchWorkspace(id); }
+        catch (e) { fail(e); }
+        return;
+      case 'create': {
+        const name = el('teamNewName').value.trim().slice(0, 40);
+        if (!name) { el('teamNewName').focus(); return; }
+        if (!navigator.onLine) { tp.msg = 'Ekip kurmak için internet gerekli.'; tp.msgKind = 'err'; renderTeamPanel(); return; }
+        tp.busy = true; renderTeamPanel();
+        try { const id = await createTeam(name); after(); await switchWorkspace(id); }
+        catch (e) { fail(e); }
+        return;
+      }
+      case 'share-invite': {
+        const url = el('teamInvite').value;
+        if (navigator.share) {
+          try { await navigator.share({ title: 'White Note: ' + cloud.team.name, text: cloud.team.name + ' ekibine katıl:', url: url }); } catch (e) {}
+        } else {
+          try { await navigator.clipboard.writeText(url); node.textContent = 'Kopyalandı ✓'; }
+          catch (e) { el('teamInvite').select(); try { document.execCommand('copy'); node.textContent = 'Kopyalandı ✓'; } catch (_) {} }
+          setTimeout(() => { node.textContent = 'Kopyala'; }, 1600);
+        }
+        return;
+      }
+      case 'rotate':
+        if (!confirm('Yeni bir davet bağlantısı oluşturulsun mu? Daha önce paylaştığın bağlantı artık çalışmaz (ekipteki kimse çıkmaz).')) return;
+        try { const code = randomCode(); await withTimeout(F.setDoc(F.doc(db, 'teams', cloud.team.id, 'secret', 'invite'), { code: code })); tp.code = code; tp.codeFor = cloud.team.id; showSnack('Yeni davet bağlantısı hazır.'); renderTeamPanel(); }
+        catch (e) { fail(e); }
+        return;
+      case 'rename': {
+        const n = prompt('Ekibin yeni adı:', cloud.team.name);
+        if (n === null || !n.trim()) return;
+        try { await withTimeout(F.updateDoc(F.doc(db, 'teams', cloud.team.id), { name: n.trim().slice(0, 40) })); }
+        catch (e) { fail(e); }
+        return;
+      }
+      case 'leave':
+        if (!confirm('"' + cloud.team.name + '" ekibinden ayrılmak istiyor musun? Ekibin projeleri ekipte kalır; yeniden katılmak için davet bağlantısı gerekir.')) return;
+        lostShown = true; // kendi isteğimizle çıkıyoruz; "erişimin kalmadı" uyarısı çıkmasın
+        try {
+          const tid = cloud.team.id;
+          await withTimeout(F.deleteDoc(F.doc(db, 'teams', tid, 'presence', tp.user.uid))).catch(() => {});
+          await withTimeout(F.deleteDoc(F.doc(db, 'teams', tid, 'members', tp.user.uid)));
+          await withTimeout(F.updateDoc(F.doc(db, 'users', tp.user.uid), { ['teams.' + tid]: F.deleteField() })).catch(() => {});
+          forgetTeam(tid);
+          await switchWorkspace('');
+        } catch (e) { lostShown = false; fail(e); }
+        return;
+      case 'copy-personal': copyPersonalToTeam(); return;
+    }
+  }
+  async function teamSignedIn() {
+    tp.user = await fbUser(tp.inst);
+    tp.busy = false;
+    // Giriş, açılmak istenen bir ekip içinse doğrudan o ekibe geç
+    if (tp.pendingTeam && !tp.invite) { const id = tp.pendingTeam.id; tp.pendingTeam = null; await switchWorkspace(id); return; }
+    tp.msg = ''; renderTeamPanel();
+    teamPanelFetch();
+  }
+  async function teamEmailSubmit() {
+    const inst = tp.inst, A = inst.A, mode = tp.emailMode;
+    const email = (el('tfEmail').value || '').trim(), pass = el('tfPass') ? el('tfPass').value : '';
+    tp.busy = true;
+    try {
+      if (mode === 'reset') {
+        await A.sendPasswordResetEmail(inst.auth, email);
+        tp.busy = false; tp.emailMode = 'signin'; tp.msg = 'Şifre sıfırlama bağlantısı ' + email + ' adresine gönderildi (gereksiz klasörüne de bak).'; tp.msgKind = 'ok';
+        renderTeamPanel(); return;
+      }
+      if (mode === 'signup') {
+        const name = (el('tfName').value || '').trim().slice(0, 60);
+        if (!name) { tp.busy = false; tp.msg = 'Adını yaz; ekipte bu adla görünürsün.'; tp.msgKind = 'err'; renderTeamPanel(); return; }
+        const cred = await A.createUserWithEmailAndPassword(inst.auth, email, pass);
+        await A.updateProfile(cred.user, { displayName: name });
+      } else {
+        await A.signInWithEmailAndPassword(inst.auth, email, pass);
+      }
+      await teamSignedIn();
+    } catch (e) {
+      tp.busy = false; tp.msg = fbErr(e); tp.msgKind = 'err'; renderTeamPanel();
+      const f = el('tfEmail'); if (f) f.value = email;
+    }
+  }
+  el('teamBody').addEventListener('click', e => {
+    const a = e.target.closest('[data-tact]'), ws = e.target.closest('[data-ws]'), rm = e.target.closest('[data-rm]');
+    if (a) { teamAction(a.dataset.tact, a); return; }
+    if (ws) {
+      const id = ws.dataset.ws, now = cloud.on && cloud.team ? cloud.team.id : '';
+      if (id === now) { closeTeamPanel(); return; }
+      switchWorkspace(id);
+      return;
+    }
+    if (rm) {
+      const uid = rm.dataset.rm, name = memberName(uid);
+      if (!confirm(name + ' ekipten çıkarılsın mı? Ekibin projelerini artık göremez ve değiştiremez.\n\nEski davet bağlantısıyla geri katılamasın diye davet bağlantısı da yenilenir.')) return;
+      const F = tp.inst.F, db = tp.inst.db, tid = cloud.team.id;
+      withTimeout(F.deleteDoc(F.doc(db, 'teams', tid, 'members', uid)))
+        .then(async () => {
+          // Çıkarılan kişinin elinde eski bağlantı var: yenisi oluşturulur, eskisi artık çalışmaz
+          let renewed = false;
+          try {
+            const code = randomCode();
+            await withTimeout(F.setDoc(F.doc(db, 'teams', tid, 'secret', 'invite'), { code: code }));
+            tp.code = code; tp.codeFor = tid; renewed = true;
+          } catch (e) { console.error(e); }
+          showSnack(name + ' ekipten çıkarıldı.' + (renewed ? ' Davet bağlantısı yenilendi.' : ''));
+          teamPanelSafeRender();
+        })
+        .catch(err => { tp.msg = fbErr(err); tp.msgKind = 'err'; renderTeamPanel(); });
+    }
+  });
+  el('teamBody').addEventListener('submit', e => { e.preventDefault(); if (!tp.busy) teamEmailSubmit(); });
+  el('teamBody').addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    if (e.target.id === 'teamNewName') { e.preventDefault(); teamAction('create', e.target); }
+    if (e.target.id === 'teamInvPaste') { e.preventDefault(); teamAction('paste-invite', e.target); }
+  });
+  el('teamBody').addEventListener('focusin', e => { if (e.target.id === 'teamInvite') e.target.select(); });
+  el('teamBtn').addEventListener('click', () => openTeamPanel());
+  el('wsChip').addEventListener('click', () => openTeamPanel());
+  el('teamClose').addEventListener('click', closeTeamPanel);
+  el('teamModal').addEventListener('click', e => { if (e.target === el('teamModal')) closeTeamPanel(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && teamPanelOpen()) closeTeamPanel(); });
+
+  /* Bu cihazdaki kişisel projeleri ekibe kopyala: yedek yükleme penceresi "ekle" kipinde açılır */
+  function readPersonalData() {
+    const map = { 'proj:': 'projects', 'item:': 'items', 'col:': 'columns', 'tbl:': 'dbTables', 'rel:': 'dbLinks', 'sch:': 'dbSettings',
+                  'flc:': 'flowCharts', 'fln:': 'flowNodes', 'fle:': 'flowEdges', 'fls:': 'flSettings' };
+    const out = { version: 5, exported: Date.now() };
+    Object.values(map).forEach(k => { out[k] = []; });
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || k.indexOf(STORE_PREFIX) !== 0) continue;
+        const arr = map[prefixOf(k.slice(STORE_PREFIX.length))];
+        if (!arr) continue;
+        try { const o = JSON.parse(localStorage.getItem(k)); if (o && typeof o === 'object') out[arr].push(o); } catch (e) {}
+      }
+    } catch (e) {}
+    return out;
+  }
+  function copyPersonalToTeam() {
+    const data = readPersonalData();
+    if (!data.projects.length) { showSnack('Bu cihazda kişisel proje yok.'); return; }
+    if (!backupIdsOk(data)) { alert('Kişisel verilerde bozuk kayıtlar var; kopyalanamadı. Önce kişisel alanda JSON yedeği alıp onu yüklemeyi dene.'); return; }
+    pendingImport = { data: data, file: 'Bu cihazdaki kişisel projeler', personal: true };
+    closeTeamPanel();
+    openBackupModal();
+  }
+
   /* ---- UYGULAMAYI BAŞLAT ----
      Her şey tanımlandı; şimdi temayı ve kayıtlı veriyi yükleyip ekranı çiziyoruz.
-     Veriler yüklendikten SONRA görünüm tercihini uygula (pano render'ı veri ister). */
-  loadTheme();
-  loadAll().then(loadView);
+     Veriler yüklendikten SONRA görünüm tercihini uygula (pano render'ı veri ister).
+     Açık alan bir ekipse veriler ekibin deposundan gelir (startApp → startTeam). */
+  startApp();
 
   /* Yazı tipi inince akış şekillerinin boyutunu yeniden ölç (ölçüm yazı tipine göre yapılıyor) */
   if (document.fonts && document.fonts.load) {

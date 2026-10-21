@@ -4,6 +4,7 @@ Not, görev, Trello tarzı pano, takvim, **SQLite veritabanı şema tasarımcıs
 tasarımcısı** bir arada.
 Tek bir `index.html` dosyasından oluşur; kurulum gerektirmez, tarayıcıda çalışır.
 Telefona ya da bilgisayara **uygulama olarak yüklenebilir** ve internetsiz de açılır.
+**Ekip alanında** projeler ekip arkadaşlarınla birlikte, canlı olarak düzenlenir.
 
 **Canlı sürüm:** https://acemividyolar-alt.github.io/white_not/
 
@@ -109,9 +110,69 @@ Dışa / İçe aktar → **Telefona / bilgisayara yükle**. Chrome ve Edge doğr
 Safari'nin Paylaş → **Ana Ekrana Ekle** adımı gösterilir. Yüklenen uygulama kendi simgesiyle,
 tarayıcı çubukları olmadan açılır ve internetsiz çalışır (`sw.js`).
 
+## Ekip ile çalışma
+
+Projeleri ekip arkadaşlarınla **birlikte** düzenleyebilirsin: biri kart eklediğinde, kartı taşıdığında,
+SQL şemasını ya da akış şemasını değiştirdiğinde herkesin ekranında anında görünür. Telefondan ve
+bilgisayardan aynı anda kullanılır.
+
+- Üst çubuktaki **Ekip** düğmesi (telefonda kişi simgesi) ya da kenar çubuğundaki **Kişisel** kutusu
+  Ekip penceresini açar.
+- **Kişisel alan** eskisi gibi sadece bu cihazdadır. **Ekip alanında** projeler ekibin ortak deposunda
+  (Google Firebase) durur. İkisi arasında Ekip penceresinden geçilir.
+- Kimin çevrimiçi olduğu üst çubukta, hangi projede olduğu kenar çubuğunda görünür. Simgenin
+  köşesindeki nokta: yeşil = kaydedildi, sarı = kaydediliyor, gri = çevrimdışı, kırmızı = sorun.
+- Açık bir kartı başkası değiştirirse ya da silerse kartta uyarı çıkar; kartta son değiştiren kişi yazar.
+  Çöp kutusu ekipte ortaktır ve kimin sildiğini gösterir.
+- Telefonda kart sürüklerken gelen değişiklikler kartı bırakana kadar bekletilir.
+- İnternet kesilirse çalışmaya devam edersin; değişiklikler bağlantı gelince gönderilir.
+- **Kişisel projelerimi bu ekibe kopyala** ile bu cihazdaki projeler ekibe eklenir.
+
+### Bir kez kurulum (ekibi kuran kişi, yaklaşık 10 dakika)
+
+Ekip alanı ücretsiz bir Firebase projesi kullanır (Spark planı yeter, kart bilgisi istemez).
+Aynı adımlar uygulamadaki Ekip penceresinde de yazar.
+
+1. https://console.firebase.google.com adresinde **Proje oluştur** (Create a project).
+   Google Analytics'i kapatabilirsin.
+2. **Authentication → Başlayın (Get started) → Sign-in method**: **Google**'ı aç (destek e-postası
+   olarak kendi adresini seç), sonra **E-posta/Şifre**'yi (Email/Password) aç.
+3. **Authentication → Settings → Authorized domains → Add domain**: `acemividyolar-alt.github.io`
+4. **Firestore Database → Create database**: sürüm sorarsa **Standard**, konum olarak Avrupa'dan birini
+   (ör. `europe-west1`) seç, **production mode** ile başlat.
+5. Firestore'un **Rules** (Kurallar) sekmesine bu depodaki [`firestore.rules`](firestore.rules)
+   dosyasının içeriğini yapıştır ve **Publish**'e bas.
+6. **Proje ayarları** (dişli) → **General** → **Your apps** → web simgesi `</>` → bir ad yaz →
+   **Register app**. Çıkan `firebaseConfig` kutusunu kopyala.
+7. White Note'ta **Ekip** → kutuya yapıştır → **Kaydet ve devam et** → Google ile ya da e-postayla
+   giriş yap → ekip adını yazıp **Kur**.
+
+Menüde bir bölümü bulamazsan konsolun üstündeki arama kutusuna adını yaz (ör. "Firestore").
+
+### Ekip arkadaşlarını davet etme
+
+Ekip penceresindeki **davet bağlantısını** paylaş (telefonda **Paylaş** düğmesi WhatsApp gibi
+uygulamaları açar). Bağlantıyı açan kişi Google hesabıyla ya da e-postayla giriş yapıp **Ekibe katıl**'a
+basar; onun Firebase kurulumu yapması gerekmez. Bağlantıyı açan herkes katılabildiği için sadece ekip
+arkadaşlarınla paylaş. Ekip sahibi **Yeni bağlantı oluştur** ile eski bağlantıyı geçersiz kılabilir ve
+üyeleri **Çıkar**abilir; bir üye çıkarılınca davet bağlantısı da kendiliğinden yenilenir.
+
+iPhone'da ana ekrana eklenen uygulama, Safari'de açılan bağlantıyı göremez. O zaman bağlantıyı kopyala,
+uygulamada Ekip penceresindeki **Davet bağlantısını buraya yapıştır** kutusuna yapıştır.
+
+### Bilinmesi gerekenler
+
+- Ekipteki herkes ekibin bütün projelerini görür ve düzenler; üyeler birbirinin adını ve e-postasını görür.
+- Aynı kartı iki kişi aynı anda kaydederse son kaydeden geçerli olur (kart penceresi bunu haber verir).
+- Bir kayıt en fazla yaklaşık 1 MB olabilir; çok büyük kapak resmi eklenemez.
+- Firebase'in ücretsiz planı küçük bir ekip için fazlasıyla yeter (günde 50.000 okuma, 20.000 yazma).
+- Kimin neyi okuyup yazabileceğini `firestore.rules` belirler: sadece ekip üyeleri okur ve yazar,
+  ekibe sadece geçerli davet koduyla katılınır.
+
 ## Veriler nerede?
 
-- Her şey bu cihazın tarayıcısında (`localStorage`) saklanır; hiçbir sunucuya gönderilmez.
+- **Kişisel alanda** her şey bu cihazın tarayıcısında (`localStorage`) saklanır; hiçbir sunucuya
+  gönderilmez. **Ekip alanında** projeler ekibin Firebase projesinde durur (bkz. Ekip ile çalışma).
 - Tarayıcılar bu alana sınır koyar (çoğunda yaklaşık 5 MB). Kapak resimleri bu yüzden
   otomatik küçültülür; kullanılan alan liste görünümünün altında görünür.
 - Başka cihaza taşımak ya da yedeklemek için: **Dışa / İçe aktar → JSON yedeği indir / yükle**.
@@ -126,7 +187,10 @@ tarayıcı çubukları olmadan açılır ve internetsiz çalışır (`sw.js`).
   internetten bir kez yüklenir (~650 KB). Diyagram ve SQL üretimi internetsiz çalışır.
 - Uygulamanın tamamı `index.html` içindedir. Yanındaki dosyalar: `sw.js` ve `manifest.webmanifest`
   (uygulama olarak yükleme, internetsiz çalışma), `icons/` (simgeler), `fonts/` (Recursive yazı tipi,
-  SIL Open Font License). Sadece `index.html` indirilse de çalışır; o zaman sistem yazı tipi kullanılır.
+  SIL Open Font License), `firestore.rules` (ekip alanının Firestore güvenlik kuralları).
+  Sadece `index.html` indirilse de çalışır; o zaman sistem yazı tipi kullanılır.
+- Ekip alanı Firebase kütüphanesini ilk kullanımda internetten bir kez yükler; ekip alanı sadece sitenin
+  internetteki adresinden açıldığında çalışır (dosyadan açılan sayfada değil).
   `script.js` ve `style.css` eski bir sürümden kalmadır ve kullanılmaz.
 
 ## Kısayollar
