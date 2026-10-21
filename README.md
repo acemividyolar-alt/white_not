@@ -14,7 +14,8 @@ Telefona ya da bilgisayara **uygulama olarak yüklenebilir** ve internetsiz de a
 kareli kâğıt zemin. Açık proje, seçili görünüm, arama eşleşmeleri, takvimde bugün ve çalışan adım
 fosforlu kalem sarısıyla işaretlenir. Gece görünümü lacivert "mavi kopya" (blueprint) zeminidir;
 ilk açılışta cihazın gece / gündüz ayarına uyar, ay / güneş düğmesiyle değiştirilir.
-Telefonda görünümler ekranın altındaki sekme çubuğundadır, pencereler alttan açılır.
+Telefonda görünümler ekranın altındaki sekme çubuğundadır; pencereler ve Şema / Akış'ın **Dosya** menüsü
+alttan açılır, kısa bildirimler ("dizildi · Geri al" gibi) ekranın altında görünür.
 
 ## Görünümler
 
@@ -57,7 +58,9 @@ Telefonda görünümler ekranın altındaki sekme çubuğundadır, pencereler al
   - Konsol: veri ekle, sorgu yaz, sonuçları tablo olarak gör
   - `.db` / `.sqlite` dosyası indirme
   - Var olan `.db` / `.sqlite` / `.sql` dosyasını içe aktarma
-- Geri al / yinele (Ctrl+Z / Ctrl+Y), otomatik yerleştir, ekrana sığdır, tabloya git
+- Geri al / yinele (Ctrl+Z / Ctrl+Y), ekrana sığdır, tabloya git
+- **Yerleştir:** tablolar ilişkilerine göre sütunlara dizilir; telefonda okunur kalsın diye alt alta
+  dizilir (alttaki bildirimden **Geri al**)
 - Diyagramı PNG / SVG olarak indirme
 
 ### Akış (algoritma / akış şeması)
@@ -87,7 +90,8 @@ Telefonda görünümler ekranın altındaki sekme çubuğundadır, pencereler al
 - **? düğmesi:** "Şekiller ne işe yarar?" hatırlatması — her şeklin anlamı, kısa örneği ve
   tek tıkla ekleme (klavyede `?` tuşu da açar)
 - Hata kontrolü: Başla yok, kararın iki çıkışı yok, bağlanmamış adım, ulaşılamayan adım…
-- Otomatik yerleştir, ekrana sığdır, geri al / yinele, PNG / SVG indirme
+- **Yerleştir** (şekilleri akışa göre dizer, telefonda ekran genişliğine sığdırır), ekrana sığdır,
+  geri al / yinele, PNG / SVG indirme
 - Hazır örnekler: toplam, büyük olanı bul, not harfi, faktöriyel, asal sayı, sayı tahmin oyunu
   ve bu uygulamanın kendi çalışma akışı
 

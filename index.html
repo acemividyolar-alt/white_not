@@ -384,6 +384,8 @@
   .menu button.danger:hover { background: var(--danger-soft); }
   .menu .sep { height: 1px; background: var(--line); margin: 0.3rem 0.4rem; }
   .menu [hidden] { display: none !important; }
+  /* Telefonda Şema / Akış "Dosya" menüsü açıkken arkadaki örtü (dokununca menü kapanır) */
+  .menu-scrim { position: fixed; inset: 0; z-index: 90; background: var(--scrim); }
 
   /* GÖRÜNÜM SEKMELERİ (Liste / Pano / Şema / Akış / Takvim).
      Masaüstünde başlığın altında sekme şeridi; telefonda ekranın altında sekme çubuğu. */
@@ -1536,7 +1538,10 @@
     .view-toggle button.sel::after { display: none; }
     .view-toggle button.sel span { background: none; padding: 0; }
 
-    .snack { bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
+    /* Telefonda bildirim ekran genişliğinde; uzun mesaj "…" ile kesilmez, en çok üç satıra sarılır */
+    .snack { left: 0.75rem; right: 0.75rem; max-width: none; transform: translate(0, 14px); bottom: calc(74px + env(safe-area-inset-bottom, 0px)); font-size: 0.875rem; }
+    .snack.show { transform: translate(0, 0); }
+    .snack span { flex: 1; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-height: 1.35; padding: 0.3rem 0; }
     .due-filters { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -1rem 0.8rem; padding: 0 1rem; }
     .due-filters::-webkit-scrollbar { display: none; }
     .df { flex-shrink: 0; }
@@ -1580,6 +1585,17 @@
     .er-status { font-size: 0.75rem; }
     .er-hint { display: none; }
     .er-stats { margin-left: auto; }
+    /* Dosya menüsü: yana kayan araç çubuğunun içinde kalınca kesilip görünmüyordu.
+       Telefonda ekranın altından açılan bir liste olur (arkası karartılır, dışına dokununca kapanır). */
+    .er-menu-wrap .menu {
+      position: fixed; left: 0.5rem; right: 0.5rem; top: auto; z-index: 95;
+      bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+      min-width: 0; max-height: calc(100dvh - 150px); overflow-y: auto; overscroll-behavior: contain;
+      padding: 0.35rem; border-radius: var(--r-xl); box-shadow: var(--shadow-3);
+    }
+    .er-menu-wrap .menu.open { animation: sheetIn 0.2s ease-out; }
+    .er-menu-wrap .menu button { min-height: 46px; font-size: 0.95rem; padding: 0 0.85rem; }
+    .er-menu-wrap .menu-group-label { padding: 0.6rem 0.85rem 0.3rem; }
     .er-wrap, .fl-wrap { gap: 0.5rem; }
     .sql-out { min-height: 200px; }
     /* Tablo penceresinde alan satırı bölünsün: üstte ad + tür, altta kutucuklar ve düğmeler */
@@ -2281,6 +2297,9 @@
   </div>
 </div>
 
+<!-- Telefonda Dosya menüsü açıkken arkadaki örtü -->
+<div class="menu-scrim" id="menuScrim" hidden></div>
+
 <!-- Alttan çıkan kısa bildirim (ör. "Çöp kutusuna taşındı · Geri al") -->
 <div class="snack" id="snack" role="status" aria-live="polite"><span id="snackMsg"></span><button id="snackUndo" type="button">Geri al</button><button id="snackX" type="button" aria-label="Kapat">&times;</button></div>
 
@@ -2869,6 +2888,8 @@
     snackTimer = setTimeout(hideSnack, 6500);
   }
   function hideSnack() { el('snack').classList.remove('show'); snackUndoFn = null; }
+  /* Telefonda anlamsız olan klavye ipucunu ("(geri almak için Ctrl+Z)") mesajdan çıkarır */
+  function noKeyHint(msg) { return String(msg).replace(/\s*\([^()]*(Ctrl|⌘)[^()]*\)/g, '').replace(/\s+([.,;:])/g, '$1'); }
 
   /* ===================================================================
      TÜM PROJELERDE ARA (Ctrl+K)
@@ -4561,6 +4582,8 @@
   let erToastTimer = null;
   function erToast(msg, ms) {
     const h = el('erHint');
+    // Telefonda ipucu satırı gizli: mesaj alttaki bildirimde gösterilir (yoksa hiç görünmüyordu)
+    if (!h.offsetParent) { showSnack(noKeyHint(msg)); return; }
     h.textContent = msg;
     h.classList.add('flash');
     clearTimeout(erToastTimer);
@@ -4886,7 +4909,15 @@
   /* ---------- OTOMATİK YERLEŞTİRME ----------
      Tablolar ilişki "derinliğine" göre sütunlara dizilir: başkasına bağlanmayan ana tablolar
      solda, onlara bağlanan alt tablolar sağda. Çok uzun sütunlar ikiye bölünür. */
-  function erAutoLayout(onlyIds, startX) {
+  /* Telefon gibi dar ekran mı? (Şema tuvalinin genişliğine bakılır; tuval görünmüyorsa ekran genişliğine) */
+  function erNarrow() {
+    const w = el('erCanvas').clientWidth;
+    return w ? w < 560 : matchMedia('(max-width: 760px)').matches;
+  }
+  /* opts.narrow: dar ekranda tablolar TEK SÜTUNDA alt alta dizilir (ana tablolar üstte), böylece
+     telefonda yazılar okunacak büyüklükte kalır ve aşağı kaydırarak bakılır. */
+  function erAutoLayout(onlyIds, startX, opts) {
+    opts = opts || {};
     const tables = projectTables(activeProject).filter(t => !onlyIds || onlyIds.has(t.id));
     if (!tables.length) return;
     const ids = new Set(tables.map(t => t.id));
@@ -4910,18 +4941,36 @@
 
     const maxLevel = Math.max(...tables.map(t => level[t.id]));
     const order = {}; // bir tablonun dikey sırası (çizgi kesişmelerini azaltmak için)
-    let x = startX || 40;
-    const maxH = 1000;
-    for (let lv = 0; lv <= maxLevel; lv++) {
-      let col = tables.filter(t => level[t.id] === lv);
-      if (!col.length) continue;
-      // Ana tablolarının ortalama sırasına göre diz (ilk sütunda: en çok bağlantı alan önce)
+    // Bir seviyedeki tablolar, ana tablolarının ortalama sırasına göre (ilk seviyede: en çok bağlantı alan önce)
+    const levelCol = lv => {
       const score = t => {
         const ps = deps.filter(l => l.fromTable === t.id && order[l.toTable] != null).map(l => order[l.toTable]);
         if (ps.length) return ps.reduce((a, b) => a + b, 0) / ps.length;
         return -deps.filter(l => l.toTable === t.id).length;
       };
-      col = col.map(t => ({ t: t, s: score(t) })).sort((a, b) => a.s - b.s).map(o => o.t);
+      return tables.filter(t => level[t.id] === lv).map(t => ({ t: t, s: score(t) })).sort((a, b) => a.s - b.s).map(o => o.t);
+    };
+
+    if (opts.narrow) {
+      // Dar ekran: tek sütun. İçe aktarmada "ekle" seçildiyse yeni tablolar mevcutların altına gelir.
+      let y = 24;
+      const others = onlyIds ? projectTables(activeProject).filter(t => !onlyIds.has(t.id)) : [];
+      if (others.length) y = Math.max(...others.map(t => t.y + ((size[t.id] || {}).h || 150))) + 80;
+      for (let lv = 0; lv <= maxLevel; lv++) {
+        levelCol(lv).forEach((t, i) => {
+          t.x = 48; t.y = Math.round(y); // solda ilişki çizgilerine yer kalsın
+          order[t.id] = lv * 1000 + i;
+          y += ((size[t.id] || {}).h || 150) + 36;
+        });
+      }
+      return;
+    }
+
+    let x = startX || 40;
+    const maxH = 1000;
+    for (let lv = 0; lv <= maxLevel; lv++) {
+      const col = levelCol(lv);
+      if (!col.length) continue;
 
       let y = 40, colW = 0;
       col.forEach((t, i) => {
@@ -4937,13 +4986,32 @@
   }
 
   async function erAutoLayoutCmd() {
-    if (!projectTables(activeProject).length) return;
+    if (!projectTables(activeProject).length) { erToast('Dizilecek tablo yok. Önce "+ Tablo" ile tablo ekle.'); return; }
     erCheckpoint();
-    erAutoLayout();
+    const narrow = erNarrow();
+    erAutoLayout(null, null, { narrow: narrow });
     for (const t of projectTables(activeProject)) await saveDbTable(t);
     renderSchema();
-    erFit();
-    erToast('Tablolar ilişkilerine göre dizildi (geri almak için Ctrl+Z).');
+    if (narrow) erFitWidth(); else erFit();
+    // Sonuç ve geri alma her ekranda görünsün (telefonda alttaki ipucu satırı gizli)
+    showSnack(narrow ? 'Tablolar alt alta dizildi.' : 'Tablolar ilişkilerine göre dizildi.', () => erUndo());
+  }
+
+  /* Telefonda: tablolar ekranın genişliğine sığacak kadar küçültülür (en az %50, yazılar okunur kalsın),
+     en üste kaydırılır; aşağısı kaydırılarak görülür. (Sığdır ise her şeyi tek ekrana sığdırır.) */
+  function erFitWidth() {
+    const nodes = [...el('erTables').querySelectorAll('.er-table')];
+    const c = el('erCanvas');
+    if (!nodes.length) { setErZoom(1); c.scrollTo(0, 0); return; }
+    // Sol kenardan ölçülür: tabloların solundaki ilişki çizgileri de görünsün
+    let y1 = Infinity, x2 = 0;
+    nodes.forEach(n => { y1 = Math.min(y1, n.offsetTop); x2 = Math.max(x2, n.offsetLeft + n.offsetWidth); });
+    const pad = 24;
+    let z = Math.min(1, (c.clientWidth - pad) / (x2 + pad));
+    z = Math.max(0.5, Math.floor(z * 20) / 20);
+    if (z !== erZoom) setErZoom(z);
+    c.scrollLeft = 0;
+    c.scrollTop = Math.max(0, y1 * erZoom - pad / 2);
   }
 
   /* ---------- SÜRÜKLEME MOTORU (Pointer Events: fare + dokunmatik) ----------
@@ -5976,12 +6044,13 @@
     else if (extra) s.extraSql = (s.extraSql ? s.extraSql.trim() + '\n\n' : '') + extra;
     await saveSchemaSettings(pid);
 
-    // Yeni tabloları önce çiz (boyutları ölçülsün), sonra ilişkilerine göre diz
+    // Yeni tabloları önce çiz (boyutları ölçülsün), sonra ilişkilerine göre diz (telefonda alt alta)
     renderSchema();
-    erAutoLayout(newIds, startX);
+    const narrow = erNarrow();
+    erAutoLayout(newIds, startX, { narrow: narrow });
     for (const t of dbTables.filter(x => newIds.has(x.id))) await saveDbTable(t);
     renderSchema();
-    erFit();
+    if (narrow) erFitWidth(); else erFit();
 
     const nIdx = model.tables.reduce((a, t) => a + t.indexes.length, 0);
     let report = '✓ ' + model.tables.length + ' tablo, ' + nLinks + ' ilişki, ' + nIdx + ' indeks içe aktarıldı.';
@@ -6669,6 +6738,10 @@
   /* ---- İÇE AKTARMA PENCERESİ olayları ---- */
   el('impClose').addEventListener('click', () => el('importModal').classList.remove('open'));
   el('importModal').addEventListener('click', e => { if (e.target === el('importModal')) el('importModal').classList.remove('open'); });
+  // Telefonda (iPhone / Android) uzantı süzgeci .sql / .db dosyalarını seçilemez (gri) yapabiliyor:
+  // dokunmatik cihazlarda süzgeç kaldırılır. Dosyanın ne olduğu zaten içeriğinden anlaşılıyor
+  // (SQLite başlığı ya da CREATE TABLE metni); başka bir dosya seçilirse anlaşılır bir hata çıkar.
+  if (matchMedia('(pointer: coarse)').matches) el('impFile').removeAttribute('accept');
   el('impFileBtn').addEventListener('click', () => el('impFile').click());
   el('impFile').addEventListener('change', e => {
     const f = e.target.files[0];
@@ -6878,6 +6951,7 @@
   let flToastTimer = null;
   function flToast(msg, ms) {
     const h = el('flHint');
+    if (!h.offsetParent) { showSnack(noKeyHint(msg)); return; } // telefonda ipucu satırı gizli (bkz. erToast)
     h.textContent = msg;
     h.classList.add('flash');
     clearTimeout(flToastTimer);
@@ -8470,13 +8544,31 @@
 
   async function flAutoLayoutCmd() {
     const nodes = projectFlowNodes(activeProject);
-    if (!nodes.length) return;
+    if (!nodes.length) { flToast('Dizilecek şekil yok. Önce şablondan bir şekil ekle.'); return; }
     flCheckpoint();
     flLayoutGraph(nodes, projectFlowEdges(activeProject), 90, 50);
     for (const n of nodes) await saveFlowNode(n);
     renderFlow();
-    flFit();
-    flToast('Şekiller akışa göre dizildi (geri almak için Ctrl+Z).');
+    // Telefonda bütün şemayı tek ekrana sığdırmak yazıları okunmaz yapıyordu: genişliğe göre sığdır
+    if (flNarrow()) flFitWidth(); else flFit();
+    showSnack('Şekiller akışa göre dizildi.', () => flUndo()); // telefonda ipucu satırı gizli; geri alma da burada
+  }
+  /* Telefon gibi dar ekran mı? (Akış tuvalinin genişliğine bakılır) */
+  function flNarrow() {
+    const w = el('flCanvas').clientWidth;
+    return w ? w < 560 : matchMedia('(max-width: 760px)').matches;
+  }
+  /* Şemanın genişliği ekrana sığacak kadar küçültür (en az %50), en üste kaydırır; aşağısı kaydırılarak görülür. */
+  function flFitWidth() {
+    const c = el('flCanvas');
+    const b = flBounds(activeProject);
+    if (!b) { setFlZoom(1); c.scrollTo(0, 0); return; }
+    const pad = 24;
+    let z = Math.min(1, (c.clientWidth - pad) / (b.x2 - b.x1 + pad));
+    z = Math.max(0.5, Math.floor(z * 20) / 20);
+    if (z !== flZoom) setFlZoom(z);
+    c.scrollLeft = Math.max(0, b.x1 * flZoom - pad / 2);
+    c.scrollTop = Math.max(0, b.y1 * flZoom - pad / 2);
   }
 
   /* Ayrıştırılan algoritmayı projeye ekler (ya da mevcut şemanın yerine koyar). */
@@ -9820,6 +9912,21 @@
   el('flFileBtn').addEventListener('click', e => { e.stopPropagation(); el('flFileMenu').classList.toggle('open'); });
   document.addEventListener('click', e => { if (!e.target.closest('#flFileMenu, #flFileBtn')) el('flFileMenu').classList.remove('open'); });
   el('flFileMenu').addEventListener('click', e => { const b = e.target.closest('[data-flact]'); if (b) flFileAction(b.dataset.flact); });
+
+  /* Telefonda Şema ve Akış'ın Dosya menüleri ekranın altından açılır (bkz. CSS). Açıkken arkası
+     karartılır; örtüye dokununca ya da Esc'e basınca kapanır. Menülerin açılıp kapanması izlenir. */
+  const TOOL_MENUS = ['erFileMenu', 'flFileMenu'];
+  function closeToolMenus() { TOOL_MENUS.forEach(id => el(id).classList.remove('open')); }
+  function syncMenuScrim() {
+    const open = TOOL_MENUS.some(id => el(id).classList.contains('open'));
+    const phone = open && matchMedia('(max-width: 760px)').matches;
+    el('menuScrim').hidden = !phone;
+    if (phone) hideSnack(); // alttaki bildirim menünün son seçeneklerinin üstüne binmesin
+  }
+  const toolMenuObserver = new MutationObserver(syncMenuScrim);
+  TOOL_MENUS.forEach(id => toolMenuObserver.observe(el(id), { attributes: true, attributeFilter: ['class'] }));
+  el('menuScrim').addEventListener('click', closeToolMenus);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeToolMenus(); });
   el('flEmpty').addEventListener('click', e => { const b = e.target.closest('[data-flact]'); if (b) flFileAction(b.dataset.flact); });
 
   // Şekiller: gövdeden tut -> taşı, kenardaki noktadan tut -> ok çiz, dokun -> seç, iki kez dokun -> düzenle
