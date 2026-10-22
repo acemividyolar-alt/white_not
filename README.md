@@ -173,10 +173,67 @@ uygulamada Ekip penceresindeki **Davet bağlantısını buraya yapıştır** kut
 - Kimin neyi okuyup yazabileceğini `firestore.rules` belirler: sadece ekip üyeleri okur ve yazar,
   ekibe sadece geçerli davet koduyla katılınır.
 
+## GitHub ile paylaşma (Firebase'siz)
+
+Firebase kurmak istemeyen ekipler projeleri GitHub'daki **gizli bir depoda** paylaşabilir. Her proje
+depoda `projeler/<proje-kimliği>.json` dosyası olarak durur ve her kayıt bir sürüm (commit) olur, yani eski
+hallere GitHub'dan dönülebilir. Bu dosya normal bir JSON yedeğidir; **JSON yedeği yükle** ile de açılır.
+
+**Dışa / İçe aktar → GitHub ile paylaş** menüsünde iki düğme var: **Açık projeyi GitHub'a kaydet** ve
+**GitHub penceresi…**. Bağlandıktan sonra üst çubukta bir **GitHub** düğmesi de çıkar. Düğmedeki nokta açık
+projenin durumunu gösterir:
+
+- yeşil: GitHub'daki hal ile aynı
+- sarı: kaydedilmemiş değişikliğin var
+- mavi: GitHub'da daha yeni bir hal var
+- kırmızı: hem sende hem GitHub'da değişiklik var
+
+### Bir kez kurulum (ekibi kuran kişi, yaklaşık 5 dakika)
+
+1. https://github.com/new adresinde bir depo aç (ör. `white-note-veri`). **Private**'ı seç ve
+   **Add a README file**'ı aç.
+2. https://github.com/settings/personal-access-tokens/new adresinde bir anahtar (fine-grained token) oluştur:
+   - **Repository access**: **Only select repositories** → bu depo
+   - **Permissions**: **Contents** → **Read and write**. Başka izin gerekmez.
+   - **Expiration**: projenin bitişinden sonraki bir tarih
+   
+   Çıkan `github_pat_…` anahtarını kopyala. Klasik anahtar (`ghp_…`) kabul edilmez: klasik anahtar
+   sahibinin bütün depolarına erişir ve bağlantıyla dağıtılınca hepsi açığa çıkar.
+3. White Note'ta **GitHub penceresi…**'ni aç. Depo adını, anahtarı ve adını yaz, **Bağlan**'a bas.
+4. Açık projeyi **GitHub'a kaydet** ile ilk kez depoya yaz.
+
+### Ekip arkadaşlarını ekleme
+
+GitHub penceresindeki **Kopyala** ile bağlantıyı al ve ekip arkadaşlarına gönder. Bağlantıyı açan kişi
+adını yazıp **Bağlan**'a basar; GitHub hesabı gerekmez. Sonra listede projenin yanındaki **Getir**'e basar.
+
+Bağlantıda deponun anahtarı vardır: bağlantıyı alan herkes projeleri görür ve değiştirir. Bu yüzden sadece
+ekip arkadaşlarınla paylaş. Bağlantı başkasının eline geçerse anahtarı GitHub'da sil
+(Settings → Developer settings → Personal access tokens), yenisini oluştur ve bağlantıyı yeniden gönder.
+
+Başka bir depoya bağlıyken yeni bir GitHub bağlantısı açarsan pencere bunu açıkça yazar: bağlanırsan
+kayıtların artık o depoya gider. Bağlantıyı tanımadığın birinden aldıysan **Vazgeç**'e bas.
+
+### Nasıl çalışır
+
+- **GitHub'a kaydet** açık projeyi depoya yazar. Commit mesajında kimin kaydettiği yazar
+  (ör. "VetTakip · Ayşe kaydetti").
+- **Getir** depodaki hali bu cihaza alır. Proje kopyalanmaz, aynı proje güncellenir.
+- Sayfa açılınca, sekmeye dönünce ve dakikada bir depo kontrol edilir. Açık projede kaydedilmemiş
+  değişikliğin yoksa yeni hal kendiliğinden gelir; varsa sadece haber verilir.
+- Sen getirdikten sonra başka biri kaydettiyse kaydın yapılmaz. Bunun yerine hangisinin kalacağı sorulur:
+  onun hali (istersen önce seninkinin yedeği iner) ya da seninki (onunki GitHub geçmişinde kalır).
+  Kimsenin işi habersizce ezilmez.
+- Depodan gelen dosya, yedek yüklemedeki gibi denetlenir: bozuk ya da güvensiz dosya "okunamadı" diye
+  gösterilir ve uygulanmaz; başka bir projendeki kayıtların üstüne yazılmaz.
+- Depo adı, anahtar ve adın sadece o tarayıcıda saklanır; anahtar sadece `api.github.com`'a gönderilir.
+
 ## Veriler nerede?
 
 - **Kişisel alanda** her şey bu cihazın tarayıcısında (`localStorage`) saklanır; hiçbir sunucuya
   gönderilmez. **Ekip alanında** projeler ekibin Firebase projesinde durur (bkz. Ekip ile çalışma).
+  **GitHub'a kaydet** dediğin projelerin bir kopyası da ekibin GitHub deposuna gider
+  (bkz. GitHub ile paylaşma).
 - Tarayıcılar bu alana sınır koyar (çoğunda yaklaşık 5 MB). Kapak resimleri bu yüzden
   otomatik küçültülür; kullanılan alan liste görünümünün altında görünür.
 - Başka cihaza taşımak ya da yedeklemek için: **Dışa / İçe aktar → JSON yedeği indir / yükle**.
@@ -195,7 +252,7 @@ uygulamada Ekip penceresindeki **Davet bağlantısını buraya yapıştır** kut
   Sadece `index.html` indirilse de çalışır; o zaman sistem yazı tipi kullanılır.
 - Ekip alanı Firebase kütüphanesini ilk kullanımda internetten bir kez yükler; ekip alanı sadece sitenin
   internetteki adresinden açıldığında çalışır (dosyadan açılan sayfada değil).
-  `script.js` ve `style.css` eski bir sürümden kalmadır ve kullanılmaz.
+- `script.js` ve `style.css` eski bir sürümden kalmadır ve kullanılmaz.
 
 ## Kısayollar
 
