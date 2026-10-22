@@ -197,7 +197,8 @@ projenin durumunu gösterir:
    - **Permissions**: **Contents** → **Read and write**. Başka izin gerekmez.
    - **Expiration**: projenin bitişinden sonraki bir tarih
    
-   Çıkan `github_pat_…` anahtarını kopyala.
+   Çıkan `github_pat_…` anahtarını kopyala. Klasik anahtar (`ghp_…`) kabul edilmez: klasik anahtar
+   sahibinin bütün depolarına erişir ve bağlantıyla dağıtılınca hepsi açığa çıkar.
 3. White Note'ta **GitHub penceresi…**'ni aç. Depo adını, anahtarı ve adını yaz, **Bağlan**'a bas.
 4. Açık projeyi **GitHub'a kaydet** ile ilk kez depoya yaz.
 
@@ -210,6 +211,9 @@ Bağlantıda deponun anahtarı vardır: bağlantıyı alan herkes projeleri gör
 ekip arkadaşlarınla paylaş. Bağlantı başkasının eline geçerse anahtarı GitHub'da sil
 (Settings → Developer settings → Personal access tokens), yenisini oluştur ve bağlantıyı yeniden gönder.
 
+Başka bir depoya bağlıyken yeni bir GitHub bağlantısı açarsan pencere bunu açıkça yazar: bağlanırsan
+kayıtların artık o depoya gider. Bağlantıyı tanımadığın birinden aldıysan **Vazgeç**'e bas.
+
 ### Nasıl çalışır
 
 - **GitHub'a kaydet** açık projeyi depoya yazar. Commit mesajında kimin kaydettiği yazar
@@ -220,7 +224,9 @@ ekip arkadaşlarınla paylaş. Bağlantı başkasının eline geçerse anahtarı
 - Sen getirdikten sonra başka biri kaydettiyse kaydın yapılmaz. Bunun yerine hangisinin kalacağı sorulur:
   onun hali (istersen önce seninkinin yedeği iner) ya da seninki (onunki GitHub geçmişinde kalır).
   Kimsenin işi habersizce ezilmez.
-- Depo adı, anahtar ve adın sadece o tarayıcıda saklanır.
+- Depodan gelen dosya, yedek yüklemedeki gibi denetlenir: bozuk ya da güvensiz dosya "okunamadı" diye
+  gösterilir ve uygulanmaz; başka bir projendeki kayıtların üstüne yazılmaz.
+- Depo adı, anahtar ve adın sadece o tarayıcıda saklanır; anahtar sadece `api.github.com`'a gönderilir.
 
 ## Veriler nerede?
 
@@ -246,7 +252,7 @@ ekip arkadaşlarınla paylaş. Bağlantı başkasının eline geçerse anahtarı
   Sadece `index.html` indirilse de çalışır; o zaman sistem yazı tipi kullanılır.
 - Ekip alanı Firebase kütüphanesini ilk kullanımda internetten bir kez yükler; ekip alanı sadece sitenin
   internetteki adresinden açıldığında çalışır (dosyadan açılan sayfada değil).
-  `script.js` ve `style.css` eski bir sürümden kalmadır ve kullanılmaz.
+- `script.js` ve `style.css` eski bir sürümden kalmadır ve kullanılmaz.
 
 ## Kısayollar
 

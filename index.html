@@ -4544,27 +4544,31 @@
   /* Bozuk/eksik kayıtlarda çökmemek için tablo nesnelerini tamamlar
      (eski sürümde oluşturulan tablolarda yeni alanlar yoktur). */
   function normalizeDbTables(list) {
+    // Metin olması gereken alanlar metin olsun (yedekten / ekipten / GitHub'dan sayı ya da nesne gelirse ekran çökmesin)
+    const str = v => (typeof v === 'string' ? v : typeof v === 'number' && isFinite(v) ? String(v) : '');
     list.forEach(t => {
-      if (!Array.isArray(t.fields)) t.fields = [];
-      if (!Array.isArray(t.indexes)) t.indexes = [];
-      t.name = t.name || '';
-      t.note = t.note || '';
+      t.fields = Array.isArray(t.fields) ? t.fields.filter(f => f && typeof f === 'object') : [];
+      t.indexes = Array.isArray(t.indexes) ? t.indexes.filter(ix => ix && typeof ix === 'object') : [];
+      t.name = str(t.name);
+      t.note = str(t.note);
       t.x = Math.max(0, +t.x || 0);
       t.y = Math.max(0, +t.y || 0);
       t.fields.forEach(f => {
-        f.name = f.name || ''; f.type = f.type || ''; f.def = f.def || ''; f.check = f.check || '';
+        f.name = str(f.name); f.type = str(f.type); f.def = str(f.def); f.check = str(f.check);
         f.pk = !!f.pk; f.ai = !!f.ai; f.nn = !!f.nn; f.uq = !!f.uq;
       });
       t.indexes.forEach(ix => {
-        if (!Array.isArray(ix.cols)) ix.cols = [];
+        ix.cols = Array.isArray(ix.cols) ? ix.cols.filter(c => typeof c === 'string') : [];
         if (!Array.isArray(ix.desc)) ix.desc = [];
-        ix.name = ix.name || ''; ix.unique = !!ix.unique;
+        ix.name = str(ix.name); ix.unique = !!ix.unique;
       });
     });
     return list;
   }
   function normalizeDbLinks(list) {
-    list.forEach(l => { l.onDelete = l.onDelete || ''; l.onUpdate = l.onUpdate || ''; l.grp = l.grp || null; });
+    // ON DELETE / ON UPDATE sadece bilinen eylemlerden biri olabilir (SQL çıktısına yabancı metin girmesin)
+    const act = v => (FK_ACTIONS.some(a => a[0] === v) ? v : '');
+    list.forEach(l => { l.onDelete = act(l.onDelete); l.onUpdate = act(l.onUpdate); l.grp = l.grp || null; });
     return list;
   }
 
@@ -6908,7 +6912,7 @@
   function normalizeFlowNodes(list) {
     return list.filter(n => n && typeof n === 'object' && n.id && n.projectId).map(n => {
       n.chartId = typeof n.chartId === 'string' ? n.chartId : null;
-      n.kind = FL_KINDS[n.kind] ? n.kind : 'process';
+      n.kind = Object.prototype.hasOwnProperty.call(FL_KINDS, n.kind) ? n.kind : 'process';   // "constructor" gibi adlar geçmesin
       n.text = typeof n.text === 'string' ? n.text.slice(0, 500) : '';
       n.x = Number.isFinite(+n.x) ? Math.max(0, +n.x) : 120;
       n.y = Number.isFinite(+n.y) ? Math.max(0, +n.y) : 80;
@@ -12376,8 +12380,13 @@ service cloud.firestore {
      Depo adı, anahtar ve ad sadece bu cihazda durur ("pref:" anahtarları ekip alanına gitmez).
      =================================================================== */
   const GH_DIR = 'projeler';
-  const GH_REPO_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]{1,100}$/;
-  const GH_TOKEN_RE = /^(github_pat_[A-Za-z0-9_]{20,255}|gh[pousr]_[A-Za-z0-9]{30,255})$/;
+  /* Depo: kullanıcı-adı/depo-adı. "." ve ".." depo adı olamaz (adres başka bir API yoluna kayardı). */
+  const GH_REPO_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/(?!\.\.?$)[A-Za-z0-9._-]{1,100}$/;
+  /* Sadece fine-grained anahtar (github_pat_…): tek bir depoya ve tek bir izne sınırlanabilir.
+     Klasik anahtar (ghp_…) sahibinin BÜTÜN depolarına erişir; ekip bağlantısıyla dağıtılırsa hepsi açığa çıkar. */
+  const GH_TOKEN_RE = /^github_pat_[A-Za-z0-9_]{20,255}$/;
+  const GH_OTHER_TOKEN_RE = /^gh[pousr]_[A-Za-z0-9]{20,255}$/;
+  const GH_SHA_RE = /^[0-9a-f]{40}([0-9a-f]{24})?$/;
   const GH_SVG = d => '<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
   const ICO_CLOUD = GH_SVG('<path d="M4.6 12.4H4a2.9 2.9 0 0 1-.3-5.8 4.3 4.3 0 0 1 8.3-1 3.1 3.1 0 0 1 0 6.8h-.6"/><path d="M8 14V8.6M5.9 10.7 8 8.6l2.1 2.1"/>');
   const ICO_FILE = GH_SVG('<path d="M4 1.8h5.2L12 4.6v9.6H4z"/><path d="M9 1.8v3h3M6 8h4M6 10.6h4"/>').replace('class="ico"', 'class="ico gh-row-ico"');
@@ -12394,6 +12403,8 @@ service cloud.firestore {
     applying: false, lastPid: null, notified: null, dirtyTimer: null,
     gen: 0,               // her kayıt/getirme/kaldırmada artar; o sırada başlamış liste okuması bayat sayılır
     seen: new Set(),      // bu cihazın geçtiği eski sha'lar (GitHub kısa süre eski listeyi verirse geri dönülmesin)
+    mine: new Map(),      // proje kimliği -> bu cihazın az önce ilk kez oluşturduğu dosya { sha, at } (liste birkaç saniye geriden gelebilir)
+    retryTimer: null,     // sürükleme vb. bitince kendiliğinden getirmeyi yeniden dene
     draft: null           // kurulum formuna yazılanlar (pencere yeniden çizilince silinmesin)
   };
   const ghPanelOpen = () => el('ghModal').classList.contains('open');
@@ -12409,6 +12420,7 @@ service cloud.firestore {
     return s && gh.cfg && s.repo === gh.cfg.repo ? s : {};
   }
   function ghSetStateFor(pid, s) {
+    if (!gh.cfg) return;
     const old = ghStateFor(pid).sha;
     if (old && (!s || s.sha !== old)) gh.seen.add(old);
     gh.gen++;
@@ -12476,23 +12488,37 @@ service cloud.firestore {
   function ghErrText(e) {
     if (!e || !e.gh) return 'Beklenmeyen bir sorun çıktı' + (e && e.message ? ': ' + e.message : '.');
     if (e.gh === 'net') return 'GitHub\'a ulaşılamadı. İnternet bağlantını kontrol edip tekrar dene.';
+    if (e.gh === 'format') return 'GitHub\'dan beklenmeyen bir cevap geldi. Biraz sonra tekrar dene.';
     if (e.gh === 401) return 'GitHub anahtarı geçersiz ya da süresi dolmuş. Ayarlar\'dan yeni anahtar gir.';
-    if (e.gh === 403 && e.limit) return 'GitHub kısa sürede çok fazla istek aldı. Biraz bekleyip tekrar dene.';
+    if ((e.gh === 403 && e.limit) || e.gh === 429) return 'GitHub kısa sürede çok fazla istek aldı. Biraz bekleyip tekrar dene.';
     if (e.gh === 403) return 'Bu anahtarın depoya yazma izni yok. Anahtarda "Contents: Read and write" izni olmalı ve depo anahtarda seçili olmalı.';
     if (e.gh === 404) return 'Depo bulunamadı. Depo adını ve anahtarın bu depoyu kapsadığını kontrol et.';
     return 'GitHub hatası (' + e.gh + (e.detail ? ': ' + e.detail : '') + ').';
   }
-  /* Dosyayı doğrula: tek projelik, geçerli kimlikli bir White Note yedeği mi? */
+  /* Dosyayı doğrula: tek projelik, geçerli kimlikli bir White Note yedeği mi?
+     (Depoya bağlantıyı alan herkes yazabildiği için içerik güvenilmez sayılır; ekip alanındaki
+     cloudParse ile aynı kurallar: kimlikler güvenli karakterli, listeler gerçekten liste.) */
+  const GH_LISTS = ['columns', 'items', 'dbTables', 'dbLinks', 'dbSettings', 'flowCharts', 'flowNodes', 'flowEdges', 'flSettings'];
   function ghParse(text) {
-    let d;
-    try { d = JSON.parse(text); } catch (e) { return null; }
-    if (!d || !Array.isArray(d.projects) || d.projects.length !== 1 || !d.projects[0] || !Array.isArray(d.items) || !backupIdsOk(d)) return null;
-    return d;
+    try {
+      if (typeof text !== 'string' || text.length > 20 * 1024 * 1024) return null;
+      const d = JSON.parse(text);
+      if (!d || typeof d !== 'object' || Array.isArray(d) || !Array.isArray(d.projects) || d.projects.length !== 1 ||
+          !d.projects[0] || typeof d.projects[0] !== 'object' || !Array.isArray(d.items)) return null;
+      if (!GH_LISTS.every(k => d[k] == null || (Array.isArray(d[k]) && d[k].every(x => x && typeof x === 'object' && !Array.isArray(x))))) return null;
+      if (!backupIdsOk(d)) return null;
+      if (!(d.dbLinks || []).every(l => l.grp == null || (typeof l.grp === 'string' && SAFE_ID.test(l.grp)))) return null;
+      if (!(d.dbTables || []).every(t => (t.fields == null || Array.isArray(t.fields)) && (t.indexes == null || Array.isArray(t.indexes)) &&
+            (t.indexes || []).every(ix => ix && typeof ix === 'object' && (ix.cols == null || Array.isArray(ix.cols))))) return null;
+      return d;
+    } catch (e) { return null; }
   }
   function ghInfo(sha, data, pid) {
-    const g = (data && data.github) || {}, p = data && data.projects[0];
+    const g = (data && data.github && typeof data.github === 'object') ? data.github : {}, p = data && data.projects[0];
+    const at = +g.savedAt;
     return { sha: sha, data: data, ok: !!(p && p.id === pid), name: p ? String(p.name || 'Proje').slice(0, 80) : pid,
-             by: String(g.savedBy || '').slice(0, 40), at: +g.savedAt || 0 };
+             by: typeof g.savedBy === 'string' ? g.savedBy.slice(0, 40) : '',
+             at: at > 0 && at < Date.now() + 366 * 864e5 ? at : 0 };
   }
   async function ghReadBlob(sha, cfg) {
     if (gh.blobs.has(sha)) return gh.blobs.get(sha);
@@ -12506,12 +12532,16 @@ service cloud.firestore {
   async function ghReadRemote(pid) {
     const cfg = gh.cfg;
     const r = await ghApi('/contents/' + GH_DIR + '/' + pid + '.json', null, cfg);
-    if (r.status === 404) { gh.remote.delete(pid); return null; }
+    if (r.status === 404) { if (gh.cfg === cfg) gh.remote.delete(pid); return null; }
     if (!r.ok) throw await ghFail(r);
     const j = await r.json();
+    if (!j || typeof j.sha !== 'string' || !GH_SHA_RE.test(j.sha)) throw { gh: 'format' };
     let data = gh.blobs.get(j.sha);
     if (data === undefined) {
-      if (j.encoding === 'base64' && j.content) { data = ghParse(ghUnB64(j.content)); gh.blobs.set(j.sha, data); }
+      if (j.encoding === 'base64' && typeof j.content === 'string' && j.content) {
+        try { data = ghParse(ghUnB64(j.content)); } catch (e) { data = null; }
+        gh.blobs.set(j.sha, data);
+      }
       else data = await ghReadBlob(j.sha, cfg);
     }
     const info = ghInfo(j.sha, data, pid);
@@ -12529,7 +12559,8 @@ service cloud.firestore {
     } else if (!r.ok) throw await ghFail(r);
     else {
       const j = await r.json();
-      files = (Array.isArray(j) ? j : []).filter(f => f && f.type === 'file' && /^[A-Za-z0-9_-]{1,80}\.json$/.test(f.name));
+      files = (Array.isArray(j) ? j : []).filter(f => f && f.type === 'file' && typeof f.name === 'string' && /^[A-Za-z0-9_-]{1,80}\.json$/.test(f.name) &&
+        typeof f.sha === 'string' && GH_SHA_RE.test(f.sha));
     }
     const infos = await Promise.all(files.map(async f => {
       const pid = f.name.slice(0, -5);
@@ -12538,7 +12569,22 @@ service cloud.firestore {
       return [pid, ghInfo(f.sha, data, pid)];
     }));
     if (gh.cfg !== cfg || gh.gen !== gen) return; // bu arada başka depoya geçildi ya da kayıt yapıldı: bu liste bayat
-    gh.remote = new Map(infos);
+    /* GitHub bir kayıttan sonra birkaç saniye eski listeyi verebilir. Bu cihazın eskidiğini bildiği
+       bir hal (gh.seen) listede görünürse, bildiğimiz daha yeni hal korunur; az önce kaldırdığımız
+       dosya geri gelmez, az önce ilk kez oluşturduğumuz dosya da listede henüz yoksa kaybolmaz. */
+    const prev = gh.remote, next = new Map();
+    infos.forEach(([pid, info]) => {
+      const old = prev.get(pid);
+      if (!gh.seen.has(info.sha)) next.set(pid, info);
+      else if (old && !gh.seen.has(old.sha)) next.set(pid, old);
+    });
+    gh.mine.forEach((m, pid) => {
+      const old = prev.get(pid);
+      if (!next.has(pid) && old && old.sha === m.sha && Date.now() - m.at < 60000) next.set(pid, old);
+    });
+    gh.remote = next;
+    const keep = new Set([...next.values()].map(i => i.sha));
+    for (const k of [...gh.blobs.keys()]) if (!keep.has(k)) gh.blobs.delete(k);   // önbellek büyümesin
   }
   function ghLoadList() {
     if (!gh.cfg) return Promise.resolve();
@@ -12603,26 +12649,33 @@ service cloud.firestore {
 
   /* ---------- Kaydet ---------- */
   async function ghSave(pid, force) {
-    const b = ghBundle(pid);
-    if (!b) return { ok: false };
+    const b = ghBundle(pid), cfg = gh.cfg;
+    if (!b || !cfg) return { ok: false };
     const now = Date.now();
-    const file = Object.assign({ app: 'White Note', exported: now, github: { savedBy: gh.cfg.name, savedAt: now } }, b);
+    const file = Object.assign({ app: 'White Note', exported: now, github: { savedBy: cfg.name, savedAt: now } }, b);
     const text = JSON.stringify(file, null, 2);   // satır satır yazılır: GitHub'da neyin değiştiği okunur
-    const body = { message: b.projects[0].name + ' · ' + gh.cfg.name + ' kaydetti', content: ghB64(text) };
+    const body = { message: b.projects[0].name + ' · ' + cfg.name + ' kaydetti', content: ghB64(text) };
     const sha = force ? force.sha : ghStateFor(pid).sha;
     if (sha) body.sha = sha;
-    const r = await ghApi('/contents/' + GH_DIR + '/' + pid + '.json', { method: 'PUT', body: body });
-    if (r.status === 409 || r.status === 422) {
+    const r = await ghApi('/contents/' + GH_DIR + '/' + pid + '.json', { method: 'PUT', body: body }, cfg);
+    /* 409 / 422: GitHub'daki dosya bu arada değişmiş (ya da dosya varken sha verilmemiş).
+       404 ve elimizde sha var: dosya bu arada kaldırılmış olabilir. Hepsinde depodaki hale bakılır. */
+    if (r.status === 409 || r.status === 422 || (r.status === 404 && sha)) {
       const f = await ghFail(r);
-      if (r.status === 409 || /sha/i.test(f.detail)) return { conflict: true };
+      if (r.status !== 422 || /sha/i.test(f.detail)) return { conflict: true };
       throw f;
     }
     if (!r.ok) throw await ghFail(r);
     const j = await r.json();
+    const nsha = j && j.content && j.content.sha;
+    if (typeof nsha !== 'string' || !GH_SHA_RE.test(nsha)) throw { gh: 'format' };
+    if (gh.cfg !== cfg) return { ok: true };      // bu arada bağlantı kesildi / değişti
     const data = JSON.parse(text);
-    gh.blobs.set(j.content.sha, data);
-    gh.remote.set(pid, ghInfo(j.content.sha, data, pid));
-    ghSetStateFor(pid, { sha: j.content.sha, hash: ghHash(b) });
+    gh.blobs.set(nsha, data);
+    gh.remote.set(pid, ghInfo(nsha, data, pid));
+    if (r.status === 201) gh.mine.set(pid, { sha: nsha, at: Date.now() });   // dosyayı ilk kez biz oluşturduk
+    else gh.mine.delete(pid);
+    ghSetStateFor(pid, { sha: nsha, hash: ghHash(b) });
     return { ok: true };
   }
   async function ghSaveFlow(pid, opts) {
@@ -12636,7 +12689,7 @@ service cloud.firestore {
       if (res.conflict) {
         const rem = await ghReadRemote(pid);
         if (!rem) res = await ghSave(pid, { sha: null });   // dosya bu arada kaldırılmış: yeniden oluştur
-        else { gh.busy = false; gh.msg = ''; ghAskShow({ kind: 'conflict', pid: pid }); ghIndicator(); return; }
+        if (rem || res.conflict) { gh.busy = false; gh.msg = ''; ghAskShow({ kind: 'conflict', pid: pid }); ghIndicator(); return; }
       }
       gh.busy = false;
       if (res.ok) {
@@ -12672,12 +12725,58 @@ service cloud.firestore {
     }
     ghIndicator();
   }
+  /* Dosyadaki SQL ayarları: sadece bilinen alanlar, doğru türde; lehçe bilinenlerden biri */
+  function ghSchemaSettings(s, pid) {
+    if (!s) return null;
+    const o = { projectId: pid };
+    for (const k in SCHEMA_DEFAULTS) if (typeof s[k] === typeof SCHEMA_DEFAULTS[k]) o[k] = s[k];
+    if (!['sqlite', 'mysql', 'postgres', 'mssql'].includes(o.dialect)) delete o.dialect;
+    return o;
+  }
   /* Depodaki hali bu cihaza koyar: projenin buradaki kayıtları kaldırılır (çöp kutusuna gitmez),
      yerine dosyadakiler aynı kimliklerle yazılır. */
   async function ghApply(data, sha) {
     const p0 = data.projects[0], pid = p0.id;
-    const copy = k => (Array.isArray(data[k]) ? data[k] : []).filter(x => x && typeof x === 'object' && x.projectId === pid).map(x => JSON.parse(JSON.stringify(x)));
+    /* 1) Önce dosyadaki kayıtların hepsi hazırlanır ve temizlenir; buradaki projeye ancak ondan sonra
+          dokunulur (bozuk bir dosya yüzünden proje yarı silinmiş kalmasın).
+          Başka bir projede aynı kimlikle duran kayıt dosyadan alınmaz: o projenin kaydını ezmesin.
+          Dosyada aynı kimlik iki kez geçerse ilki alınır. */
+    const others = arr => new Set(arr.filter(x => x.projectId !== pid).map(x => x.id));
+    const taken = { columns: others(columns), items: others(items), dbTables: others(dbTables), dbLinks: others(dbLinks),
+                    flowCharts: others(flowCharts), flowNodes: others(flowNodes), flowEdges: others(flowEdges) };
+    const copy = k => {
+      const ids = new Set();
+      return (Array.isArray(data[k]) ? data[k] : []).filter(x => {
+        if (!x || typeof x !== 'object' || x.projectId !== pid) return false;
+        if (x.id == null) return true;
+        if (ids.has(x.id) || (taken[k] && taken[k].has(x.id))) return false;
+        ids.add(x.id);
+        return true;
+      }).map(x => JSON.parse(JSON.stringify(x)));
+    };
+    const p = { id: pid, name: String(p0.name || 'Proje').slice(0, 80), created: +p0.created || Date.now() };
+    const cols = copy('columns').filter(c => c.id).map(c => Object.assign(c, {
+      name: String(c.name || 'Sütun'), color: /^#[0-9a-f]{3,8}$/i.test(c.color || '') ? c.color : '#2747C9', order: +c.order || 0 }));
+    const colIds = new Set(cols.map(c => c.id));
+    const its = normalizeItems(copy('items')).map(i => { if (!colIds.has(i.columnId)) i.columnId = null; return i; });
+    const tbls = normalizeDbTables(copy('dbTables').filter(t => t.id));
+    const tids = new Set(tbls.map(t => t.id));
+    const lnks = normalizeDbLinks(copy('dbLinks').filter(l => l.id && tids.has(l.fromTable) && tids.has(l.toTable)));
+    const chs = normalizeFlowCharts(copy('flowCharts'));
+    const chIds = new Set(chs.map(c => c.id));
+    const nds = normalizeFlowNodes(copy('flowNodes')).map(n => { if (!chIds.has(n.chartId)) n.chartId = null; return n; });
+    const eds = normalizeFlowEdges(copy('flowEdges'), nds);
+    const ds = ghSchemaSettings(copy('dbSettings')[0], pid);
+    const fs = copy('flSettings')[0];
     const keepChart = flSettings[pid] && flSettings[pid].active;
+    const active = chIds.has(keepChart) ? keepChart : (fs && chIds.has(fs.active) ? fs.active : null);
+
+    // 2) Açık düzenleme pencereleri kapanır (yoksa kapanınca eski hali geri yazarlardı)
+    if (openCardId) await closeCard();
+    if (openTableId) await closeTableModal();
+    if (flOpenNode) await closeFlNodeModal();
+
+    // 3) Buradaki kayıtlar kaldırılır, dosyadakiler yazılır
     gh.applying = true;
     try {
       if (flRun && projectCharts(pid).some(c => c.id === flRun.pid)) flCloseRun();
@@ -12695,21 +12794,11 @@ service cloud.firestore {
       flowCharts = flowCharts.filter(x => x.projectId !== pid);
       delete erHistory[pid];
 
-      const p = Object.assign({}, p0, { name: String(p0.name || 'Proje').slice(0, 80), created: +p0.created || Date.now() });
       const at = projects.findIndex(x => x.id === pid);
       if (at >= 0) projects[at] = p; else projects.push(p);
       projects.sort((a, b) => a.created - b.created);
       await saveProject(p);
 
-      const cols = copy('columns').filter(c => c.id).map(c => Object.assign(c, {
-        name: String(c.name || 'Sütun'), color: /^#[0-9a-f]{3,8}$/i.test(c.color || '') ? c.color : '#2747C9', order: +c.order || 0 }));
-      const its = normalizeItems(copy('items'));
-      const tbls = normalizeDbTables(copy('dbTables').filter(t => t.id));
-      const tids = new Set(tbls.map(t => t.id));
-      const lnks = normalizeDbLinks(copy('dbLinks').filter(l => l.id && tids.has(l.fromTable) && tids.has(l.toTable)));
-      const chs = normalizeFlowCharts(copy('flowCharts'));
-      const nds = normalizeFlowNodes(copy('flowNodes'));
-      const eds = normalizeFlowEdges(copy('flowEdges'), nds);
       columns.push(...cols); items.push(...its); dbTables.push(...tbls); dbLinks.push(...lnks);
       flowCharts.push(...chs); flowNodes.push(...nds); flowEdges.push(...eds);
       for (const x of cols) await saveColumn(x);
@@ -12719,17 +12808,17 @@ service cloud.firestore {
       for (const x of chs) await saveFlowChart(x);
       for (const x of nds) await saveFlowNode(x);
       for (const x of eds) await saveFlowEdge(x);
-      const ds = copy('dbSettings')[0];
       if (ds) { dbSettings[pid] = ds; await saveSchemaSettings(pid); }
       else { delete dbSettings[pid]; await sDel('sch:' + pid); }
-      const fs = copy('flSettings')[0];
-      const active = chs.some(c => c.id === keepChart) ? keepChart : (fs && typeof fs.active === 'string' ? fs.active : null);
       flSettings[pid] = { projectId: pid, active: active };
       await saveFlowSettings(pid);
       await migrateFlowCharts();
       await ensureColumns(pid);
       await migrateItemsToColumns();
       activeProject = pid;
+      // Seçili şekil / ok / ilişki artık yoksa seçim kalkar
+      if (flSel && (flSel.type === 'node' ? !findFlowNode(flSel.id) : !flowEdges.some(e => e.id === flSel.id))) flSel = null;
+      if (selectedLinkId && !dbLinks.some(l => l.id === selectedLinkId)) selectedLinkId = null;
       ghSetStateFor(pid, { sha: sha, hash: ghHash(ghBundle(pid)) });
     } finally {
       gh.applying = false;
@@ -12747,10 +12836,18 @@ service cloud.firestore {
     if (!pid || !gh.cfg || gh.busy || gh.applying) return;
     const st = ghStateFor(pid), rem = gh.remote.get(pid);
     if (!st.sha || !rem || !rem.ok || rem.sha === st.sha || gh.seen.has(rem.sha) || gh.notified === rem.sha) return;
+    // Bir şey sürükleniyorsa bırakılınca yeniden denenir (yoksa sürüklenen eski kayıt yeni halin üstüne yazılırdı)
+    if ((ptrDown && Date.now() - ptrDownAt < 8000) || document.body.classList.contains('dragging-active')) {
+      clearTimeout(gh.retryTimer);
+      gh.retryTimer = setTimeout(() => ghAutoCheck(), 1500);
+      return;
+    }
     const who = rem.by || 'Bir ekip arkadaşın';
     const a = document.activeElement;
     const typing = a && a !== document.body && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable);
-    if (!ghStatus(pid).dirty && !document.querySelector('.modal-overlay.open') && !typing) {
+    // Akış adım adım çalışıyorsa ya da SQL konsolu açıksa kendiliğinden getirilmez, sadece haber verilir
+    const running = (flRun && projectCharts(pid).some(c => c.id === flRun.pid)) || (erConsole && erConsole.pid === pid);
+    if (!ghStatus(pid).dirty && !document.querySelector('.modal-overlay.open') && !typing && !running) {
       await ghApply(rem.data, rem.sha);
       showSnack('GitHub\'dan güncel hal geldi: ' + who + ' kaydetmiş.');
     } else {
@@ -12776,7 +12873,7 @@ service cloud.firestore {
       gh.busy = false;
       if (r.status === 409 || r.status === 422) { ghSetMsg('Bu arada biri projeyi yeniden kaydetmiş; kaldırılmadı. Liste yenilendi.', 'err'); ghLoadList(); return; }
       if (!r.ok && r.status !== 404) throw await ghFail(r);
-      gh.seen.add(rem.sha); gh.remote.delete(pid); ghSetStateFor(pid, null);
+      gh.seen.add(rem.sha); gh.remote.delete(pid); gh.mine.delete(pid); ghSetStateFor(pid, null);
       ghSetMsg('"' + rem.name + '" GitHub\'dan kaldırıldı.', 'ok');
     } catch (e) { gh.busy = false; ghSetMsg(ghErrText(e), 'err'); }
     ghIndicator();
@@ -12784,13 +12881,16 @@ service cloud.firestore {
 
   /* ---------- Bağlanma ve ekip bağlantısı ---------- */
   function ghParseRepo(s) {
-    s = String(s || '').trim().replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/\.git$/i, '').replace(/\/+$/, '');
+    s = String(s || '').trim().replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/^git@github\.com:/i, '').replace(/\/+$/, '').replace(/\.git$/i, '');
     return GH_REPO_RE.test(s) ? s : '';
   }
+  const GH_CLASSIC_MSG = 'Bu klasik bir anahtar (ghp_…). Klasik anahtar sahibinin bütün depolarına erişir; ekip bağlantısıyla dağıtılırsa ' +
+    'hepsi açığa çıkar. Bu yüzden kabul edilmiyor. Sadece bu depoya izin veren bir fine-grained anahtar (github_pat_…) oluştur.';
   async function ghConnect() {
     const inv = gh.invite;
     const repo = inv ? inv.repo : ghParseRepo(el('ghRepo').value), token = inv ? inv.token : el('ghToken').value.trim(), name = el('ghName').value.trim().slice(0, 40);
     if (!repo) return ghSetMsg('Depoyu kullanıcı-adı/depo-adı biçiminde yaz (örneğin ali/white-note-veri) ya da depo adresini yapıştır.', 'err');
+    if (GH_OTHER_TOKEN_RE.test(token)) return ghSetMsg(GH_CLASSIC_MSG, 'err');
     if (!GH_TOKEN_RE.test(token)) return ghSetMsg('Anahtar github_pat_ ile başlamalı. GitHub\'ın verdiği anahtarın tamamını yapıştır.', 'err');
     if (!name) return ghSetMsg('Adını yaz; kayıtlarda kimin kaydettiği görünsün.', 'err');
     gh.busy = true; ghSetMsg('', ''); ghRender();
@@ -12802,7 +12902,7 @@ service cloud.firestore {
       if (j && typeof j.full_name === 'string' && GH_REPO_RE.test(j.full_name)) cfg.repo = j.full_name;
       localSet('pref:github', JSON.stringify(cfg));
       gh.cfg = cfg; gh.invite = null; gh.draft = null; gh.view = 'home';
-      gh.remote = new Map(); gh.listAt = 0; gh.listErr = ''; gh.lastPid = activeProject; gh.notified = null;
+      gh.remote = new Map(); gh.blobs = new Map(); gh.mine = new Map(); gh.listAt = 0; gh.listErr = ''; gh.lastPid = activeProject; gh.notified = null;
       gh.busy = false;
       if (j && j.private === false) ghSetMsg('Bağlandı. Dikkat: bu depo herkese açık (Public), projelerin herkes tarafından okunabilir. GitHub\'da depo ayarlarından Private yapmanı öneririm.', 'err');
       else ghSetMsg('Bağlandı. Aşağıdaki listeden projeleri getirebilir ya da açık projeyi kaydedebilirsin.', 'ok');
@@ -12819,7 +12919,9 @@ service cloud.firestore {
     if (!m) return null;
     try {
       const p = JSON.parse(b64urlDecode(m[1]));
-      if (p && GH_REPO_RE.test(p.r || '') && GH_TOKEN_RE.test(p.t || '')) return { repo: p.r, token: p.t };
+      const r = p && typeof p.r === 'string' ? p.r : '', t = p && typeof p.t === 'string' ? p.t : '';
+      if (GH_REPO_RE.test(r) && GH_TOKEN_RE.test(t)) return { repo: r, token: t };
+      if (GH_REPO_RE.test(r) && GH_OTHER_TOKEN_RE.test(t)) return { bad: true, classic: true };
     } catch (e) {}
     return { bad: true };
   }
@@ -12830,7 +12932,13 @@ service cloud.firestore {
     return inv;
   }
   function ghOpenInvite(inv) {
-    if (inv.bad) { gh.invite = null; openGhPanel({ view: 'setup' }); ghSetMsg('GitHub bağlantısı bozuk ya da eksik kopyalanmış. Gönderen kişiden yeniden iste.', 'err'); return; }
+    if (inv.bad) {
+      gh.invite = null; openGhPanel({ view: 'setup' });
+      ghSetMsg(inv.classic ? 'Bu bağlantıdaki anahtar klasik bir anahtar (ghp_…); sahibinin bütün depolarına eriştiği için kabul edilmedi. ' +
+        'Gönderen kişiden sadece ekip deposuna izin veren fine-grained anahtarla (github_pat_…) yeni bağlantı iste.'
+        : 'GitHub bağlantısı bozuk ya da eksik kopyalanmış. Gönderen kişiden yeniden iste.', 'err');
+      return;
+    }
     gh.invite = inv;
     openGhPanel({ view: 'setup' });
   }
@@ -12893,6 +13001,11 @@ service cloud.firestore {
     if (inv) {
       h += '<div class="team-card accent"><div><b>' + esc(inv.repo) + '</b> deposundaki White Note projelerine davet edildin.</div>' +
         '<small>Adını yazıp <b>Bağlan</b>\'a bas. GitHub hesabı gerekmez; kayıtlarda kimin kaydettiği bu adla görünür.</small></div>';
+      // Bu cihaz başka bir depoya bağlıysa açıkça söylenir: bağlanınca kayıtlar artık yeni depoya gider
+      if (gh.cfg && gh.cfg.repo.toLowerCase() !== inv.repo.toLowerCase()) {
+        h += '<div class="team-msg err" role="note">Bu cihaz şu an <b>' + esc(gh.cfg.repo) + '</b> deposuna bağlı. Bağlanırsan bundan sonra <b>' +
+          esc(inv.repo) + '</b> deposu kullanılır ve GitHub\'a kaydettiğin projeler oraya gider. Bağlantıyı tanımadığın birinden aldıysan <b>Vazgeç</b>\'e bas.</div>';
+      }
     } else {
       h += '<p class="modal-note">Projeleri Firebase kullanmadan, GitHub\'daki gizli bir depoda ekip arkadaşlarınla paylaşırsın. ' +
           'Her kayıt depoda bir sürüm olarak saklanır; eski hallere GitHub\'dan dönebilirsin.</p>' +
@@ -12976,11 +13089,11 @@ service cloud.firestore {
           '<button class="team-space" type="button" data-gact="ask-pull">' + ICO_DOWN + '<span class="ts-txt"><b>Onun halini getir</b><small>Senin bu arada yaptığın değişiklikler bu cihazdan silinir.</small></span></button>' +
           '<button class="team-space" type="button" data-gact="ask-overwrite">' + ICO_UP + '<span class="ts-txt"><b>Benimkini kaydet</b><small>Onun son kaydı GitHub geçmişinde kalır; gerekirse oradan geri alınır.</small></span></button>' +
         '</div>' +
-        '<label class="opt bk-safe"><input type="checkbox" id="ghBackup" checked> Onun halini getirirsem önce benim halimin yedeğini indir</label>';
+        '<label class="opt bk-safe"><input type="checkbox" id="ghBackup"' + (a.backup === false ? '' : ' checked') + '> Onun halini getirirsem önce benim halimin yedeğini indir</label>';
     } else {
       h += '<div class="team-card accent"><div>Sende "' + esc(name) + '" için GitHub\'a kaydedilmemiş değişiklikler var.</div>' +
           '<small>GitHub\'daki hali' + (rem.by ? ' (' + esc(rem.by) + (when ? ', ' + esc(when) : '') + ')' : '') + ' getirirsen bu değişiklikler bu cihazdan silinir.</small></div>' +
-        '<label class="opt bk-safe"><input type="checkbox" id="ghBackup" checked> Önce benim halimin yedeğini indir</label>';
+        '<label class="opt bk-safe"><input type="checkbox" id="ghBackup"' + (a.backup === false ? '' : ' checked') + '> Önce benim halimin yedeğini indir</label>';
     }
     h += '<div class="modal-actions"><button class="modal-btn" type="button" data-gact="ask-cancel">Vazgeç</button>' +
       (a.kind === 'pull' ? '<button class="modal-btn danger" type="button" data-gact="ask-pull">Yine de getir</button>' : '') + '</div>';
@@ -12994,9 +13107,10 @@ service cloud.firestore {
     if (act === 'settings') { gh.view = 'setup'; gh.msg = ''; gh.draft = null; ghRender(); }
     else if (act === 'setup-cancel') { gh.invite = null; gh.msg = ''; gh.draft = null; gh.view = gh.cfg ? 'home' : 'setup'; ghRender(); gh.draft = null; if (gh.cfg) ghLoadList(); }
     else if (act === 'forget') {
+      if (gh.busy || gh.applying) return;
       if (!confirm('GitHub bağlantısı bu cihazdan silinsin mi?\nProjelerin bu cihazda ve GitHub\'da kalır.')) return;
       localSet('pref:github', null);
-      gh.cfg = null; gh.remote = new Map(); gh.listAt = 0; gh.view = 'setup';
+      gh.cfg = null; gh.remote = new Map(); gh.blobs = new Map(); gh.mine = new Map(); gh.listAt = 0; gh.view = 'setup';
       ghSetMsg('GitHub bağlantısı bu cihazdan silindi.', 'ok'); ghIndicator();
     }
     else if (act === 'paste') {
@@ -13025,6 +13139,8 @@ service cloud.firestore {
     }
   });
   el('ghBody').addEventListener('submit', e => { e.preventDefault(); if (!gh.busy) ghConnect(); });
+  // "Yedeğini indir" seçimi pencere yeniden çizilince kaybolmasın
+  el('ghBody').addEventListener('change', e => { if (e.target.id === 'ghBackup' && gh.ask) gh.ask.backup = e.target.checked; });
   el('ghBody').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'ghPaste') { e.preventDefault(); el('ghBody').querySelector('[data-gact="paste"]').click(); } });
   el('ghClose').addEventListener('click', closeGhPanel);
   el('ghModal').addEventListener('click', e => { if (e.target === el('ghModal')) closeGhPanel(); });
