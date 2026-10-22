@@ -1437,6 +1437,33 @@
   .team-new input, .team-paste input { flex: 1; min-width: 0; }
   .team-callout + .team-paste { margin: -0.4rem 0 0.9rem; }
 
+  /* GitHub ile paylaş: düğmedeki nokta ve penceredeki satırlar (Ekip penceresinin parçaları kullanılır) */
+  .gh-btn[data-sync="dirty"] .sync-dot { display: block; background: var(--warn); }
+  .gh-btn[data-sync="behind"] .sync-dot { display: block; background: var(--accent); }
+  body.team-mode .gh-btn { border-color: var(--line-2); background: var(--paper); }
+  body.team-mode .gh-btn .team-ico { color: var(--muted); }
+  body.team-mode .gh-btn .sync-dot { border-color: var(--paper); }
+  .gh-row-ico { width: 18px; height: 18px; color: var(--muted); flex-shrink: 0; }
+  .team-member .gh-acts { display: flex; gap: 0.35rem; flex-shrink: 0; }
+  .tm-on.new { color: var(--accent); }
+  .tm-on.new::before { background: var(--accent); }
+  .tm-on.warn { color: var(--warn); }
+  .tm-on.warn::before { background: var(--warn); }
+  .tm-on.bad { color: var(--danger); }
+  .tm-on.bad::before { background: var(--danger); }
+  .gh-choices { display: grid; gap: 0.45rem; margin-bottom: 0.8rem; }
+  .gh-choices .ts-txt b, .gh-choices .ts-txt small { white-space: normal; }
+  .gh-choices .team-space { min-height: 62px; }
+  .team-acct > .ico { width: 22px; height: 22px; color: var(--muted); flex-shrink: 0; }
+  .gh-foot { font-size: 0.78rem; color: var(--muted); line-height: 1.55; margin-top: 1.2rem; }
+  .gh-foot a { color: var(--accent); }
+  @media (max-width: 760px) {
+    body.team-mode .gh-btn { border-color: transparent; background: transparent; }
+    .gh-btn .sync-dot { border-color: var(--bg); }
+    .gh-list .team-member { flex-wrap: wrap; }
+    .gh-list .team-member .gh-acts { width: 100%; justify-content: flex-end; }
+  }
+
   /* Ekip alanı açılırken (veriler gelene kadar) */
   .team-boot { position: fixed; inset: 0; z-index: 90; background: var(--bg); display: grid; place-items: center; padding: 1.5rem; }
   .team-boot-box { max-width: 440px; text-align: center; display: grid; gap: 0.75rem; justify-items: center; }
@@ -1674,6 +1701,12 @@
           <h2 id="projTitle" title="Yeniden adlandırmak için tıkla">&mdash;</h2>          <!-- Aktif projenin adı buraya yazılır -->
         </div>
         <div class="topbar-right">
+          <!-- GitHub ile paylaş: sadece bağlanınca görünür. Nokta: yeşil = GitHub'daki ile aynı,
+               sarı = kaydedilmemiş değişiklik, mavi = GitHub'da daha yeni hali var, kırmızı = ikisi birden -->
+          <button class="team-btn gh-btn" id="ghBtn" type="button" aria-haspopup="dialog" data-sync="none" hidden>
+            <span class="team-ico"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.6 12.4H4a2.9 2.9 0 0 1-.3-5.8 4.3 4.3 0 0 1 8.3-1 3.1 3.1 0 0 1 0 6.8h-.6"/><path d="M8 14V8.6M5.9 10.7 8 8.6l2.1 2.1"/></svg><span class="sync-dot" aria-hidden="true"></span></span>
+            <span class="team-label">GitHub</span>
+          </button>
           <!-- Ekip: kişisel alan / ekip alanı, kim çevrimiçi, kaydedildi mi (renkli nokta) -->
           <button class="team-btn" id="teamBtn" type="button" aria-haspopup="dialog" data-sync="personal">
             <span class="team-avatars" id="teamAvatars"></span>
@@ -1701,6 +1734,10 @@
               <div class="menu-group-label">Yedek</div>
               <button data-act="json-export">JSON yedeği indir</button>
               <button data-act="json-import">JSON yedeği yükle&hellip;</button>
+              <div class="sep"></div>
+              <div class="menu-group-label">GitHub ile paylaş</div>
+              <button data-act="gh-save">Açık projeyi GitHub'a kaydet</button>
+              <button data-act="gh-open">GitHub penceresi&hellip;</button>
               <div class="sep install-only"></div>
               <div class="menu-group-label install-only">Uygulama</div>
               <button data-act="install" class="install-only">Telefona / bilgisayara yükle&hellip;</button>
@@ -2287,6 +2324,20 @@
   </div>
 </div>
 
+<!-- ===================================================================
+     GITHUB İLE PAYLAŞ: bağlanma, açık projenin durumu, depodaki projeler, ekip bağlantısı.
+     İçeriği JS çizer (ghRender).
+     =================================================================== -->
+<div class="modal-overlay" id="ghModal">
+  <div class="modal team-modal" role="dialog" aria-modal="true" aria-labelledby="ghTitle">
+    <div class="modal-head">
+      <div class="modal-heading" id="ghTitle">GitHub ile paylaş</div>
+      <button class="modal-close" id="ghClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body" id="ghBody"></div>
+  </div>
+</div>
+
 <!-- Ekip alanı açılırken (veriler gelene kadar) gösterilen ekran -->
 <div class="team-boot" id="teamBoot" hidden>
   <div class="team-boot-box" role="status" aria-live="polite">
@@ -2513,6 +2564,9 @@
     fromCache: true, hasPendingWrites: false, error: ''
   };
   const isLocalKey = k => String(k).indexOf('pref:') === 0;
+  /* GITHUB İLE PAYLAŞ: kayıt değişince ve proje listesi çizilince haber verilir
+     (aşağıda "GITHUB İLE PAYLAŞ" bölümü kurulunca { write, render } olur). */
+  let ghHook = null;
 
   async function sGet(k){
     if (cloud.on && !isLocalKey(k)) { const v = cloud.mirror.get(k); return v == null ? null : { value: v }; }
@@ -2523,6 +2577,7 @@
     } catch(e){ return null; }
   }
   async function sSet(k,v){
+    if (ghHook && !isLocalKey(k)) ghHook.write();
     if (cloud.on && !isLocalKey(k)) return cloudSet(k, v);
     try { localStorage.setItem(STORE_PREFIX + k, v); return true; }
     catch(e){
@@ -2563,6 +2618,7 @@
     el('status').textContent = 'Otomatik kayıt açık — notların bu cihaza kaydediliyor. (Kullanılan alan: ' + storageUsedMB().toFixed(1) + ' MB)';
   }
   async function sDel(k){
+    if (ghHook && !isLocalKey(k)) ghHook.write();
     if (cloud.on && !isLocalKey(k)) { cloudDel(k); return; }
     try { localStorage.removeItem(STORE_PREFIX + k); } catch(e){}
   }
@@ -2878,10 +2934,13 @@
   }
 
   /* ---- ALT BİLDİRİM (geri alma düğmeli) ---- */
-  let snackTimer = null, snackUndoFn = null;
-  function showSnack(msg, undoFn) {
+  let snackTimer = null, snackUndoFn = null, snackIsUndo = true;
+  /* actLabel verilirse düğme "Geri al" yerine o yazıyla çıkar (ör. "Göster") */
+  function showSnack(msg, undoFn, actLabel) {
     el('snackMsg').textContent = msg;
     snackUndoFn = undoFn || null;
+    snackIsUndo = !actLabel;
+    el('snackUndo').textContent = actLabel || 'Geri al';
     el('snackUndo').style.display = undoFn ? '' : 'none';
     el('snack').classList.add('show');
     clearTimeout(snackTimer);
@@ -3166,6 +3225,7 @@
         renderProjects(); renderMain(); renderBoard(); renderSchema(); renderFlow();
       });
     });
+    if (ghHook) ghHook.render();
   }
 
   /* ---- PROJEYİ YENİDEN ADLANDIR ----
@@ -10643,6 +10703,8 @@
       case 'all-pdf': exportPDF('all'); break;
       case 'json-export': exportJSON(); break;
       case 'json-import': el('importFile').click(); break; // gizli dosya seçiciyi aç
+      case 'gh-save': ghSaveFlow(activeProject); break;   // GitHub ile paylaş (aşağıda)
+      case 'gh-open': openGhPanel(); break;
       case 'install': installApp(); break;
     }
   }
@@ -10809,7 +10871,7 @@
     for (const t of trash.slice()) await dropTrash(t.id);
     renderTrash();
   });
-  el('snackUndo').addEventListener('click', async () => { const f = snackUndoFn; hideSnack(); if (f) { await f(); showSnack('Geri alındı.'); } });
+  el('snackUndo').addEventListener('click', async () => { const f = snackUndoFn, undo = snackIsUndo; hideSnack(); if (f) { await f(); if (undo) showSnack('Geri alındı.'); } });
   el('snackX').addEventListener('click', hideSnack);
 
   /* ---- MARKDOWN olayları ---- */
@@ -11740,12 +11802,13 @@ service cloud.firestore {
     const inv = readInvite();
     const wsId = localGet('pref:ws');
     const team = wsId ? knownTeams().find(t => t.id === wsId) : null;
-    if (team && !inv && /^https?:$/.test(location.protocol)) { await startTeam(team); return; }
+    if (team && !inv && /^https?:$/.test(location.protocol)) { await startTeam(team); ghStart(); return; }
     if (wsId && !team) localSet('pref:ws', null);
     await loadAll();
     await loadView();
     updateSyncUI();
     if (inv) openTeamPanel({ invite: inv });
+    ghStart();
   }
   async function switchWorkspace(id) {
     if (cloud.on) { cloudFlush(); await new Promise(r => setTimeout(r, 350)); } // bekleyen yazmalar cihaza işlensin
@@ -12298,6 +12361,688 @@ service cloud.firestore {
     pendingImport = { data: data, file: 'Bu cihazdaki kişisel projeler', personal: true };
     closeTeamPanel();
     openBackupModal();
+  }
+
+  /* ===================================================================
+     GITHUB İLE PAYLAŞ (Firebase'siz ekip çalışması)
+     Her proje, ekibin GitHub'daki gizli deposunda "projeler/<proje-kimliği>.json" dosyası olarak
+     durur. Dosya normal bir JSON yedeğidir; "JSON yedeği yükle" ile de açılabilir.
+     - Kaydet: açık projeyi o dosyaya yazar. Her kayıt bir commit olur; eski hallere GitHub'dan dönülür.
+     - Getir: dosyadaki hali bu cihaza alır. Kimlikler aynı kaldığı için proje kopyalanmaz, güncellenir.
+     - Siz getirdikten sonra başka biri kaydettiyse kaydınız yapılmaz ve hangisinin kalacağı sorulur;
+       kimsenin işi habersizce ezilmez. (GitHub bunu dosyanın "sha" değeriyle denetler.)
+     - Sayfa açılınca, sekmeye dönünce ve dakikada bir depo kontrol edilir; açık projede sizin
+       kaydedilmemiş değişikliğiniz yoksa yeni hal kendiliğinden gelir.
+     Depo adı, anahtar ve ad sadece bu cihazda durur ("pref:" anahtarları ekip alanına gitmez).
+     =================================================================== */
+  const GH_DIR = 'projeler';
+  const GH_REPO_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]{1,100}$/;
+  const GH_TOKEN_RE = /^(github_pat_[A-Za-z0-9_]{20,255}|gh[pousr]_[A-Za-z0-9]{30,255})$/;
+  const GH_SVG = d => '<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+  const ICO_CLOUD = GH_SVG('<path d="M4.6 12.4H4a2.9 2.9 0 0 1-.3-5.8 4.3 4.3 0 0 1 8.3-1 3.1 3.1 0 0 1 0 6.8h-.6"/><path d="M8 14V8.6M5.9 10.7 8 8.6l2.1 2.1"/>');
+  const ICO_FILE = GH_SVG('<path d="M4 1.8h5.2L12 4.6v9.6H4z"/><path d="M9 1.8v3h3M6 8h4M6 10.6h4"/>').replace('class="ico"', 'class="ico gh-row-ico"');
+  const ICO_DOWN = GH_SVG('<path d="M8 2.5v8M4.8 7.6 8 10.8l3.2-3.2M2.8 13.5h10.4"/>');
+  const ICO_UP = GH_SVG('<path d="M8 11V3M4.8 6.2 8 3l3.2 3.2M2.8 13.5h10.4"/>');
+  const gh = {
+    cfg: null,            // { repo, token, name }
+    remote: new Map(),    // proje kimliği -> { sha, data, ok, name, by, at } (depodaki son bilinen hal)
+    blobs: new Map(),     // sha -> dosya içeriği (bir sha'nın içeriği değişmez; önbellek)
+    listAt: 0, listErr: '', listBusy: null, triedAt: 0,
+    view: 'home', msg: '', msgKind: '', busy: false,
+    ask: null,            // "hangisi kalsın?" sorusu: { kind: 'conflict' | 'pull', pid }
+    invite: null,         // bağlantıdan gelen { repo, token }
+    applying: false, lastPid: null, notified: null, dirtyTimer: null,
+    gen: 0,               // her kayıt/getirme/kaldırmada artar; o sırada başlamış liste okuması bayat sayılır
+    seen: new Set(),      // bu cihazın geçtiği eski sha'lar (GitHub kısa süre eski listeyi verirse geri dönülmesin)
+    draft: null           // kurulum formuna yazılanlar (pencere yeniden çizilince silinmesin)
+  };
+  const ghPanelOpen = () => el('ghModal').classList.contains('open');
+
+  function ghLoadCfg() {
+    const c = localJSON('pref:github', null);
+    gh.cfg = c && GH_REPO_RE.test(c.repo || '') && GH_TOKEN_RE.test(c.token || '') && c.name
+      ? { repo: c.repo, token: c.token, name: String(c.name).slice(0, 40) } : null;
+  }
+  /* Bu cihazın bir projeyi en son hangi halde eşitlediği: { repo, sha, hash } */
+  function ghStateFor(pid) {
+    const s = localJSON('pref:gh:' + pid, null);
+    return s && gh.cfg && s.repo === gh.cfg.repo ? s : {};
+  }
+  function ghSetStateFor(pid, s) {
+    const old = ghStateFor(pid).sha;
+    if (old && (!s || s.sha !== old)) gh.seen.add(old);
+    gh.gen++;
+    localSet('pref:gh:' + pid, s ? JSON.stringify(Object.assign({ repo: gh.cfg.repo }, s)) : null);
+  }
+
+  /* Projenin bütün kayıtları, yedek dosyası biçiminde (sıralı, böylece aynı içerik aynı dosyayı verir) */
+  function ghBundle(pid) {
+    const p = projects.find(x => x.id === pid);
+    if (!p) return null;
+    const of = arr => arr.filter(x => x && x.projectId === pid).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    const fs = flowSettings(pid);
+    return { version: 5, projects: [p], columns: of(columns), items: of(items), dbTables: of(dbTables), dbLinks: of(dbLinks),
+      dbSettings: [schemaSettings(pid)], flowCharts: of(flowCharts), flowNodes: of(flowNodes), flowEdges: of(flowEdges),
+      flSettings: [{ projectId: pid, active: typeof fs.active === 'string' ? fs.active : null }] };
+  }
+  /* "Değişti mi?" karşılaştırması için parmak izi. Boş değerler (null, '', 0, false, []) yok sayılır;
+     böylece aynı kaydın eksik alanlı ve tamamlanmış hali aynı sayılır. Açık akış sekmesi sayılmaz. */
+  function ghCanon(v) {
+    if (Array.isArray(v)) return v.length ? '[' + v.map(ghCanon).join(',') + ']' : '';
+    if (v && typeof v === 'object') {
+      return '{' + Object.keys(v).sort().map(k => { const s = ghCanon(v[k]); return s === '' ? '' : JSON.stringify(k) + ':' + s; }).filter(Boolean).join(',') + '}';
+    }
+    if (v === null || v === undefined || v === false || v === '' || v === 0) return '';
+    return JSON.stringify(v);
+  }
+  function ghHash(b) {
+    const s = ghCanon(Object.assign({}, b, { flSettings: [] }));
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+  }
+  /* Türkçe karakterler bozulmasın diye metin önce UTF-8 baytlarına çevrilir */
+  function ghB64(str) {
+    const bytes = new TextEncoder().encode(str);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+  function ghUnB64(b64) {
+    const bin = atob(String(b64).replace(/\s/g, ''));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
+  /* ---------- GitHub API ---------- */
+  async function ghApi(path, opts, cfg) {
+    cfg = cfg || gh.cfg; opts = opts || {};
+    const headers = { 'Accept': opts.accept || 'application/vnd.github+json', 'Authorization': 'Bearer ' + cfg.token, 'X-GitHub-Api-Version': '2022-11-28' };
+    if (opts.body) headers['Content-Type'] = 'application/json';
+    try {
+      return await withTimeout(fetch('https://api.github.com/repos/' + cfg.repo + path, {
+        method: opts.method || 'GET', headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined, cache: 'no-store'
+      }), 25000);
+    } catch (e) { throw { gh: 'net' }; }
+  }
+  async function ghFail(r) {
+    let m = '';
+    try { m = String((await r.json()).message || ''); } catch (e) {}
+    return { gh: r.status, detail: m, limit: r.headers.get('x-ratelimit-remaining') === '0' };
+  }
+  function ghErrText(e) {
+    if (!e || !e.gh) return 'Beklenmeyen bir sorun çıktı' + (e && e.message ? ': ' + e.message : '.');
+    if (e.gh === 'net') return 'GitHub\'a ulaşılamadı. İnternet bağlantını kontrol edip tekrar dene.';
+    if (e.gh === 401) return 'GitHub anahtarı geçersiz ya da süresi dolmuş. Ayarlar\'dan yeni anahtar gir.';
+    if (e.gh === 403 && e.limit) return 'GitHub kısa sürede çok fazla istek aldı. Biraz bekleyip tekrar dene.';
+    if (e.gh === 403) return 'Bu anahtarın depoya yazma izni yok. Anahtarda "Contents: Read and write" izni olmalı ve depo anahtarda seçili olmalı.';
+    if (e.gh === 404) return 'Depo bulunamadı. Depo adını ve anahtarın bu depoyu kapsadığını kontrol et.';
+    return 'GitHub hatası (' + e.gh + (e.detail ? ': ' + e.detail : '') + ').';
+  }
+  /* Dosyayı doğrula: tek projelik, geçerli kimlikli bir White Note yedeği mi? */
+  function ghParse(text) {
+    let d;
+    try { d = JSON.parse(text); } catch (e) { return null; }
+    if (!d || !Array.isArray(d.projects) || d.projects.length !== 1 || !d.projects[0] || !Array.isArray(d.items) || !backupIdsOk(d)) return null;
+    return d;
+  }
+  function ghInfo(sha, data, pid) {
+    const g = (data && data.github) || {}, p = data && data.projects[0];
+    return { sha: sha, data: data, ok: !!(p && p.id === pid), name: p ? String(p.name || 'Proje').slice(0, 80) : pid,
+             by: String(g.savedBy || '').slice(0, 40), at: +g.savedAt || 0 };
+  }
+  async function ghReadBlob(sha, cfg) {
+    if (gh.blobs.has(sha)) return gh.blobs.get(sha);
+    const r = await ghApi('/git/blobs/' + sha, { accept: 'application/vnd.github.raw+json' }, cfg);
+    if (!r.ok) throw await ghFail(r);
+    const data = ghParse(await r.text());
+    gh.blobs.set(sha, data);
+    return data;
+  }
+  /* Tek bir projenin depodaki hali (yoksa null) */
+  async function ghReadRemote(pid) {
+    const cfg = gh.cfg;
+    const r = await ghApi('/contents/' + GH_DIR + '/' + pid + '.json', null, cfg);
+    if (r.status === 404) { gh.remote.delete(pid); return null; }
+    if (!r.ok) throw await ghFail(r);
+    const j = await r.json();
+    let data = gh.blobs.get(j.sha);
+    if (data === undefined) {
+      if (j.encoding === 'base64' && j.content) { data = ghParse(ghUnB64(j.content)); gh.blobs.set(j.sha, data); }
+      else data = await ghReadBlob(j.sha, cfg);
+    }
+    const info = ghInfo(j.sha, data, pid);
+    if (gh.cfg === cfg) gh.remote.set(pid, info);
+    return info;
+  }
+  /* Depodaki bütün projeler. Klasör listesi tek istektir; içerik sadece değişen dosyalar için iner. */
+  async function ghReadList() {
+    const cfg = gh.cfg, gen = gh.gen;
+    const r = await ghApi('/contents/' + GH_DIR, null, cfg);
+    let files = [];
+    if (r.status === 404) {                       // klasör henüz yok (hiç kayıt yapılmamış) ya da depo yok
+      const rr = await ghApi('', null, cfg);
+      if (!rr.ok) throw await ghFail(rr);
+    } else if (!r.ok) throw await ghFail(r);
+    else {
+      const j = await r.json();
+      files = (Array.isArray(j) ? j : []).filter(f => f && f.type === 'file' && /^[A-Za-z0-9_-]{1,80}\.json$/.test(f.name));
+    }
+    const infos = await Promise.all(files.map(async f => {
+      const pid = f.name.slice(0, -5);
+      let data = null;
+      try { data = await ghReadBlob(f.sha, cfg); } catch (e) { if (e && (e.gh === 401 || e.gh === 'net')) throw e; }
+      return [pid, ghInfo(f.sha, data, pid)];
+    }));
+    if (gh.cfg !== cfg || gh.gen !== gen) return; // bu arada başka depoya geçildi ya da kayıt yapıldı: bu liste bayat
+    gh.remote = new Map(infos);
+  }
+  function ghLoadList() {
+    if (!gh.cfg) return Promise.resolve();
+    if (gh.listBusy) return gh.listBusy;
+    gh.listBusy = (async () => {
+      try { await ghReadList(); gh.listErr = ''; gh.listAt = Date.now(); }
+      catch (e) { gh.listErr = ghErrText(e); }
+      finally { gh.listBusy = null; }
+      ghSafeRender(); ghIndicator();
+    })();
+    return gh.listBusy;
+  }
+
+  /* ---------- Durum ---------- */
+  function ghStatus(pid) {
+    const st = ghStateFor(pid), rem = gh.remote.get(pid) || null, b = ghBundle(pid);
+    const gone = gh.listAt > 0 && !rem;           // depoda yok: hiç kaydedilmemiş ya da kaldırılmış
+    const linked = !!st.sha && !gone;
+    return { local: !!b, rem: rem, linked: linked, gone: gone,
+             dirty: !!b && (!linked || ghHash(b) !== st.hash),
+             behind: !!rem && rem.sha !== st.sha && !gh.seen.has(rem.sha) };
+  }
+  function ghStatusText(s) {
+    const who = s.rem && s.rem.by ? s.rem.by : 'bir ekip arkadaşın', when = s.rem && s.rem.at ? fmtDate(s.rem.at) : '';
+    const last = s.rem ? ' Son kayıt: ' + (s.rem.by || '?') + (when ? ' · ' + when : '') + '.' : '';
+    if (!s.rem && !gh.listAt) return gh.listErr ? 'GitHub\'a ulaşılamadı.' : 'GitHub kontrol ediliyor…';
+    if (!s.rem) return 'Bu proje henüz GitHub\'da değil. Kaydedince ekip arkadaşların da görür.';
+    if (!s.rem.ok) return 'GitHub\'daki dosya okunamadı (bozuk ya da White Note dosyası değil).';
+    if (s.behind && s.dirty) return 'Sen bu projede değişiklik yaptın; bu arada ' + who + ' de GitHub\'a kaydetti' + (when ? ' (' + when + ')' : '') + '. Kaydederken ya da getirirken hangisinin kalacağını seçeceksin.';
+    if (s.behind) return who.charAt(0).toLocaleUpperCase('tr') + who.slice(1) + ' daha yeni bir hal kaydetti' + (when ? ' (' + when + ')' : '') + '. Getirince bu cihazdaki proje güncellenir.';
+    if (s.dirty) return 'Sende GitHub\'a kaydedilmemiş değişiklikler var.' + last;
+    return 'GitHub\'daki hal ile aynı.' + last;
+  }
+  /* Üst çubuktaki GitHub düğmesi (sadece bağlıyken görünür) */
+  function ghIndicator() {
+    const btn = el('ghBtn');
+    btn.hidden = !gh.cfg;
+    if (!gh.cfg) return;
+    const s = activeProject && projects.some(p => p.id === activeProject) ? ghStatus(activeProject) : null;
+    let st = 'none', t = 'Bu proje GitHub\'da değil';
+    if (s && (s.linked || s.rem)) {
+      if (s.behind && s.dirty) { st = 'error'; t = 'Hem sende hem GitHub\'da değişiklik var'; }
+      else if (s.behind) { st = 'behind'; t = 'GitHub\'da daha yeni hali var' + (s.rem && s.rem.by ? ' (' + s.rem.by + ')' : ''); }
+      else if (s.dirty) { st = 'dirty'; t = 'GitHub\'a kaydedilmemiş değişiklik var'; }
+      else { st = 'ok'; t = 'GitHub\'daki hal ile aynı'; }
+    }
+    btn.dataset.sync = st;
+    btn.title = 'GitHub ile paylaş · ' + t;
+    btn.setAttribute('aria-label', btn.title);
+  }
+  function ghTouched() {
+    if (!gh.cfg || gh.applying) return;
+    clearTimeout(gh.dirtyTimer);
+    gh.dirtyTimer = setTimeout(() => { ghIndicator(); ghSafeRender(); }, 700);
+  }
+  function ghAfterRender() {
+    if (!gh.cfg || gh.applying || activeProject === gh.lastPid) return;
+    gh.lastPid = activeProject; gh.notified = null;
+    ghIndicator();
+    setTimeout(() => ghAutoCheck(), 300);
+  }
+
+  /* ---------- Kaydet ---------- */
+  async function ghSave(pid, force) {
+    const b = ghBundle(pid);
+    if (!b) return { ok: false };
+    const now = Date.now();
+    const file = Object.assign({ app: 'White Note', exported: now, github: { savedBy: gh.cfg.name, savedAt: now } }, b);
+    const text = JSON.stringify(file, null, 2);   // satır satır yazılır: GitHub'da neyin değiştiği okunur
+    const body = { message: b.projects[0].name + ' · ' + gh.cfg.name + ' kaydetti', content: ghB64(text) };
+    const sha = force ? force.sha : ghStateFor(pid).sha;
+    if (sha) body.sha = sha;
+    const r = await ghApi('/contents/' + GH_DIR + '/' + pid + '.json', { method: 'PUT', body: body });
+    if (r.status === 409 || r.status === 422) {
+      const f = await ghFail(r);
+      if (r.status === 409 || /sha/i.test(f.detail)) return { conflict: true };
+      throw f;
+    }
+    if (!r.ok) throw await ghFail(r);
+    const j = await r.json();
+    const data = JSON.parse(text);
+    gh.blobs.set(j.content.sha, data);
+    gh.remote.set(pid, ghInfo(j.content.sha, data, pid));
+    ghSetStateFor(pid, { sha: j.content.sha, hash: ghHash(b) });
+    return { ok: true };
+  }
+  async function ghSaveFlow(pid, opts) {
+    opts = opts || {};
+    if (!gh.cfg) { openGhPanel(); return; }
+    const p = projects.find(x => x.id === pid);
+    if (!p || gh.busy) return;
+    gh.busy = true; ghSetMsg('"' + p.name + '" GitHub\'a kaydediliyor…', '');
+    try {
+      let res = await ghSave(pid, opts.overwrite ? { sha: opts.overwrite } : null);
+      if (res.conflict) {
+        const rem = await ghReadRemote(pid);
+        if (!rem) res = await ghSave(pid, { sha: null });   // dosya bu arada kaldırılmış: yeniden oluştur
+        else { gh.busy = false; gh.msg = ''; ghAskShow({ kind: 'conflict', pid: pid }); ghIndicator(); return; }
+      }
+      gh.busy = false;
+      if (res.ok) {
+        gh.notified = null;
+        ghSetMsg('"' + p.name + '" GitHub\'a kaydedildi. Ekip arkadaşların açınca bu hali görür.', 'ok');
+        if (!ghPanelOpen()) showSnack('"' + p.name + '" GitHub\'a kaydedildi.');
+      }
+    } catch (e) {
+      gh.busy = false;
+      ghSetMsg(ghErrText(e), 'err');
+      if (!ghPanelOpen()) showSnack(ghErrText(e), () => openGhPanel({ keepMsg: true }), 'Aç');
+    }
+    ghIndicator();
+  }
+
+  /* ---------- Getir ---------- */
+  async function ghPullFlow(pid, confirmed) {
+    if (!gh.cfg || gh.busy) return;
+    gh.busy = true; ghSetMsg('GitHub\'daki hal getiriliyor…', '');
+    try {
+      const rem = await ghReadRemote(pid);
+      gh.busy = false;
+      if (!rem) { ghSetMsg('Bu proje GitHub\'da yok (kaldırılmış olabilir).', 'err'); ghLoadList(); return; }
+      if (!rem.ok) { ghSetMsg('GitHub\'daki dosya okunamadı (bozuk ya da White Note dosyası değil).', 'err'); return; }
+      if (!confirmed && projects.some(x => x.id === pid) && ghStatus(pid).dirty) { gh.msg = ''; ghAskShow({ kind: 'pull', pid: pid }); return; }
+      await ghApply(rem.data, rem.sha);
+      gh.notified = null;
+      ghSetMsg('"' + rem.name + '" getirildi' + (rem.by ? ' (' + rem.by + ' kaydetmişti' + (rem.at ? ', ' + fmtDate(rem.at) : '') + ')' : '') + '.', 'ok');
+    } catch (e) {
+      gh.busy = false;
+      console.error(e);
+      ghSetMsg(ghErrText(e), 'err');
+    }
+    ghIndicator();
+  }
+  /* Depodaki hali bu cihaza koyar: projenin buradaki kayıtları kaldırılır (çöp kutusuna gitmez),
+     yerine dosyadakiler aynı kimliklerle yazılır. */
+  async function ghApply(data, sha) {
+    const p0 = data.projects[0], pid = p0.id;
+    const copy = k => (Array.isArray(data[k]) ? data[k] : []).filter(x => x && typeof x === 'object' && x.projectId === pid).map(x => JSON.parse(JSON.stringify(x)));
+    const keepChart = flSettings[pid] && flSettings[pid].active;
+    gh.applying = true;
+    try {
+      if (flRun && projectCharts(pid).some(c => c.id === flRun.pid)) flCloseRun();
+      if (erConsole && erConsole.pid === pid) closeConsoleDb();
+      for (const x of items.filter(x => x.projectId === pid)) await deleteItemStore(x.id);
+      for (const x of columns.filter(x => x.projectId === pid)) await deleteColumnStore(x.id);
+      for (const x of dbTables.filter(x => x.projectId === pid)) await deleteDbTableStore(x.id);
+      for (const x of dbLinks.filter(x => x.projectId === pid)) await deleteDbLinkStore(x.id);
+      for (const x of flowNodes.filter(x => x.projectId === pid)) await deleteFlowNodeStore(x.id);
+      for (const x of flowEdges.filter(x => x.projectId === pid)) await deleteFlowEdgeStore(x.id);
+      for (const x of flowCharts.filter(x => x.projectId === pid)) { await deleteFlowChartStore(x.id); delete flHistory[x.id]; }
+      items = items.filter(x => x.projectId !== pid); columns = columns.filter(x => x.projectId !== pid);
+      dbTables = dbTables.filter(x => x.projectId !== pid); dbLinks = dbLinks.filter(x => x.projectId !== pid);
+      flowNodes = flowNodes.filter(x => x.projectId !== pid); flowEdges = flowEdges.filter(x => x.projectId !== pid);
+      flowCharts = flowCharts.filter(x => x.projectId !== pid);
+      delete erHistory[pid];
+
+      const p = Object.assign({}, p0, { name: String(p0.name || 'Proje').slice(0, 80), created: +p0.created || Date.now() });
+      const at = projects.findIndex(x => x.id === pid);
+      if (at >= 0) projects[at] = p; else projects.push(p);
+      projects.sort((a, b) => a.created - b.created);
+      await saveProject(p);
+
+      const cols = copy('columns').filter(c => c.id).map(c => Object.assign(c, {
+        name: String(c.name || 'Sütun'), color: /^#[0-9a-f]{3,8}$/i.test(c.color || '') ? c.color : '#2747C9', order: +c.order || 0 }));
+      const its = normalizeItems(copy('items'));
+      const tbls = normalizeDbTables(copy('dbTables').filter(t => t.id));
+      const tids = new Set(tbls.map(t => t.id));
+      const lnks = normalizeDbLinks(copy('dbLinks').filter(l => l.id && tids.has(l.fromTable) && tids.has(l.toTable)));
+      const chs = normalizeFlowCharts(copy('flowCharts'));
+      const nds = normalizeFlowNodes(copy('flowNodes'));
+      const eds = normalizeFlowEdges(copy('flowEdges'), nds);
+      columns.push(...cols); items.push(...its); dbTables.push(...tbls); dbLinks.push(...lnks);
+      flowCharts.push(...chs); flowNodes.push(...nds); flowEdges.push(...eds);
+      for (const x of cols) await saveColumn(x);
+      for (const x of its) await saveItem(x);
+      for (const x of tbls) await saveDbTable(x);
+      for (const x of lnks) await saveDbLink(x);
+      for (const x of chs) await saveFlowChart(x);
+      for (const x of nds) await saveFlowNode(x);
+      for (const x of eds) await saveFlowEdge(x);
+      const ds = copy('dbSettings')[0];
+      if (ds) { dbSettings[pid] = ds; await saveSchemaSettings(pid); }
+      else { delete dbSettings[pid]; await sDel('sch:' + pid); }
+      const fs = copy('flSettings')[0];
+      const active = chs.some(c => c.id === keepChart) ? keepChart : (fs && typeof fs.active === 'string' ? fs.active : null);
+      flSettings[pid] = { projectId: pid, active: active };
+      await saveFlowSettings(pid);
+      await migrateFlowCharts();
+      await ensureColumns(pid);
+      await migrateItemsToColumns();
+      activeProject = pid;
+      ghSetStateFor(pid, { sha: sha, hash: ghHash(ghBundle(pid)) });
+    } finally {
+      gh.applying = false;
+    }
+    gh.lastPid = pid;
+    el('search').value = '';
+    renderProjects(); renderMain(); renderBoard(); renderSchema(); renderFlow();
+    updateStorageStatus();
+  }
+  /* Depoyu kontrol et; açık projede sende değişiklik yoksa yeni hali kendiliğinden getir */
+  async function ghAutoCheck(force) {
+    if (!gh.cfg || gh.busy || gh.applying) return;
+    if (force || Date.now() - gh.triedAt > 15000) { gh.triedAt = Date.now(); await ghLoadList(); }
+    const pid = activeProject;
+    if (!pid || !gh.cfg || gh.busy || gh.applying) return;
+    const st = ghStateFor(pid), rem = gh.remote.get(pid);
+    if (!st.sha || !rem || !rem.ok || rem.sha === st.sha || gh.seen.has(rem.sha) || gh.notified === rem.sha) return;
+    const who = rem.by || 'Bir ekip arkadaşın';
+    const a = document.activeElement;
+    const typing = a && a !== document.body && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable);
+    if (!ghStatus(pid).dirty && !document.querySelector('.modal-overlay.open') && !typing) {
+      await ghApply(rem.data, rem.sha);
+      showSnack('GitHub\'dan güncel hal geldi: ' + who + ' kaydetmiş.');
+    } else {
+      gh.notified = rem.sha;   // aynı hal için bir kez haber ver
+      showSnack(who + ' bu projenin daha yeni halini GitHub\'a kaydetti.', () => openGhPanel(), 'Göster');
+    }
+    ghIndicator();
+  }
+  /* Getirmeden önce bu cihazdaki hali JSON yedeği olarak indir ("JSON yedeği yükle" ile geri yüklenebilir) */
+  function ghDownloadMine(pid) {
+    const b = ghBundle(pid);
+    if (!b) return;
+    const nm = (b.projects[0].name.replace(/[^\w ğüşıöçĞÜŞİÖÇ-]/g, '').trim() || 'proje');
+    download(JSON.stringify(Object.assign({ exported: Date.now() }, b), null, 2), nm + '-benim-halim-' + new Date().toISOString().slice(0, 10) + '.json', 'application/json');
+  }
+  async function ghRemove(pid) {
+    const rem = gh.remote.get(pid);
+    if (!rem || gh.busy) return;
+    if (!confirm('"' + rem.name + '" GitHub\'dan kaldırılsın mı?\n\nEkip arkadaşların artık bu projeyi depoda görmez. Bu cihazdaki kopya silinmez; eski hali GitHub geçmişinde kalır.')) return;
+    gh.busy = true; ghSetMsg('Kaldırılıyor…', '');
+    try {
+      const r = await ghApi('/contents/' + GH_DIR + '/' + pid + '.json', { method: 'DELETE', body: { message: rem.name + ' · ' + gh.cfg.name + ' kaldırdı', sha: rem.sha } });
+      gh.busy = false;
+      if (r.status === 409 || r.status === 422) { ghSetMsg('Bu arada biri projeyi yeniden kaydetmiş; kaldırılmadı. Liste yenilendi.', 'err'); ghLoadList(); return; }
+      if (!r.ok && r.status !== 404) throw await ghFail(r);
+      gh.seen.add(rem.sha); gh.remote.delete(pid); ghSetStateFor(pid, null);
+      ghSetMsg('"' + rem.name + '" GitHub\'dan kaldırıldı.', 'ok');
+    } catch (e) { gh.busy = false; ghSetMsg(ghErrText(e), 'err'); }
+    ghIndicator();
+  }
+
+  /* ---------- Bağlanma ve ekip bağlantısı ---------- */
+  function ghParseRepo(s) {
+    s = String(s || '').trim().replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/\.git$/i, '').replace(/\/+$/, '');
+    return GH_REPO_RE.test(s) ? s : '';
+  }
+  async function ghConnect() {
+    const inv = gh.invite;
+    const repo = inv ? inv.repo : ghParseRepo(el('ghRepo').value), token = inv ? inv.token : el('ghToken').value.trim(), name = el('ghName').value.trim().slice(0, 40);
+    if (!repo) return ghSetMsg('Depoyu kullanıcı-adı/depo-adı biçiminde yaz (örneğin ali/white-note-veri) ya da depo adresini yapıştır.', 'err');
+    if (!GH_TOKEN_RE.test(token)) return ghSetMsg('Anahtar github_pat_ ile başlamalı. GitHub\'ın verdiği anahtarın tamamını yapıştır.', 'err');
+    if (!name) return ghSetMsg('Adını yaz; kayıtlarda kimin kaydettiği görünsün.', 'err');
+    gh.busy = true; ghSetMsg('', ''); ghRender();
+    try {
+      const cfg = { repo: repo, token: token, name: name };
+      const r = await ghApi('', null, cfg);
+      if (!r.ok) throw await ghFail(r);
+      const j = await r.json();
+      if (j && typeof j.full_name === 'string' && GH_REPO_RE.test(j.full_name)) cfg.repo = j.full_name;
+      localSet('pref:github', JSON.stringify(cfg));
+      gh.cfg = cfg; gh.invite = null; gh.draft = null; gh.view = 'home';
+      gh.remote = new Map(); gh.listAt = 0; gh.listErr = ''; gh.lastPid = activeProject; gh.notified = null;
+      gh.busy = false;
+      if (j && j.private === false) ghSetMsg('Bağlandı. Dikkat: bu depo herkese açık (Public), projelerin herkes tarafından okunabilir. GitHub\'da depo ayarlarından Private yapmanı öneririm.', 'err');
+      else ghSetMsg('Bağlandı. Aşağıdaki listeden projeleri getirebilir ya da açık projeyi kaydedebilirsin.', 'ok');
+      ghLoadList();
+    } catch (e) {
+      gh.busy = false;
+      ghSetMsg(ghErrText(e), 'err');
+    }
+    ghIndicator();
+  }
+  function ghInviteURL() { return location.origin + location.pathname + '#github=' + b64urlEncode(JSON.stringify({ v: 1, r: gh.cfg.repo, t: gh.cfg.token })); }
+  function ghDecodeInvite(s) {
+    const m = /github=([A-Za-z0-9_-]+)/.exec(String(s || ''));
+    if (!m) return null;
+    try {
+      const p = JSON.parse(b64urlDecode(m[1]));
+      if (p && GH_REPO_RE.test(p.r || '') && GH_TOKEN_RE.test(p.t || '')) return { repo: p.r, token: p.t };
+    } catch (e) {}
+    return { bad: true };
+  }
+  function ghReadHash() {
+    if (!/[#&]github=/.test(location.hash || '')) return null;
+    const inv = ghDecodeInvite(location.hash);
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}   // anahtar adres çubuğunda kalmasın
+    return inv;
+  }
+  function ghOpenInvite(inv) {
+    if (inv.bad) { gh.invite = null; openGhPanel({ view: 'setup' }); ghSetMsg('GitHub bağlantısı bozuk ya da eksik kopyalanmış. Gönderen kişiden yeniden iste.', 'err'); return; }
+    gh.invite = inv;
+    openGhPanel({ view: 'setup' });
+  }
+  async function ghCopyInvite(btn) {
+    const url = ghInviteURL();
+    try { await navigator.clipboard.writeText(url); btn.textContent = 'Kopyalandı ✓'; }
+    catch (e) { prompt('Bağlantıyı kopyala:', url); return; }
+    setTimeout(() => { if (btn.isConnected) btn.textContent = 'Kopyala'; }, 1800);
+  }
+  async function ghShareInvite() {
+    try { await navigator.share({ title: 'White Note', text: 'White Note projelerimize bu bağlantıyla katıl:', url: ghInviteURL() }); } catch (e) {}
+  }
+
+  /* ---------- Pencere ---------- */
+  function ghSetMsg(msg, kind) { gh.msg = msg || ''; gh.msgKind = kind || ''; if (ghPanelOpen()) ghRender(); }
+  function ghAskShow(a) {
+    gh.ask = a; gh.view = 'ask';
+    if (ghPanelOpen()) ghRender(); else openGhPanel({ view: 'ask' });
+  }
+  function openGhPanel(opts) {
+    opts = opts || {};
+    closeDrawer(); closeExportMenu();
+    if (!opts.keepMsg) { gh.msg = ''; gh.msgKind = ''; }
+    gh.draft = null;
+    gh.view = opts.view || (gh.cfg ? 'home' : 'setup');
+    if (gh.view !== 'ask') gh.ask = null;
+    el('ghModal').classList.add('open');
+    ghRender();
+    if (gh.cfg && gh.view === 'home') ghLoadList();
+  }
+  function closeGhPanel() {
+    el('ghModal').classList.remove('open');
+    gh.ask = null; gh.invite = null; gh.msg = '';
+  }
+  function ghSafeRender() {
+    if (!ghPanelOpen()) return;
+    const a = document.activeElement;
+    if (a && el('ghBody').contains(a) && /^(INPUT|TEXTAREA)$/.test(a.tagName) && !a.readOnly && !gh.busy) return; // yazdığı silinmesin
+    ghRender();
+  }
+  function ghRender() {
+    const body = el('ghBody');
+    const val = id => { const n = el(id); return n && body.contains(n) ? n.value : undefined; };
+    if (el('ghForm') && body.contains(el('ghForm'))) gh.draft = { repo: val('ghRepo'), token: val('ghToken'), name: val('ghName'), paste: val('ghPaste') };
+    let h;
+    if (gh.view === 'ask' && gh.ask && gh.cfg) h = ghAskHTML();
+    else if (!gh.cfg || gh.view === 'setup') h = ghSetupHTML();
+    else h = ghHomeHTML();
+    const msg = gh.msg && gh.view !== 'ask' ? '<div class="team-msg ' + (gh.msgKind || '') + '" role="status">' + esc(gh.msg) + '</div>' : '';
+    body.innerHTML = msg + h;
+    el('ghTitle').textContent = gh.view === 'ask' ? 'Hangisi kalsın?' : 'GitHub ile paylaş';
+    const f = body.querySelector('[data-autofocus]');
+    if (f && !f.value && !('ontouchstart' in window)) f.focus();
+  }
+  function ghSetupHTML() {
+    const inv = gh.invite, c = gh.cfg || {}, d = gh.draft || {};
+    const pick = (v, def) => (v === undefined ? def : v);
+    const repo = pick(d.repo, c.repo || ''), token = pick(d.token, c.token || ''), name = pick(d.name, c.name || '');
+    let h = '';
+    if (inv) {
+      h += '<div class="team-card accent"><div><b>' + esc(inv.repo) + '</b> deposundaki White Note projelerine davet edildin.</div>' +
+        '<small>Adını yazıp <b>Bağlan</b>\'a bas. GitHub hesabı gerekmez; kayıtlarda kimin kaydettiği bu adla görünür.</small></div>';
+    } else {
+      h += '<p class="modal-note">Projeleri Firebase kullanmadan, GitHub\'daki gizli bir depoda ekip arkadaşlarınla paylaşırsın. ' +
+          'Her kayıt depoda bir sürüm olarak saklanır; eski hallere GitHub\'dan dönebilirsin.</p>' +
+        '<div class="team-callout">' + ICO_USERS + '<span>Ekip arkadaşından bir <b>GitHub bağlantısı</b> aldıysan bu adımlara gerek yok: bağlantıyı aç ya da buraya yapıştır:</span></div>' +
+        '<div class="team-paste"><input class="modal-tags-input" id="ghPaste" autocomplete="off" spellcheck="false" placeholder="Bağlantıyı buraya yapıştır" aria-label="GitHub bağlantısı" value="' + escAttr(d.paste || '') + '">' +
+          '<button class="modal-btn" type="button" data-gact="paste">Ekle</button></div>' +
+        '<details class="team-steps"' + (gh.cfg ? '' : ' open') + '><summary>1. Depo ve anahtar oluştur (ekibi kuran kişi, bir kez, yaklaşık 5 dakika)</summary><ol>' +
+          '<li><a href="https://github.com/new" target="_blank" rel="noopener">github.com/new</a> adresini aç. <b>Repository name</b> olarak örneğin <code>white-note-veri</code> yaz, ' +
+            '<b>Private</b>\'ı seç, <b>Add a README file</b>\'ı aç ve <b>Create repository</b>\'ye bas.</li>' +
+          '<li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a> adresini aç ' +
+            '(Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token).</li>' +
+          '<li><b>Token name</b>: White Note. <b>Expiration</b>: projenin bitişinden sonraki bir tarih. <b>Repository access</b>: <b>Only select repositories</b> → az önce açtığın depo.</li>' +
+          '<li><b>Permissions</b> bölümünde <b>Contents</b> iznini <b>Read and write</b> yap (gerekirse önce <b>Add permissions</b> → Contents). Başka izin gerekmez.</li>' +
+          '<li><b>Generate token</b>\'a bas ve <code>github_pat_</code> ile başlayan anahtarı kopyala. GitHub onu bir daha göstermez.</li>' +
+        '</ol></details>' +
+        '<div class="modal-section-label">2. Bilgileri gir</div>';
+    }
+    h += '<form class="team-form" id="ghForm" novalidate>' +
+      (inv ? '' : '<input class="modal-tags-input" id="ghRepo" autocomplete="off" spellcheck="false" maxlength="140" placeholder="Depo: kullanıcı-adı/white-note-veri" value="' + escAttr(repo) + '" aria-label="Depo">' +
+        '<input class="modal-tags-input" id="ghToken" type="password" autocomplete="off" spellcheck="false" maxlength="300" placeholder="Anahtar: github_pat_…" value="' + escAttr(token) + '" aria-label="Anahtar">') +
+      '<input class="modal-tags-input" id="ghName" autocomplete="name" maxlength="40" placeholder="Adın (kayıtlarda görünür)" value="' + escAttr(name) + '" aria-label="Adın" data-autofocus>' +
+      '<button class="modal-btn primary" type="submit"' + (gh.busy ? ' disabled' : '') + '>' + (gh.busy ? 'Bağlanıyor…' : 'Bağlan') + '</button></form>';
+    h += '<p class="team-hint">Depo adı, anahtar ve adın sadece bu tarayıcıda saklanır.' + (inv ? '' : ' Bağlandıktan sonra ekip arkadaşlarına göndereceğin bağlantı bu pencerede çıkar.') + '</p>';
+    if (gh.cfg || inv) h += '<div class="modal-actions">' + (gh.cfg && !inv ? '<button class="modal-btn danger" type="button" data-gact="forget">Bu cihazda bağlantıyı kes</button>' : '<span></span>') +
+      '<button class="modal-btn" type="button" data-gact="setup-cancel">Vazgeç</button></div>';
+    return h;
+  }
+  function ghHomeHTML() {
+    const pid = activeProject, p = projects.find(x => x.id === pid);
+    let h = '<div class="team-acct">' + ICO_CLOUD + '<div class="team-acct-txt"><b>' + esc(gh.cfg.repo) + '</b><small>' + esc(gh.cfg.name) + ' adıyla kaydediyorsun</small></div>' +
+      '<button class="modal-btn" type="button" data-gact="settings">Ayarlar</button></div>';
+    if (p) {
+      const s = ghStatus(pid);
+      h += '<div class="modal-section-label">Açık proje</div>' +
+        '<div class="team-card' + (s.behind ? ' accent' : '') + '"><div><b>' + esc(p.name) + '</b></div><small>' + esc(ghStatusText(s)) + '</small>' +
+        '<div class="team-card-acts">' +
+          (s.rem && s.rem.ok && (s.behind || s.dirty) ? '<button class="modal-btn" type="button" data-gact="pull" data-pid="' + pid + '"' + (gh.busy ? ' disabled' : '') + '>GitHub\'daki hali getir</button>' : '') +
+          '<button class="modal-btn primary" type="button" data-gact="save" data-pid="' + pid + '"' + (gh.busy ? ' disabled' : '') + '>GitHub\'a kaydet</button></div></div>';
+    }
+    h += '<div class="modal-section-label">Depodaki projeler' + (gh.listAt ? ' (' + gh.remote.size + ')' : '') + '</div>';
+    if (gh.listErr) h += '<div class="team-msg err">' + esc(gh.listErr) + ' <button class="link-btn" type="button" data-gact="reload">Tekrar dene</button></div>';
+    else if (!gh.listAt) h += '<div class="team-loading"><span class="team-spin" aria-hidden="true"></span>Depo okunuyor…</div>';
+    else if (!gh.remote.size) h += '<p class="team-hint">Depoda henüz proje yok. Bir projeyi açıp <b>GitHub\'a kaydet</b>\'e bas; ekip arkadaşların burada görür.</p>';
+    else {
+      h += '<div class="team-members gh-list">' + [...gh.remote.entries()].sort((a, b) => b[1].at - a[1].at || a[1].name.localeCompare(b[1].name, 'tr')).map(([rpid, r]) => {
+        const here = projects.some(x => x.id === rpid);
+        const s = here ? ghStatus(rpid) : null;
+        let chip = 'bu cihazda yok', cls = 'new', act = 'pull', label = 'Getir';
+        if (!r.ok) { chip = 'okunamadı'; cls = 'bad'; act = ''; }
+        else if (s && s.behind && s.dirty) { chip = 'ikiniz de değiştirdiniz'; cls = 'bad'; }
+        else if (s && s.behind) { chip = 'yeni hali var'; cls = 'new'; }
+        else if (s && s.dirty) { chip = 'kaydedilmemiş değişiklik'; cls = 'warn'; act = 'go'; label = 'Aç'; }
+        else if (s) { chip = 'güncel'; cls = 'on'; act = 'go'; label = 'Aç'; }
+        return '<div class="team-member">' + ICO_FILE +
+          '<div class="tm-txt"><b>' + esc(r.name) + (rpid === pid ? ' <span class="tm-you">(açık)</span>' : '') + '</b>' +
+            '<small>' + esc([r.by ? r.by + ' kaydetti' : '', r.at ? fmtDate(r.at) : ''].filter(Boolean).join(' · ') || 'Bilinmiyor') + '</small></div>' +
+          '<span class="tm-on ' + cls + '">' + esc(chip) + '</span>' +
+          '<span class="gh-acts">' + (act ? '<button class="modal-btn tm-rm" type="button" data-gact="' + act + '" data-pid="' + rpid + '"' + (gh.busy ? ' disabled' : '') + '>' + label + '</button>' : '') +
+            '<button class="modal-btn danger tm-rm" type="button" data-gact="remove" data-pid="' + rpid + '" title="GitHub\'dan kaldır"' + (gh.busy ? ' disabled' : '') + '>Kaldır</button></span>' +
+        '</div>';
+      }).join('') + '</div>';
+    }
+    h += '<div class="modal-section-label">Ekip arkadaşı ekle</div>' +
+      '<p class="team-hint">Bu bağlantıyı açan kişi adını yazıp bağlanır; GitHub hesabı gerekmez. Bağlantıda deponun anahtarı var: ' +
+        'alan herkes projeleri görür ve değiştirir, o yüzden sadece ekip arkadaşlarına gönder.</p>' +
+      '<div class="team-invite"><input class="modal-tags-input" id="ghInvite" readonly value="' + escAttr(location.origin + location.pathname + '#github=••••••••••••') + '" aria-label="Ekip arkadaşına gönderilecek bağlantı (gizli)">' +
+        '<button class="modal-btn primary" type="button" data-gact="copy">Kopyala</button>' +
+        (navigator.share ? '<button class="modal-btn" type="button" data-gact="share">Paylaş</button>' : '') + '</div>' +
+      '<p class="gh-foot">Her kayıt depoda bir sürüm olarak durur; eski hallere <a href="https://github.com/' + escAttr(gh.cfg.repo) + '/commits" target="_blank" rel="noopener">GitHub\'daki geçmişten</a> ulaşabilirsin. ' +
+        'Anahtar ele geçerse GitHub\'da silip yenisini oluştur ve bağlantıyı yeniden gönder.</p>';
+    return h;
+  }
+  function ghAskHTML() {
+    const a = gh.ask, p = projects.find(x => x.id === a.pid), rem = gh.remote.get(a.pid) || {};
+    const who = rem.by || 'Bir ekip arkadaşın', when = rem.at ? fmtDate(rem.at) : '', name = p ? p.name : (rem.name || 'Proje');
+    let h = '';
+    if (a.kind === 'conflict') {
+      h += '<div class="team-card accent"><div><b>' + esc(who) + '</b>, "' + esc(name) + '" projesini sen son getirdikten sonra GitHub\'a kaydetmiş' + (when ? ' (' + esc(when) + ')' : '') + '.</div>' +
+          '<small>Senin değişikliklerin henüz kaydedilmedi. Hangisi kalsın?</small></div>' +
+        '<div class="gh-choices">' +
+          '<button class="team-space" type="button" data-gact="ask-pull">' + ICO_DOWN + '<span class="ts-txt"><b>Onun halini getir</b><small>Senin bu arada yaptığın değişiklikler bu cihazdan silinir.</small></span></button>' +
+          '<button class="team-space" type="button" data-gact="ask-overwrite">' + ICO_UP + '<span class="ts-txt"><b>Benimkini kaydet</b><small>Onun son kaydı GitHub geçmişinde kalır; gerekirse oradan geri alınır.</small></span></button>' +
+        '</div>' +
+        '<label class="opt bk-safe"><input type="checkbox" id="ghBackup" checked> Onun halini getirirsem önce benim halimin yedeğini indir</label>';
+    } else {
+      h += '<div class="team-card accent"><div>Sende "' + esc(name) + '" için GitHub\'a kaydedilmemiş değişiklikler var.</div>' +
+          '<small>GitHub\'daki hali' + (rem.by ? ' (' + esc(rem.by) + (when ? ', ' + esc(when) : '') + ')' : '') + ' getirirsen bu değişiklikler bu cihazdan silinir.</small></div>' +
+        '<label class="opt bk-safe"><input type="checkbox" id="ghBackup" checked> Önce benim halimin yedeğini indir</label>';
+    }
+    h += '<div class="modal-actions"><button class="modal-btn" type="button" data-gact="ask-cancel">Vazgeç</button>' +
+      (a.kind === 'pull' ? '<button class="modal-btn danger" type="button" data-gact="ask-pull">Yine de getir</button>' : '') + '</div>';
+    return h;
+  }
+
+  el('ghBody').addEventListener('click', async e => {
+    const b = e.target.closest('[data-gact]');
+    if (!b || b.disabled) return;
+    const act = b.dataset.gact, pid = b.dataset.pid;
+    if (act === 'settings') { gh.view = 'setup'; gh.msg = ''; gh.draft = null; ghRender(); }
+    else if (act === 'setup-cancel') { gh.invite = null; gh.msg = ''; gh.draft = null; gh.view = gh.cfg ? 'home' : 'setup'; ghRender(); gh.draft = null; if (gh.cfg) ghLoadList(); }
+    else if (act === 'forget') {
+      if (!confirm('GitHub bağlantısı bu cihazdan silinsin mi?\nProjelerin bu cihazda ve GitHub\'da kalır.')) return;
+      localSet('pref:github', null);
+      gh.cfg = null; gh.remote = new Map(); gh.listAt = 0; gh.view = 'setup';
+      ghSetMsg('GitHub bağlantısı bu cihazdan silindi.', 'ok'); ghIndicator();
+    }
+    else if (act === 'paste') {
+      const inv = ghDecodeInvite(el('ghPaste').value);
+      if (!inv || inv.bad) ghSetMsg('Bu bir White Note GitHub bağlantısı değil ya da eksik kopyalanmış.', 'err');
+      else { gh.invite = inv; gh.msg = ''; if (gh.draft) gh.draft.paste = ''; ghRender(); }
+    }
+    else if (act === 'reload') { gh.listErr = ''; gh.listAt = 0; ghRender(); ghLoadList(); }
+    else if (act === 'save') ghSaveFlow(pid);
+    else if (act === 'pull') ghPullFlow(pid);
+    else if (act === 'go') { switchProject(pid); closeGhPanel(); }
+    else if (act === 'remove') ghRemove(pid);
+    else if (act === 'copy') ghCopyInvite(b);
+    else if (act === 'share') ghShareInvite();
+    else if (act === 'ask-cancel') { gh.ask = null; gh.view = 'home'; ghRender(); ghLoadList(); }
+    else if (act === 'ask-pull') {
+      const a = gh.ask;
+      if (el('ghBackup') && el('ghBackup').checked) ghDownloadMine(a.pid);
+      gh.ask = null; gh.view = 'home'; ghRender();
+      await ghPullFlow(a.pid, true);
+    }
+    else if (act === 'ask-overwrite') {
+      const a = gh.ask, rem = gh.remote.get(a.pid);
+      gh.ask = null; gh.view = 'home'; ghRender();
+      await ghSaveFlow(a.pid, { overwrite: rem && rem.sha });
+    }
+  });
+  el('ghBody').addEventListener('submit', e => { e.preventDefault(); if (!gh.busy) ghConnect(); });
+  el('ghBody').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'ghPaste') { e.preventDefault(); el('ghBody').querySelector('[data-gact="paste"]').click(); } });
+  el('ghClose').addEventListener('click', closeGhPanel);
+  el('ghModal').addEventListener('click', e => { if (e.target === el('ghModal')) closeGhPanel(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && ghPanelOpen()) closeGhPanel(); });
+  el('ghBtn').addEventListener('click', () => openGhPanel());
+  window.addEventListener('hashchange', () => { const inv = ghReadHash(); if (inv) ghOpenInvite(inv); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ghAutoCheck(); });
+  setInterval(() => { if (document.visibilityState === 'visible') ghAutoCheck(); }, 60000);
+
+  /* Uygulama açılınca (startApp sonunda) çağrılır */
+  function ghStart() {
+    ghLoadCfg();
+    ghHook = { write: ghTouched, render: ghAfterRender };
+    gh.lastPid = activeProject;
+    ghIndicator();
+    const inv = ghReadHash();
+    if (inv) ghOpenInvite(inv);
+    else if (gh.cfg) setTimeout(() => ghAutoCheck(true), 500);
   }
 
   /* ---- UYGULAMAYI BAŞLAT ----
