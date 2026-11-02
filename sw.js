@@ -7,6 +7,7 @@
      böylece şema konsolu ve .db dışa aktarma internetsiz de çalışır.
    - Firebase kütüphanesi (ekip modu, internetten bir kez iner): aynı şekilde cihazda saklanır,
      böylece ekip alanı da internetsiz açılır.
+   Hatırlatma bildirimine dokununca uygulama öne gelir.
    Notların kendisi burada değil: kişisel alan tarayıcının yerel deposunda (localStorage),
    ekip alanı Firebase'in cihazdaki kopyasında (IndexedDB) durur.
    ========================================================================== */
@@ -27,6 +28,15 @@ self.addEventListener('activate', event => {
       .then(keys => Promise.all(keys.filter(k => k.startsWith('white-note-') && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
+});
+
+// Hatırlatma bildirimine dokununca uygulama öne gelir (kapalıysa açılır)
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    for (const c of list) if (c.url.indexOf(self.registration.scope) === 0 && 'focus' in c) return c.focus();
+    return self.clients.openWindow ? self.clients.openWindow('./') : null;
+  }));
 });
 
 function put(req, res) {
