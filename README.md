@@ -87,6 +87,11 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
 - **Gerçek SQLite motoru** (tarayıcıda, [sql.js](https://sql.js.org)):
   - "SQLite'ta dene" ile şemayı doğrulama
   - Konsol: veri ekle, sorgu yaz, sonuçları tablo olarak gör
+  - **Örnek veri ekle:** her tabloya 10 satır anlamlı Türkçe deneme verisi (ad, soyad, telefon,
+    e-posta, il/ilçe, tarih, fiyat, geçerli TC kimlik numarası…). Sütun adına, türüne ve CHECK
+    kısıtlarına göre üretilir; yabancı anahtarlar gerçek satırlara bağlanır, UNIQUE alanlar tekrar etmez.
+    **Verileri şemaya kaydet** ile konsolda eklenen satırlar şemanın "Ek SQL" kısmına `INSERT` olarak
+    yazılır (önce denenir; böylece `.db` indirince ve "SQLite'ta dene"de de gelir)
   - `.db` / `.sqlite` dosyası indirme
   - Var olan `.db` / `.sqlite` / `.sql` dosyasını içe aktarma
 - Geri al / yinele (Ctrl+Z / Ctrl+Y), ekrana sığdır, tabloya git
@@ -109,6 +114,16 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
   - `Tekrarla` … `tahmin = gizli olana kadar`
   - Numaralı biçim: `Adım 4: Eğer x > 0 ise Adım 6'ya git` · `Adım 7: Adım 3'e git`
   - İngilizce anahtar kelimeler de olur (`IF / ELSE / WHILE / FOR / INPUT / PRINT`)
+- **Python'dan şema:** kutuya Python kodu yapıştırınca önce Türkçe algoritmaya çevrilir, şema oradan çizilir
+  (**Python'dan çevir** ile çeviriyi önce görüp düzeltebilirsin). Kod çalıştırılmaz, sadece okunur.
+  - `input()` → `Oku` · `print()` → `Yaz` (f-string, `.format()`, `%` dahil) · `if/elif/else` · `while`
+  - `for i in range(...)` → `İçin` · `while True` + `break` → `Tekrarla … olana kadar`
+  - `break` / `continue` / `return` → `Adım N'e git` · `match/case` → `Eğer` zinciri
+  - `0 < x < 10` → `0 < x ve x < 10` · `x in (1, 2)` → `x = 1 veya x = 2` · `a, b = b, a` geçici değişkenle
+  - `def` ile yazılan fonksiyonlar çağrıldıkları yere açılır (`main()` dahil); tek satırlık
+    `return ifade` fonksiyonları ifadenin içine yazılır
+  - Listeler, sözlükler, sınıflar gibi akış şemasında karşılığı olmayan satırlar uyarıyla atlanır
+    ya da şekle olduğu gibi yazılır; uyarılar satır numarasıyla gösterilir
 - **Şemadan algoritma:** şema "Adım 1: Başla …" biçiminde numaralı adımlara çevrilir
   (kopyala / .txt indir); bu metin tekrar şemaya çevrilebilir
 - **Koda çevir:** şema **C#** (konsol uygulaması), **Python** ya da sözde koda çevrilir.
@@ -123,8 +138,8 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
 - Hata kontrolü: Başla yok, kararın iki çıkışı yok, bağlanmamış adım, ulaşılamayan adım…
 - **Yerleştir** (şekilleri akışa göre dizer, telefonda ekran genişliğine sığdırır), ekrana sığdır,
   geri al / yinele, PNG / SVG indirme
-- Hazır örnekler: toplam, büyük olanı bul, not harfi, faktöriyel, asal sayı, sayı tahmin oyunu
-  ve bu uygulamanın kendi çalışma akışı
+- Hazır örnekler: toplam, büyük olanı bul, not harfi, faktöriyel, asal sayı, sayı tahmin oyunu,
+  bu uygulamanın kendi çalışma akışı ve bir Python kodu (not ortalaması)
 
 ## Her yerde ara (Ctrl+K)
 
@@ -250,6 +265,12 @@ kayıtların artık o depoya gider. Bağlantıyı tanımadığın birinden aldı
 - **GitHub'a kaydet** açık projeyi depoya yazar. Commit mesajında kimin kaydettiği yazar
   (ör. "VetTakip · Ayşe kaydetti").
 - **Getir** depodaki hali bu cihaza alır. Proje kopyalanmaz, aynı proje güncellenir.
+- **Kendiliğinden kaydetme** (GitHub penceresinde, varsayılan olarak açık): GitHub'a bir kez kaydedilmiş
+  ya da oradan getirilmiş projede değişiklik yapınca, birkaç saniye yeni değişiklik gelmezse proje
+  kendiliğinden kaydedilir (art arda değişiklikler tek kayıtta gider; sekmeden çıkarken bekleyen kayıt
+  hemen yapılır). Bu arada başkası kaydetmişse üzerine **yazılmaz**: o projede kendiliğinden kaydetme durur
+  ve hangisinin kalacağı sorulur. Hiç kaydedilmemiş proje kendiliğinden gönderilmez. İnternet ya da GitHub
+  geçici olarak cevap vermezse sonra yeniden denenir. Ayar sadece o cihazda geçerlidir.
 - Sayfa açılınca, sekmeye dönünce ve dakikada bir depo kontrol edilir. Açık projede kaydedilmemiş
   değişikliğin yoksa yeni hal kendiliğinden gelir; varsa sadece haber verilir.
 - Sen getirdikten sonra başka biri kaydettiyse kaydın yapılmaz. Bunun yerine hangisinin kalacağı sorulur:
