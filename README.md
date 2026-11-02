@@ -199,8 +199,8 @@ Firebase kurmak istemeyen ekipler projeleri GitHub'daki **gizli bir depoda** pay
 depoda `projeler/<proje-kimliği>.json` dosyası olarak durur ve her kayıt bir sürüm (commit) olur, yani eski
 hallere GitHub'dan dönülebilir. Bu dosya normal bir JSON yedeğidir; **JSON yedeği yükle** ile de açılır.
 
-**Dışa / İçe aktar → GitHub ile paylaş** menüsünde iki düğme var: **Açık projeyi GitHub'a kaydet** ve
-**GitHub penceresi…**. Bağlandıktan sonra üst çubukta bir **GitHub** düğmesi de çıkar. Düğmedeki nokta açık
+Üst çubukta **Ekip**'in yanındaki **GitHub** düğmesi GitHub penceresini açar (bağlı değilken kurulumu,
+bağlıyken açık projeyi kaydetme / getirme ve depodaki projeleri). Bağlandıktan sonra düğmedeki nokta açık
 projenin durumunu gösterir:
 
 - yeşil: GitHub'daki hal ile aynı
@@ -219,7 +219,7 @@ projenin durumunu gösterir:
    
    Çıkan `github_pat_…` anahtarını kopyala. Klasik anahtar (`ghp_…`) kabul edilmez: klasik anahtar
    sahibinin bütün depolarına erişir ve bağlantıyla dağıtılınca hepsi açığa çıkar.
-3. White Note'ta **GitHub penceresi…**'ni aç. Depo adını, anahtarı ve adını yaz, **Bağlan**'a bas.
+3. White Note'ta üst çubuktaki **GitHub** düğmesine bas. Depo adını, anahtarı ve adını yaz, **Bağlan**'a bas.
 4. Açık projeyi **GitHub'a kaydet** ile ilk kez depoya yaz.
 
 ### Ekip arkadaşlarını ekleme
