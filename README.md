@@ -12,10 +12,25 @@ Telefona ya da bilgisayara **uygulama olarak yüklenebilir** ve internetsiz de a
 
 "Mühendislik defteri" fikriyle tasarlandı: beyaz sayfalar, tükenmez kalem mavisi, Şema ve Akış'ta
 kareli kâğıt zemin. Açık proje, seçili görünüm, arama eşleşmeleri, takvimde bugün ve çalışan adım
-fosforlu kalem sarısıyla işaretlenir. Gece görünümü lacivert "mavi kopya" (blueprint) zeminidir;
-ilk açılışta cihazın gece / gündüz ayarına uyar, ay / güneş düğmesiyle değiştirilir.
+fosforlu kalem sarısıyla işaretlenir.
 Telefonda görünümler ekranın altındaki sekme çubuğundadır; pencereler ve Şema / Akış'ın **Dosya** menüsü
 alttan açılır, kısa bildirimler ("dizildi · Geri al" gibi) ekranın altında görünür.
+
+### Temalar
+
+Üst çubuktaki palet düğmesi tema menüsünü açar. Seçim o cihazda hatırlanır ve JSON yedeğine de yazılır.
+
+| Tema | Görünüş |
+| --- | --- |
+| Otomatik | Cihazın gece / gündüz ayarına uyar; ayar değişince kendiliğinden değişir (ilk açılışta bu seçili) |
+| Gündüz | Beyaz sayfa, tükenmez kalem mavisi |
+| Kâğıt | Krem rengi defter sayfası, kahverengi mürekkep; göz yormaz |
+| Gece mavisi | Lacivert "mavi kopya" (blueprint) zemin |
+| Gece siyahı | Mavisiz, nötr koyu gri ve siyah; OLED ekranlarda pil dostu |
+| Kara tahta | Koyu yeşil tahta, tebeşir beyazı yazı, sarı tebeşir işaret |
+
+Bütün temalarda yerleşim ve yazı boyutları aynıdır; sadece renkler değişir. Koyu temalarda seçili
+sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant çizilmez, yazı her zaman okunur).
 
 ## Görünümler
 
