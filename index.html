@@ -30,6 +30,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="White Note">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<!-- Yazı tipi sayfayla birlikte hemen insin: yoksa sayfa önce sistem yazı tipiyle açılıp yazı tipi
+     gelince üstteki yazılar bir an büyüyüp küçülüyordu. (Sadece site adresinden açılınca; dosyadan
+     açılan sayfada tarayıcı bu erken indirmeye izin vermez, yazı tipi yine normal yoldan yüklenir.) -->
+<script>
+  if (/^https?:$/.test(location.protocol)) ['recursive-latin', 'recursive-latin-ext'].forEach(function (f) {
+    var l = document.createElement('link');
+    l.rel = 'preload'; l.as = 'font'; l.type = 'font/woff2'; l.crossOrigin = 'anonymous'; l.href = 'fonts/' + f + '.woff2';
+    document.head.appendChild(l);
+  });
+</script>
 
 <style>
   /* ===================================================================
@@ -141,6 +151,83 @@
     --fl-proc-bg: #12223D;  --fl-proc-bd: #95A5C2;
     --fl-dec-bg: #3A3213;   --fl-dec-bd: #EBC94A;
     --fl-loop-bg: #2B1E4D;  --fl-loop-bd: #B590F5;
+  }
+
+  /* ---------- EK TEMALAR ----------
+     Tema menüsünden seçilir (body'nin data-theme değeri). Koyu olanlar ayrıca "dark" sınıfını da
+     alır; böylece gece görünümüne özel kurallar (aşağıdaki body.dark ...) onlarda da geçerli olur.
+     Sadece renk değişkenleri değişir; yerleşim ve yazı boyutları bütün temalarda aynıdır. */
+
+  /* KÂĞIT: sıcak, krem rengi defter sayfası; kahverengi mürekkep, kiremit vurgu */
+  body[data-theme="sepia"] {
+    color-scheme: light;
+    --bg: #EFE6D6;  --paper: #FBF6EC;  --paper-2: #F4ECDD;  --col-bg: #E7DCC8;  --canvas: #FCF8F0;
+    --ink: #2A1F14;  --ink-2: #4A3A2A;  --muted: #6E5C48;  --line: #E3D6C1;  --line-2: #D2C1A6;
+    --accent: #9C3D1C;  --accent-2: #7D2F14;  --accent-soft: #F5E2D3;  --on-accent: #FFFFFF;
+    --hl: #FFD84A;  --hl-ink: #2A1F14;
+    --green: #3B7A35;   --green-soft: #E2EDD6;  --on-green: #FFFFFF;
+    --danger: #B0281A;  --danger-soft: #F7DFD9;
+    --warn: #855600;    --warn-soft: #F5E6C4;
+    --grid: rgba(156, 61, 28, 0.07);  --grid-2: rgba(156, 61, 28, 0.13);
+    --side-bg: #FBF6EC;  --scrim: rgba(42, 31, 20, 0.42);
+    --shadow-1: 0 1px 2px rgba(42, 31, 20, 0.07);
+    --shadow-2: 0 2px 6px rgba(42, 31, 20, 0.07), 0 14px 32px -10px rgba(42, 31, 20, 0.24);
+    --shadow-3: 0 28px 70px -16px rgba(42, 31, 20, 0.42);
+    --pk: #8A6700; --fk: #9C3D1C; --uq: #2E6F68;
+    --search-ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='7' cy='7' r='4.6' fill='none' stroke='%236E5C48' stroke-width='1.5'/%3E%3Cpath d='M10.5 10.5L14 14' stroke='%236E5C48' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    --fl-term-bg: #F5E2D3;  --fl-term-bd: #9C3D1C;
+    --fl-io-bg: #DDEDE9;    --fl-io-bd: #2E6F68;
+    --fl-proc-bg: #FFFDF8;  --fl-proc-bd: #6E5C48;
+    --fl-dec-bg: #FBEFC4;   --fl-dec-bd: #A67C00;
+    --fl-loop-bg: #EEE2F2;  --fl-loop-bd: #7B4A8E;
+  }
+
+  /* GECE SİYAHI: mavisiz, nötr koyu gri ve siyah (OLED ekranlarda pil dostu) */
+  body[data-theme="black"] {
+    color-scheme: dark;
+    --bg: #0B0C0E;  --paper: #16181C;  --paper-2: #1D2025;  --col-bg: #121418;  --canvas: #0F1114;
+    --ink: #E8EAED;  --ink-2: #C8CCD2;  --muted: #9AA0A8;  --line: #262A30;  --line-2: #383D45;
+    --accent: #8AB4F8;  --accent-2: #B0CCFB;  --accent-soft: #1C2533;  --on-accent: #0B0C0E;
+    --hl: #FFD54F;  --hl-ink: #17140A;
+    --green: #81C995;   --green-soft: #15291C;  --on-green: #0B0C0E;
+    --danger: #F28B82;  --danger-soft: #3A1F1E;
+    --warn: #FDD663;    --warn-soft: #362E14;
+    --grid: rgba(232, 234, 237, 0.05);  --grid-2: rgba(232, 234, 237, 0.10);
+    --side-bg: #111316;  --scrim: rgba(0, 0, 0, 0.66);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.35), 0 14px 32px -10px rgba(0, 0, 0, 0.7);
+    --shadow-3: 0 28px 70px -16px rgba(0, 0, 0, 0.8);
+    --pk: #8A6700; --fk: #4A78E0; --uq: #0E7C86;
+    --search-ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='7' cy='7' r='4.6' fill='none' stroke='%239AA0A8' stroke-width='1.5'/%3E%3Cpath d='M10.5 10.5L14 14' stroke='%239AA0A8' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    --fl-term-bg: #1C2533;  --fl-term-bd: #8AB4F8;
+    --fl-io-bg: #0E2E30;    --fl-io-bd: #4FC6CF;
+    --fl-proc-bg: #16181C;  --fl-proc-bd: #9AA0A8;
+    --fl-dec-bg: #372F12;   --fl-dec-bd: #EBC94A;
+    --fl-loop-bg: #281F3D;  --fl-loop-bd: #B590F5;
+  }
+
+  /* KARA TAHTA: koyu yeşil tahta, tebeşir beyazı yazı, sarı tebeşir işaret */
+  body[data-theme="chalk"] {
+    color-scheme: dark;
+    --bg: #13221B;  --paper: #1A2D24;  --paper-2: #21372C;  --col-bg: #172920;  --canvas: #16271F;
+    --ink: #EEF2EA;  --ink-2: #D2DCCF;  --muted: #A2B3A5;  --line: #2A4235;  --line-2: #3A5646;
+    --accent: #9DD3EA;  --accent-2: #C2E5F3;  --accent-soft: #213E3C;  --on-accent: #13221B;
+    --hl: #F4D35E;  --hl-ink: #13221B;
+    --green: #9EE09E;   --green-soft: #1D3A25;  --on-green: #13221B;
+    --danger: #FF9C8F;  --danger-soft: #42241F;
+    --warn: #F6C76E;    --warn-soft: #3B3118;
+    --grid: rgba(238, 242, 234, 0.06);  --grid-2: rgba(238, 242, 234, 0.12);
+    --side-bg: #15261E;  --scrim: rgba(4, 10, 7, 0.62);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.25);
+    --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.3), 0 14px 32px -10px rgba(0, 0, 0, 0.6);
+    --shadow-3: 0 28px 70px -16px rgba(0, 0, 0, 0.75);
+    --pk: #8A6700; --fk: #3B8FB3; --uq: #2A8A7C;
+    --search-ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='7' cy='7' r='4.6' fill='none' stroke='%23A2B3A5' stroke-width='1.5'/%3E%3Cpath d='M10.5 10.5L14 14' stroke='%23A2B3A5' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    --fl-term-bg: #213E3C;  --fl-term-bd: #9DD3EA;
+    --fl-io-bg: #153832;    --fl-io-bd: #6FD3C2;
+    --fl-proc-bg: #1A2D24;  --fl-proc-bd: #A2B3A5;
+    --fl-dec-bg: #3A3315;   --fl-dec-bd: #F4D35E;
+    --fl-loop-bg: #2D2943;  --fl-loop-bd: #C3A6F5;
   }
 
   /* Dokunmatik ekranda düğmeler parmağa göre büyür */
@@ -393,6 +480,22 @@
   /* Telefonda Şema / Akış "Dosya" menüsü açıkken arkadaki örtü (dokununca menü kapanır) */
   .menu-scrim { position: fixed; inset: 0; z-index: 90; background: var(--scrim); }
 
+  /* TEMA MENÜSÜ: üst çubuktaki tema düğmesine basınca açılır; her temanın küçük renk örneği var */
+  .theme-wrap { position: relative; flex-shrink: 0; }
+  .theme-menu { width: 290px; max-width: calc(100vw - 1.5rem); }
+  .theme-menu button { gap: 0.65rem; min-height: 46px; padding: 0.3rem 0.6rem; }
+  .theme-menu button[aria-checked="true"] { background: var(--accent-soft); }
+  .th-sw {
+    width: 34px; height: 24px; flex-shrink: 0; border-radius: 6px; overflow: hidden;
+    display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; box-shadow: 0 0 0 1px var(--line-2);
+  }
+  .th-sw i { display: block; }
+  .th-txt { flex: 1; min-width: 0; display: grid; line-height: 1.25; }
+  .th-txt b { font-weight: 600; font-size: 0.875rem; }
+  .th-txt small { font-size: 0.72rem; color: var(--muted); }
+  .th-check { width: 16px; height: 16px; color: var(--accent); visibility: hidden; }
+  .theme-menu button[aria-checked="true"] .th-check { visibility: visible; }
+
   /* GÖRÜNÜM SEKMELERİ (Liste / Pano / Şema / Akış / Takvim).
      Masaüstünde başlığın altında sekme şeridi; telefonda ekranın altında sekme çubuğu. */
   .view-toggle {
@@ -408,8 +511,14 @@
   .view-toggle button:hover { color: var(--ink); }
   .view-toggle button.sel { color: var(--ink); }
   .view-toggle button.sel::after { content: ""; position: absolute; left: 0.5rem; right: 0.5rem; bottom: -1px; height: 2px; background: var(--ink); border-radius: 2px; }
-  /* Seçili sekmenin adının altı fosforlu kalemle çizilmiş gibi */
-  .view-toggle button.sel span { background: linear-gradient(transparent 58%, var(--hl) 58%, var(--hl) 92%, transparent 92%); padding: 0 0.1em; }
+  /* Seçili sekmenin adının altı fosforlu kalemle çizilmiş gibi. Kenar boşluğu bütün sekmelerde aynı:
+     önceden sadece seçili sekmede vardı, sekme değişince yazılar birkaç piksel kayıyordu. */
+  .view-toggle button span { padding: 0 0.1em; }
+  .view-toggle button.sel span { background: linear-gradient(transparent 58%, var(--hl) 58%, var(--hl) 92%, transparent 92%); }
+  /* Koyu temalarda açık renk yazının alt yarısı sarı bandın üstünde okunmuyordu:
+     seçili sekme sarı alt çizgiyle belli olur, yazı her zaman okunur. */
+  body.dark .view-toggle button.sel span { background: none; }
+  body.dark .view-toggle button.sel::after { background: var(--hl); height: 3px; bottom: -2px; }
 
   /* Görünüme göre gizlenenler (body'deki sınıfa bakar) */
   body.view-board .content { display: none; }
@@ -1573,7 +1682,7 @@
     .view-toggle button svg { width: 46px; height: 28px; padding: 5px 14px; border-radius: 999px; }
     .view-toggle button.sel svg { background: var(--hl); color: var(--hl-ink); }
     .view-toggle button.sel::after { display: none; }
-    .view-toggle button.sel span { background: none; padding: 0; }
+    .view-toggle button span, .view-toggle button.sel span { background: none; padding: 0; }
 
     /* Telefonda bildirim ekran genişliğinde; uzun mesaj "…" ile kesilmez, en çok üç satıra sarılır */
     .snack { left: 0.75rem; right: 0.75rem; max-width: none; transform: translate(0, 14px); bottom: calc(74px + env(safe-area-inset-bottom, 0px)); font-size: 0.875rem; }
@@ -1725,8 +1834,11 @@
           </button>
           <!-- Tüm projelerde ara (Ctrl+K); masaüstünde aynı düğme kenar çubuğunda -->
           <button class="theme-btn gs-top" id="gsBtn" aria-label="Tüm projelerde ara" title="Tüm projelerde ara (Ctrl+K)"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
-          <!-- Gece / gündüz görünümü (simgeyi JS yazar) -->
-          <button class="theme-btn" id="themeBtn" aria-label="Gece / gündüz görünümü" title="Gece / gündüz görünümü"></button>
+          <!-- Görünüm (tema): basınca tema menüsü açılır (simgeyi ve menüyü JS yazar) -->
+          <div class="theme-wrap">
+            <button class="theme-btn" id="themeBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="themeMenu" aria-label="Görünüm (tema)" title="Görünüm (tema)"></button>
+            <div class="menu theme-menu" id="themeMenu" role="menu" aria-label="Görünüm"></div>
+          </div>
           <!-- Dışa/içe aktarma menüsü -->
           <div class="export-wrap">
             <button class="export-btn" id="export" aria-haspopup="true" aria-label="Dışa / İçe aktar" title="Dışa / İçe aktar, yedek, uygulama olarak yükle"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.5v9.5M2.5 9.5 5 12l2.5-2.5M11 13.5V4M8.5 6.5 11 4l2.5 2.5"/></svg><span class="export-label">Dışa / İçe aktar</span><svg class="ico chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 6.5 8 10l3.5-3.5"/></svg></button>
@@ -1783,7 +1895,7 @@
             <input class="c-title" id="cTitle" type="text" placeholder="Yeni not başlığı" maxlength="120" aria-label="Yeni not ya da görev başlığı">
             <!-- Dar ekranda bu kısım başlığa dokununca açılır -->
             <div class="c-more">
-            <textarea id="cBody" placeholder="İçerik... Markdown: **kalın**, -&nbsp;madde, -&nbsp;[&nbsp;]&nbsp;yapılacak"></textarea>
+            <textarea id="cBody" placeholder="İçerik... Markdown: **kalın**, -&#8288;&nbsp;madde, -&#8288;&nbsp;[&nbsp;]&nbsp;yapılacak"></textarea>
             <div class="md-tools" data-mdfor="cBody" role="toolbar" aria-label="Biçimlendirme">
               <button type="button" data-md="bold" title="Kalın (**metin**)"><b>B</b></button>
               <button type="button" data-md="italic" title="İtalik (*metin*)"><i>I</i></button>
@@ -2025,7 +2137,7 @@
           <button type="button" class="md-preview-btn" id="modalPreviewBtn" title="Önizleme ile düzenleme arasında geç">Önizle</button>
         </span>
       </div>
-      <textarea class="modal-desc" id="modalDesc" placeholder="Daha ayrıntılı bir açıklama ekle... Markdown: **kalın**, -&nbsp;madde, -&nbsp;[&nbsp;]&nbsp;yapılacak"></textarea>
+      <textarea class="modal-desc" id="modalDesc" placeholder="Daha ayrıntılı bir açıklama ekle... Markdown: **kalın**, -&#8288;&nbsp;madde, -&#8288;&nbsp;[&nbsp;]&nbsp;yapılacak"></textarea>
       <div class="modal-desc md md-preview" id="modalPreview" style="display:none"></div>
 
       <div class="modal-section-label">Etiketler (virgülle ayır)</div>
@@ -10403,8 +10515,8 @@
   /* JSON YEDEĞİ İNDİR:
      Tüm projeleri, öğeleri ve TEMA tercihini tek bir JSON dosyasına yazar (tam yedek). */
   function exportJSON() {
-    // O anki tema: body'de "dark" sınıfı varsa karanlık, yoksa açık
-    const theme = document.body.classList.contains('dark') ? 'dark' : 'light';
+    // Seçili tema (ör. "dark", "sepia" ya da cihaza göre: "auto")
+    const theme = themePref;
     const data = { version: 5, exported: Date.now(), theme: theme, projects: projects, columns: columns, items: items,
                    dbTables: dbTables, dbLinks: dbLinks, dbSettings: Object.values(dbSettings),
                    flowCharts: flowCharts, flowNodes: flowNodes, flowEdges: flowEdges, flSettings: Object.values(flSettings) };
@@ -10686,12 +10798,8 @@
     await migrateItemsToColumns();
 
     // Yedekte tema bilgisi varsa onu uygula ve kaydet.
-    // (Eski yedeklerde theme alanı olmayabilir; o zaman tema değişmez.)
-    if (data.theme === 'dark' || data.theme === 'light') {
-      const dark = (data.theme === 'dark');
-      applyTheme(dark);
-      if (storageOK) await sSet('pref:theme', data.theme);
-    }
+    // (Eski yedeklerde theme alanı olmayabilir ya da tanınmayan bir tema olabilir; o zaman tema değişmez.)
+    if (typeof data.theme === 'string' && themeOk(data.theme)) await setThemePref(data.theme);
 
     // Eski verinin geri alma geçmişi yeni veriye uygulanmasın
     for (const k in erHistory) delete erHistory[k];
@@ -11040,35 +11148,105 @@
     e.target.value = ''; // aynı dosya tekrar seçilebilsin diye sıfırla
   });
 
-  /* ---- KARANLIK / AÇIK TEMA ----
-     Düğmeye basınca body'ye "dark" sınıfı eklenir/çıkar. Tüm renkler CSS
-     değişkenlerine bağlı olduğu için arayüz topluca değişir.
-     Seçim depoya kaydedilir, böylece sonraki açılışta hatırlanır. */
-  const ICO_SUN = '<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="2.9"/><path d="M8 1.6v1.5M8 12.9v1.5M1.6 8h1.5M12.9 8h1.5M3.5 3.5l1 1M11.5 11.5l1 1M3.5 12.5l1-1M11.5 4.5l1-1"/></svg>';
-  const ICO_MOON = '<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M13.3 9.7A5.6 5.6 0 0 1 6.3 2.7a5.6 5.6 0 1 0 7 7z"/></svg>';
-  function applyTheme(dark) {
-    document.body.classList.toggle('dark', dark);
-    // Gecede güneş (gündüze dön), gündüzde ay (geceye geç) simgesi
-    el('themeBtn').innerHTML = dark ? ICO_SUN : ICO_MOON;
-    el('themeBtn').title = dark ? 'Gündüz görünümüne geç' : 'Gece görünümüne geç';
-    el('themeColor').setAttribute('content', dark ? '#0B1628' : '#EDF1F7'); // telefonda tarayıcı çubuğu rengi
-  }
+  /* ---- GÖRÜNÜM (TEMA) ----
+     Tema düğmesi bir menü açar. Seçilen tema body'ye data-theme olarak yazılır; koyu temalar ayrıca
+     "dark" sınıfını alır (gece görünümüne özel kurallar onlarda da geçerli olsun diye). Bütün renkler
+     CSS değişkenlerine bağlı olduğu için arayüz topluca değişir. Seçim bu cihazda saklanır
+     ("pref:theme"); "Otomatik" cihazın gece / gündüz ayarına uyar ve o ayar değişince kendiliğinden değişir. */
+  const ICO_PALETTE = '<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.8a6.2 6.2 0 1 0 0 12.4c.95 0 1.45-.75 1.1-1.55-.35-.8.2-1.6 1.1-1.6h1.6a2.4 2.4 0 0 0 2.4-2.4C14.2 4.85 11.4 1.8 8 1.8z"/><circle cx="4.9" cy="7.4" r=".85" fill="currentColor" stroke="none"/><circle cx="7.3" cy="4.7" r=".85" fill="currentColor" stroke="none"/><circle cx="10.5" cy="5.4" r=".85" fill="currentColor" stroke="none"/></svg>';
+  const ICO_CHECK = '<svg class="th-check" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>';
+  /* sw: menüdeki renk örneği [zemin, sayfa, vurgu, fosforlu kalem]; bar: telefonda tarayıcı çubuğunun rengi */
+  const THEMES = [
+    { id: 'auto',  name: 'Otomatik',    note: 'Cihaza göre gündüz ya da gece', sw: ['#EDF1F7', '#0B1628', '#2747C9', '#8FA8FF'] },
+    { id: 'light', name: 'Gündüz',      note: 'Beyaz sayfa, mavi mürekkep',  dark: false, bar: '#EDF1F7', sw: ['#EDF1F7', '#FFFFFF', '#2747C9', '#FFE45C'] },
+    { id: 'sepia', name: 'Kâğıt',       note: 'Krem defter, göz yormaz', dark: false, bar: '#EFE6D6', sw: ['#EFE6D6', '#FBF6EC', '#9C3D1C', '#FFD84A'] },
+    { id: 'dark',  name: 'Gece mavisi', note: 'Lacivert mavi kopya',         dark: true,  bar: '#0B1628', sw: ['#0B1628', '#12223D', '#8FA8FF', '#FFE45C'] },
+    { id: 'black', name: 'Gece siyahı', note: 'Mavisiz koyu gri ve siyah',   dark: true,  bar: '#0B0C0E', sw: ['#0B0C0E', '#16181C', '#8AB4F8', '#FFD54F'] },
+    { id: 'chalk', name: 'Kara tahta',  note: 'Yeşil tahta, tebeşir yazı',   dark: true,  bar: '#13221B', sw: ['#13221B', '#1A2D24', '#9DD3EA', '#F4D35E'] }
+  ];
+  const themeById = id => THEMES.find(t => t.id === id && t.id !== 'auto');
+  const themeOk = id => id === 'auto' || !!themeById(id);
+  const sysDark = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
+  let themePref = 'auto';   // kullanıcının seçimi: tema kimliği ya da 'auto'
 
-  async function toggleTheme() {
-    const dark = !document.body.classList.contains('dark');
-    applyTheme(dark);
-    if (storageOK) await sSet('pref:theme', dark ? 'dark' : 'light');
+  /* Seçimden ekranda kullanılacak temayı bulur (eski true / false değerleri: gece / gündüz) */
+  function resolveTheme(pref) {
+    if (pref === true) return 'dark';
+    if (pref === false) return 'light';
+    return themeById(pref) ? pref : (sysDark && sysDark.matches ? 'dark' : 'light');
   }
-
+  /* Temayı ekrana uygular (kaydetmez) */
+  function applyTheme(pref) {
+    const id = resolveTheme(pref), t = themeById(id);
+    document.body.classList.toggle('dark', !!t.dark);
+    if (id === 'light' || id === 'dark') document.body.removeAttribute('data-theme');
+    else document.body.dataset.theme = id;
+    el('themeBtn').innerHTML = ICO_PALETTE;
+    el('themeBtn').title = 'Görünüm: ' + (themePref === 'auto' ? 'Otomatik (' + t.name + ')' : t.name);
+    el('themeColor').setAttribute('content', t.bar);   // telefonda tarayıcı çubuğu rengi
+    if (themeMenuOpen()) renderThemeMenu();
+  }
+  async function setThemePref(id) {
+    themePref = themeOk(id) ? id : 'auto';
+    applyTheme(themePref);
+    if (storageOK) await sSet('pref:theme', themePref);
+  }
   async function loadTheme() {
     // Kayıtlı tercih yoksa cihazın ayarına uy (telefon gece modundaysa gece görünümü)
-    let dark = !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
     const saved = await sGet('pref:theme');
-    if (saved && saved.value) {
-      dark = (saved.value === 'dark');
-    }
-    applyTheme(dark);
+    const v = saved && saved.value;
+    themePref = themeOk(v) ? v : 'auto';
+    applyTheme(themePref);
   }
+  if (sysDark) {
+    const onSys = () => { if (themePref === 'auto') applyTheme('auto'); };
+    if (sysDark.addEventListener) sysDark.addEventListener('change', onSys); else if (sysDark.addListener) sysDark.addListener(onSys);
+  }
+
+  /* Tema menüsü */
+  function themeMenuOpen() { return el('themeMenu').classList.contains('open'); }
+  function renderThemeMenu() {
+    el('themeMenu').innerHTML = '<div class="menu-group-label">Görünüm</div>' + THEMES.map(t =>
+      '<button type="button" role="menuitemradio" aria-checked="' + (themePref === t.id) + '" data-theme-id="' + t.id + '">' +
+        '<span class="th-sw" aria-hidden="true">' + t.sw.map(c => '<i style="background:' + c + '"></i>').join('') + '</span>' +
+        '<span class="th-txt"><b>' + t.name + '</b><small>' + t.note + '</small></span>' + ICO_CHECK +
+      '</button>').join('');
+  }
+  function openThemeMenu() {
+    closeExportMenu();
+    renderThemeMenu();
+    el('themeMenu').classList.add('open');
+    el('themeBtn').setAttribute('aria-expanded', 'true');
+    const cur = el('themeMenu').querySelector('[aria-checked="true"]') || el('themeMenu').querySelector('button');
+    if (cur) cur.focus();
+  }
+  function closeThemeMenu() {
+    if (!themeMenuOpen()) return;
+    el('themeMenu').classList.remove('open');
+    el('themeBtn').setAttribute('aria-expanded', 'false');
+  }
+  el('themeBtn').addEventListener('click', e => { e.stopPropagation(); if (themeMenuOpen()) closeThemeMenu(); else openThemeMenu(); });
+  el('themeMenu').addEventListener('click', e => {
+    const b = e.target.closest('[data-theme-id]');
+    if (!b) return;
+    setThemePref(b.dataset.themeId);
+    closeThemeMenu();
+    el('themeBtn').focus();
+  });
+  // Klavye: yukarı / aşağı ok ile gez, Esc ile kapat
+  el('themeMenu').addEventListener('keydown', e => {
+    const bs = [...el('themeMenu').querySelectorAll('button')], i = bs.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const n = bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length];
+      if (n) n.focus();
+    } else if (e.key === 'Escape') {
+      e.preventDefault(); e.stopPropagation();
+      closeThemeMenu(); el('themeBtn').focus();
+    } else if (e.key === 'Tab') closeThemeMenu();
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('.theme-wrap')) closeThemeMenu(); });
+  el('export').addEventListener('click', closeThemeMenu);   // dışa aktarma menüsü açılırken tema menüsü kapansın
 
   /* Kayıtlı görünüm tercihini (liste/pano/şema) yükler; yoksa liste açılır. */
   async function loadView() {
@@ -11080,7 +11258,6 @@
     await setView(view);
   }
 
-  el('themeBtn').addEventListener('click', toggleTheme);
 
   /* ===================================================================
      EKİP MODU (Firebase)
