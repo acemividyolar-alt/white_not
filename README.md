@@ -16,6 +16,11 @@ fosforlu kalem sarısıyla işaretlenir.
 Telefonda görünümler ekranın altındaki sekme çubuğundadır; pencereler ve Şema / Akış'ın **Dosya** menüsü
 alttan açılır, kısa bildirimler ("dizildi · Geri al" gibi) ekranın altında görünür.
 
+Bilgisayarda başlık, sekmeler, arama ve içerik **her görünümde aynı genişlikte ve aynı yerde** durur;
+Liste, Pano, Şema, Akış ve Takvim arasında geçince hiçbir şey kaymaz (Windows'ta kaydırma çubuğu çıksa
+da). Çok geniş ekranlarda (1600 pikselden geniş içerik alanı) sayfa ortalanır. Sayfa açılırken de en son
+tema, görünüm ve proje baştan doğru çizilir; açılışta yazılar büyüyüp küçülmez.
+
 ### Temalar
 
 Üst çubuktaki palet düğmesi tema menüsünü açar. Seçim o cihazda hatırlanır ve JSON yedeğine de yazılır.
@@ -251,6 +256,10 @@ kayıtların artık o depoya gider. Bağlantıyı tanımadığın birinden aldı
   (bkz. GitHub ile paylaşma).
 - Tarayıcılar bu alana sınır koyar (çoğunda yaklaşık 5 MB). Kapak resimleri bu yüzden
   otomatik küçültülür; kullanılan alan liste görünümünün altında görünür.
+- Sayfa yeniden açılınca **en son çalıştığın proje** açılır (kişisel alan ve her ekip ayrı hatırlanır).
+- Uygulama aynı bilgisayarda **iki sekmede** (ya da sekme + yüklü uygulama) açıksa, birinde yapılan
+  değişiklik birkaç saniye içinde öbürüne de gelir. O sırada öbür sekmede bir pencere açıksa ya da
+  bir şey düzenleniyorsa, iş bitince getirilir.
 - Başka cihaza taşımak ya da yedeklemek için: **Dışa / İçe aktar → JSON yedeği indir / yükle**.
   Yüklerken iki seçenek var: **Mevcutlara ekle** (projeleri tek tek seçip ekler; hiçbir kaydın üstüne
   yazmaz, aynı ada "(2)" ekler) ya da **Hepsini değiştir** (önce şu anki verinin yedeği indirilir).
