@@ -200,6 +200,9 @@
   .er-btn.primary:hover:not(:disabled), .modal-btn.primary:hover:not(:disabled) { background: var(--accent-2); border-color: var(--accent-2); }
   .er-btn.dark { background: var(--ink); border-color: var(--ink); color: var(--paper); }
   .er-btn.dark:hover:not(:disabled) { background: var(--ink-2); border-color: var(--ink-2); }
+  /* Gece görünümünde "SQL" ve "Algoritma" düğmeleri beyaz bir blok gibi parlamasın: vurgulu ama temaya uygun */
+  body.dark .er-btn.dark { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 55%, var(--line-2)); color: var(--ink); }
+  body.dark .er-btn.dark:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 24%, var(--paper)); border-color: var(--accent); color: var(--ink); }
   .modal-btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
   .modal-btn.danger:hover:not(:disabled) { background: var(--danger-soft); border-color: var(--danger); }
   .er-btn.icon { width: var(--ctl-h); padding: 0; font-size: 1rem; }
@@ -337,7 +340,10 @@
 
   /* ---------- ANA ALAN (sağ taraf) ---------- */
   .main { flex: 1; min-width: 0; overflow-y: auto; padding: 0 2.25rem 2rem; }
-  .max { max-width: 1120px; margin: 0 auto; width: 100%; }
+  /* Başlık ve sekmeler her görünümde aynı yerde durur: Liste ya da Takvim'e geçince sağa kaymaz.
+     Sadece liste görünümünün içeriği okunaklı bir genişlikte kalır (geniş ekranda soldan hizalı). */
+  .max { margin: 0 auto; width: 100%; }
+  .content, body:not(.view-board) .search { max-width: 1240px; }
 
   /* Üst şerit: proje adı + ara / tema / dışa aktar. Kaydırırken üstte kalır. */
   .topbar {
@@ -557,6 +563,8 @@
     position: relative;      /* Sütunun üstündeki renk şeridi ve menü için */
   }
   .column-color-bar { height: 4px; margin: 0 0.9rem; border-radius: 0 0 4px 4px; background: var(--accent); }
+  /* Gece görünümünde sütun zemini sayfaya çok yakın: ince bir çerçeve sütunları belli eder (bilgisayar ekranında kayboluyordu) */
+  body.dark .column { box-shadow: inset 0 0 0 1px var(--line); }
 
   /* Sütun başlığı aynı zamanda "tutma yeri"dir: buradan sürükleyince sütunun yeri değişir.
      touch-action:none -> telefonda parmakla sürüklerken sayfa kaymasın. */
@@ -1351,6 +1359,8 @@
   .ws-chip-txt b, .ws-chip-txt small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ws-chip-txt b { font-size: 0.875rem; font-weight: 680; }
   .ws-chip-txt small { font-size: 0.75rem; color: var(--muted); }
+  /* Alt satır ("Sadece bu cihazda · ekip kur ya da katıl") kesilmesin: gerekirse iki satıra iner */
+  .ws-chip-txt small { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
   .ws-chev { width: 14px; height: 14px; color: var(--muted); }
   .proj-people { display: inline-flex; }
   .proj-people .av { margin-left: -5px; box-shadow: 0 0 0 1.5px var(--side-bg); }
@@ -1773,7 +1783,7 @@
             <input class="c-title" id="cTitle" type="text" placeholder="Yeni not başlığı" maxlength="120" aria-label="Yeni not ya da görev başlığı">
             <!-- Dar ekranda bu kısım başlığa dokununca açılır -->
             <div class="c-more">
-            <textarea id="cBody" placeholder="İçerik... Markdown: **kalın**, - madde, - [ ] yapılacak"></textarea>
+            <textarea id="cBody" placeholder="İçerik... Markdown: **kalın**, -&nbsp;madde, -&nbsp;[&nbsp;]&nbsp;yapılacak"></textarea>
             <div class="md-tools" data-mdfor="cBody" role="toolbar" aria-label="Biçimlendirme">
               <button type="button" data-md="bold" title="Kalın (**metin**)"><b>B</b></button>
               <button type="button" data-md="italic" title="İtalik (*metin*)"><i>I</i></button>
@@ -2015,7 +2025,7 @@
           <button type="button" class="md-preview-btn" id="modalPreviewBtn" title="Önizleme ile düzenleme arasında geç">Önizle</button>
         </span>
       </div>
-      <textarea class="modal-desc" id="modalDesc" placeholder="Daha ayrıntılı bir açıklama ekle... Markdown: **kalın**, - madde, - [ ] yapılacak"></textarea>
+      <textarea class="modal-desc" id="modalDesc" placeholder="Daha ayrıntılı bir açıklama ekle... Markdown: **kalın**, -&nbsp;madde, -&nbsp;[&nbsp;]&nbsp;yapılacak"></textarea>
       <div class="modal-desc md md-preview" id="modalPreview" style="display:none"></div>
 
       <div class="modal-section-label">Etiketler (virgülle ayır)</div>
