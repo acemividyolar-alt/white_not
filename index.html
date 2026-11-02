@@ -840,6 +840,23 @@
   .cal-row .t.done { text-decoration: line-through; color: var(--muted); }
   .cal-row .pj { font-size: 0.75rem; color: var(--muted); flex-shrink: 0; }
   .cal-empty { color: var(--muted); font-size: 0.9rem; }
+  /* Takvim: Ay / Hafta seçimi ve hatırlatma düğmesi */
+  .cal-tools { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  .seg { display: inline-flex; padding: 2px; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--paper-2); }
+  .seg button { height: calc(var(--ctl-h) - 6px); padding: 0 0.7rem; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: var(--shadow-1); }
+  .er-btn.remind-on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, var(--line-2)); background: var(--accent-soft); }
+  /* Haftalık görünüm: tek satır, uzun hücreler, günün bütün öğeleri */
+  .cal-grid.week .cal-cell { min-height: 300px; }
+  .cal-grid.week .cal-cell.out { background: var(--paper); color: inherit; }
+  /* Tekrarlayan görevin ileriki günleri (takvimde soluk, kesik çizgili) */
+  .cal-item.ghost { background: transparent; border: 1px dashed var(--line-2); border-left: 3px dashed var(--accent); color: var(--muted); }
+  .cal-dots i.ghost { background: transparent; box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .cal-row.ghost { color: var(--muted); }
+  .cal-row .rep-tag { font-size: 0.75rem; color: var(--muted); flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.25rem; }
+  /* Tekrar simgesi (son tarih rozetinde ve takvimde) */
+  .rep-ico { width: 12px; height: 12px; flex-shrink: 0; }
+  .due .rep-ico { margin-left: 0.05rem; }
 
   /* ===================================================================
      PENCERELER (modal) - karta tıklayınca, tablo düzenlerken vb. açılır
@@ -1773,6 +1790,7 @@
     .cal-dots { display: flex; justify-content: center; }
     .cal-dow { padding: 0.35rem 0.2rem; text-align: center; }
     .cal-title { min-width: 7.5rem; font-size: 1.05rem; }
+    .cal-grid.week .cal-cell { min-height: 76px; }   /* telefonda haftalık görünümde de noktalar; ayrıntı altta */
   }
 
   /* Hareketi azalt tercihi: kayma ve açılma hareketleri kapanır */
@@ -1872,11 +1890,13 @@
               <button data-act="proj-md">Markdown (.md)</button>     <!-- data-act = hangi işlem yapılacağının etiketi -->
               <button data-act="proj-txt">Düz metin (.txt)</button>
               <button data-act="proj-pdf">PDF olarak yazdır</button>
+              <button data-act="proj-ics">Takvim dosyası (.ics)</button>
               <div class="sep"></div>
               <div class="menu-group-label">Tüm projeler</div>
               <button data-act="all-md">Markdown (.md)</button>
               <button data-act="all-txt">Düz metin (.txt)</button>
               <button data-act="all-pdf">PDF olarak yazdır</button>
+              <button data-act="all-ics">Takvim dosyası (.ics)</button>
               <div class="sep"></div>
               <div class="menu-group-label">Yedek</div>
               <button data-act="json-export">JSON yedeği indir</button>
@@ -1965,7 +1985,14 @@
             <button class="er-btn icon" id="calNext" title="Sonraki ay" aria-label="Sonraki ay">&#8250;</button>
             <button class="er-btn" id="calToday">Bugün</button>
           </div>
-          <label class="opt cal-all"><input type="checkbox" id="calAll"> Tüm projeler</label>
+          <div class="cal-tools">
+            <div class="seg" role="group" aria-label="Takvim görünümü">
+              <button type="button" id="calModeMonth" aria-pressed="true">Ay</button>
+              <button type="button" id="calModeWeek" aria-pressed="false">Hafta</button>
+            </div>
+            <button class="er-btn" id="calRemind" type="button" title="Son tarihi gelen görevler için bildirim">&#128276; Hatırlat</button>
+            <label class="opt cal-all"><input type="checkbox" id="calAll"> Tüm projeler</label>
+          </div>
         </div>
         <div class="cal-grid" id="calGrid" role="grid"></div>
         <div class="cal-day" id="calDay"></div>
@@ -2188,6 +2215,18 @@
         <input type="date" class="modal-select" id="modalDue" aria-label="Son tarih">
         <button class="modal-btn" id="modalDueClear" type="button">Tarihi kaldır</button>
         <span class="due-hint" id="modalDueHint"></span>
+      </div>
+      <!-- Tekrarlayan görev: tamamlanınca bir sonraki tarihe yeni bir kopyası açılır -->
+      <div class="modal-row" id="modalRepeatRow">
+        <select class="modal-select" id="modalRepeat" aria-label="Tekrar">
+          <option value="">Tekrarlamaz</option>
+          <option value="daily">Her gün</option>
+          <option value="weekdays">Hafta içi her gün</option>
+          <option value="weekly">Her hafta</option>
+          <option value="monthly">Her ay</option>
+          <option value="yearly">Her yıl</option>
+        </select>
+        <span class="due-hint" id="modalRepeatHint"></span>
       </div>
 
       <div class="modal-section-label">Kapak resmi</div>
@@ -3436,7 +3475,15 @@
 
   /* ---- DURUM DEĞİŞTİREN KÜÇÜK FONKSİYONLAR ----
      Önce ilgili öğeyi id'sinden bul, değerini ters çevir, kaydet, ekranı tazele. */
-  async function toggleDone(id) { const i = items.find(x => x.id === id); i.done = !i.done; await saveItem(i); renderMain(); renderBoard(); }   // görev tamam/değil
+  async function toggleDone(id) {   // görev tamam/değil (tekrarlıysa tamamlanınca bir sonrakisi açılır)
+    const i = items.find(x => x.id === id);
+    if (!i) return;
+    const was = i.done;
+    i.done = !i.done;
+    await saveItem(i);
+    await afterTaskDone(i, was);
+    renderProjects(); renderMain(); renderBoard();
+  }
   async function togglePin(id) { const i = items.find(x => x.id === id); i.pinned = !i.pinned; await saveItem(i); renderMain(); renderBoard(); } // sabitle/çöz
   /* Öğeyi çöp kutusuna taşır (onay sorulmaz; alttaki bildirimden geri alınır) */
   async function removeItem(id) {
@@ -3586,7 +3633,64 @@
   }
   function dueChip(i) {
     const d = dueInfo(i);
-    return d ? '<span class="due ' + d.cls + '" title="Son tarih: ' + escAttr(fmtLongDay(i.due)) + '">' + esc(d.txt) + '</span>' : '';
+    if (!d) return '';
+    const rep = isRepeating(i) ? repName(i.repeat) : '';
+    return '<span class="due ' + d.cls + '" title="Son tarih: ' + escAttr(fmtLongDay(i.due)) + (rep ? ' · ' + rep + ' tekrarlar' : '') + '">' + esc(d.txt) + (rep ? REP_ICO : '') + '</span>';
+  }
+
+  /* ---- TEKRARLAYAN GÖREVLER ----
+     Tekrarlı bir görev tamamlanınca bir sonraki tarihe yeni bir kopyası açılır; tamamlanan geçmiş olarak
+     kalır (panoda "Bitti"de durur). Kopyada kontrol listesi maddeleri yeniden işaretsiz başlar; kapak
+     resmi kopyalanmaz (depoda yer kaplamasın). Aylık / yıllık tekrarda gün ayın sonuna sığdırılır ama
+     asıl gün unutulmaz (repeatDay): 31 Ocak → 28 Şubat → 31 Mart. */
+  const REPEATS = { daily: 'Her gün', weekdays: 'Hafta içi her gün', weekly: 'Her hafta', monthly: 'Her ay', yearly: 'Her yıl' };
+  const repName = r => (typeof r === 'string' && Object.prototype.hasOwnProperty.call(REPEATS, r)) ? REPEATS[r] : '';
+  const isRepeating = i => !!(i && i.type === 'task' && i.due && repName(i.repeat));
+  const REP_ICO = '<svg class="rep-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.8 6.2A5 5 0 0 0 3.5 5.2M3.2 9.8a5 5 0 0 0 9.3 1"/><path d="M3.3 2.6v2.8h2.8M12.7 13.4v-2.8H9.9"/></svg>';
+  /* d tarihinden sonraki tekrar günü */
+  function repeatStep(d, rep, anchor) {
+    if (rep === 'monthly' || rep === 'yearly') {
+      const y = d.getFullYear() + (rep === 'yearly' ? 1 : 0), m = d.getMonth() + (rep === 'monthly' ? 1 : 0);
+      const day = anchor || d.getDate();
+      return new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()));
+    }
+    const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    do { x.setDate(x.getDate() + (rep === 'weekly' ? 7 : 1)); } while (rep === 'weekdays' && (x.getDay() === 0 || x.getDay() === 6));
+    return x;
+  }
+  /* Bir sonraki son tarih: geç tamamlanan görevin yenisi geçmişe düşmesin diye bugünden önce olmaz */
+  function nextRepeatDue(i) {
+    const today = parseDay(todayStr());
+    let d = parseDay(i.due), guard = 0;
+    do { d = repeatStep(d, i.repeat, i.repeatDay); } while (d < today && ++guard < 5000);
+    return dateStr(d);
+  }
+  /* Bir görev tamamlanınca çağrılır (liste, pano, takvim, kart penceresi): tekrarlıysa bir sonrakini açar */
+  async function afterTaskDone(i, wasDone) {
+    if (!i || wasDone || !i.done || !isRepeating(i)) return null;
+    if (i.repeatNext && items.some(x => x.id === i.repeatNext)) return null;   // bu tekrar zaten açılmış
+    const cols = projectColumns(i.projectId);
+    const doneCol = c => /(bitti|tamam|done|complete|finish)/.test(c.name.toLowerCase());
+    const col = cols.find(c => c.id === i.columnId && !doneCol(c)) || cols.find(c => !doneCol(c)) || cols[0];
+    const colId = col ? col.id : null;
+    const inCol = items.filter(x => x.projectId === i.projectId && x.columnId === colId);
+    const n = { id: uid(), projectId: i.projectId, columnId: colId,
+                order: (inCol.length ? Math.max(...inCol.map(x => x.order ?? x.created)) : 0) + 10,
+                type: 'task', title: i.title, body: String(i.body || '').replace(/^(\s*[-*+]\s+)\[[xX]\]/gm, '$1[ ]'),
+                tags: (i.tags || []).slice(), cover: null, due: nextRepeatDue(i), done: false, pinned: !!i.pinned,
+                created: Date.now(), repeat: i.repeat };
+    if (i.repeatDay) n.repeatDay = i.repeatDay;
+    items.push(n);
+    i.repeatNext = n.id;
+    await saveItem(n); await saveItem(i);
+    showSnack('Tekrarlayan görev: sonraki ' + fmtLongDay(n.due), async () => {
+      // Geri al: yeni kopya silinir, görev tamamlanmamış haline döner
+      if (items.some(x => x.id === n.id)) { await deleteItemStore(n.id); items = items.filter(x => x.id !== n.id); }
+      const cur = items.find(x => x.id === i.id);
+      if (cur) { cur.done = false; delete cur.repeatNext; await saveItem(cur); }
+      renderProjects(); renderMain(); renderBoard();
+    });
+    return n;
   }
   const isLate = i => i.type === 'task' && !i.done && i.due && dayDiff(i.due) < 0;
   let dueFilter = null; // liste süzgeci: null | 'late' | 'today' | 'week'
@@ -4303,6 +4407,7 @@
       const cn = col.name.toLowerCase();
       if (/(bitti|tamam|done|complete|finish)/.test(cn) && !moved.done) {
         moved.done = true; await saveItem(moved);
+        await afterTaskDone(moved, false);
       }
     }
   }
@@ -4322,8 +4427,10 @@
   async function moveItemToColumn(itemId, colId) {
     const i = items.find(x => x.id === itemId);
     if (!i || i.columnId === colId) return;
+    const was = i.done;
     placeInColumn(i, colId);
     await saveItem(i);
+    await afterTaskDone(i, was);
     renderProjects(); renderMain(); renderBoard();
   }
 
@@ -4440,6 +4547,7 @@
     el('modalTags').value = (i.tags || []).join(', ');
     el('modalType').value = i.type || 'note';
     el('modalDue').value = i.due || '';
+    el('modalRepeat').value = repName(i.repeat) ? i.repeat : '';
     updateModalDueHint();
     // İçinde kontrol listesi olan açıklama önizlemeyle açılsın (maddeler hemen işaretlenebilsin)
     setModalPreview(mdChecks(i.body).total > 0);
@@ -4450,7 +4558,7 @@
       '<option value="' + c.id + '" ' + (c.id===i.columnId?'selected':'') + '>' + esc(c.name) + '</option>'
     ).join('');
 
-    // Görev onay kutusu sadece tür "task" ise görünür
+    // Görev onay kutusu ve tekrar seçimi sadece tür "task" ise görünür
     updateModalCheckVisibility(i.type, i.done);
     // Kapak resmini göster/gizle
     updateModalCover(i.cover);
@@ -4473,6 +4581,7 @@
   function updateModalDueHint() {
     const v = el('modalDue').value;
     el('modalDueClear').style.display = v ? '' : 'none';
+    el('modalRepeatHint').textContent = el('modalRepeat').value && v ? 'Tamamlayınca bir sonraki tarihe yenisi açılır' : '';
     if (!v) { el('modalDueHint').textContent = ''; return; }
     const k = dayDiff(v);
     el('modalDueHint').textContent = fmtLongDay(v) + ' · ' + (k === 0 ? 'bugün' : k === 1 ? 'yarın' : k > 0 ? k + ' gün kaldı' : (-k) + ' gün önce');
@@ -4480,6 +4589,7 @@
 
   /* Görev onay kutusunun görünürlüğünü ve durumunu ayarlar. */
   function updateModalCheckVisibility(type, done) {
+    el('modalRepeatRow').style.display = type === 'task' ? '' : 'none';
     const chk = el('modalCheck');
     if (type === 'task') {
       chk.style.display = '';
@@ -4517,12 +4627,18 @@
     if (!i) return;
 
     const newType = el('modalType').value;
+    const wasDone = !!i.done, oldDue = i.due, oldRep = i.repeat;
     i.title = el('modalTitle').value.trim();
     i.body = el('modalDesc').value.trim();
     i.tags = el('modalTags').value.split(',').map(t => t.trim()).filter(Boolean);
     i.type = newType;
     i.done = (newType === 'task') ? el('modalCheck').checked : false;
     i.due = el('modalDue').value || null;
+    const rep = el('modalRepeat').value;
+    if (newType === 'task' && i.due && repName(rep)) {
+      if (rep !== oldRep || i.due !== oldDue || !i.repeatDay) i.repeatDay = parseDay(i.due).getDate();   // asıl gün
+      i.repeat = rep;
+    } else { delete i.repeat; delete i.repeatDay; }
     // Sütun değiştiyse kart yeni sütunun sonuna gitsin (eskiden rastgele bir sıraya düşüyordu)
     placeInColumn(i, el('modalColumn').value);
     // Not: kapak (cover) resim seç/kaldır anında doğrudan i.cover'a yazılır.
@@ -4530,6 +4646,7 @@
     if (!i.title && !i.body) i.title = '(başlıksız)'; // tamamen boş kalmasın
 
     await saveItem(i);
+    await afterTaskDone(i, wasDone);
     renderProjects(); renderMain(); renderBoard();
   }
 
@@ -4547,6 +4664,7 @@
   let calMonth = null;   // { y, m } gösterilen ay
   let calSel = null;     // seçili gün 'YYYY-AA-GG'
   let calAll = false;    // tüm projeler mi
+  let calMode = 'month'; // 'month' (ay) | 'week' (hafta) — tercih cihazda kalır
   const CAL_DOW = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
   function calItems() {
@@ -4554,38 +4672,81 @@
   }
   function calCls(i) { return i.type !== 'task' ? 'note' : i.done ? 'done' : isLate(i) ? 'late' : ''; }
 
+  /* Takvimde görünen ilk gün ve gün sayısı (ay: 5–6 hafta, hafta: 7 gün; hep Pazartesi'den başlar) */
+  function calRange() {
+    if (calMode === 'week') {
+      const s = parseDay(calSel);
+      return { start: new Date(s.getFullYear(), s.getMonth(), s.getDate() - (s.getDay() + 6) % 7), total: 7 };
+    }
+    const first = new Date(calMonth.y, calMonth.m, 1), lead = (first.getDay() + 6) % 7; // Pazartesi = 0
+    const days = new Date(calMonth.y, calMonth.m + 1, 0).getDate();
+    return { start: new Date(calMonth.y, calMonth.m, 1 - lead), total: Math.ceil((lead + days) / 7) * 7 };
+  }
   function renderCalendar() {
     if (currentView !== 'calendar') return;
     const t = new Date();
-    if (!calMonth) calMonth = { y: t.getFullYear(), m: t.getMonth() };
     if (!calSel) calSel = todayStr();
-    const first = new Date(calMonth.y, calMonth.m, 1);
-    const lead = (first.getDay() + 6) % 7; // Pazartesi = 0
-    const days = new Date(calMonth.y, calMonth.m + 1, 0).getDate();
-    const total = Math.ceil((lead + days) / 7) * 7;
+    if (!calMonth) calMonth = { y: t.getFullYear(), m: t.getMonth() };
+    const week = calMode === 'week';
+    const { start, total } = calRange();
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + total - 1);
+    const todayD = parseDay(todayStr());
+    // Her gün: { i: öğe, ghost: tekrarlayan görevin ileriki günü mü }
     const byDay = {};
-    calItems().forEach(i => { (byDay[i.due] = byDay[i.due] || []).push(i); });
-    Object.values(byDay).forEach(l => l.sort((a, b) => (calCls(a) === 'done') - (calCls(b) === 'done') || a.created - b.created));
-    el('calTitle').textContent = first.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+    const put = (ds, e) => { (byDay[ds] = byDay[ds] || []).push(e); };
+    calItems().forEach(i => put(i.due, { i: i, ghost: false }));
+    // Tekrarlayan (tamamlanmamış) görevler ileriki günlerinde soluk gösterilir; tıklayınca asıl görev açılır
+    calItems().filter(i => isRepeating(i) && !i.done).forEach(i => {
+      let d = parseDay(i.due), guard = 0;
+      while (++guard < 800) {
+        d = repeatStep(d, i.repeat, i.repeatDay);
+        if (d > end) break;
+        if (d >= start && d >= todayD) put(dateStr(d), { i: i, ghost: true });
+      }
+    });
+    Object.values(byDay).forEach(l => l.sort((a, b) => (a.ghost - b.ghost) || (calCls(a.i) === 'done') - (calCls(b.i) === 'done') || a.i.created - b.i.created));
+    const fmt = (d, o) => d.toLocaleDateString('tr-TR', o);
+    el('calTitle').textContent = !week ? fmt(new Date(calMonth.y, calMonth.m, 1), { month: 'long', year: 'numeric' })
+      : start.getMonth() === end.getMonth() ? start.getDate() + ' – ' + fmt(end, { day: 'numeric', month: 'long', year: 'numeric' })
+      : fmt(start, start.getFullYear() === end.getFullYear() ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' }) + ' – ' + fmt(end, { day: 'numeric', month: 'short', year: 'numeric' });
+    ['calPrev', 'calNext'].forEach((id, n) => { const t = (n ? 'Sonraki ' : 'Önceki ') + (week ? 'hafta' : 'ay'); el(id).title = t; el(id).setAttribute('aria-label', t); });
+    el('calModeMonth').setAttribute('aria-pressed', !week);
+    el('calModeWeek').setAttribute('aria-pressed', week);
+    el('calGrid').classList.toggle('week', week);
     el('calAll').checked = calAll;
-    const today = todayStr();
+    updateRemindBtn();
+    const today = todayStr(), lim = week ? 50 : 3;
+    const name = i => i.title || i.body || '(başlıksız)';
     let h = CAL_DOW.map(d => '<div class="cal-dow" role="columnheader">' + d + '</div>').join('');
     for (let k = 0; k < total; k++) {
-      const d = new Date(calMonth.y, calMonth.m, k - lead + 1), ds = dateStr(d), list = byDay[ds] || [];
-      const cls = 'cal-cell' + (d.getMonth() !== calMonth.m ? ' out' : '') + (ds === today ? ' today' : '') + (ds === calSel ? ' sel' : '');
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + k), ds = dateStr(d), list = byDay[ds] || [];
+      const cls = 'cal-cell' + (!week && d.getMonth() !== calMonth.m ? ' out' : '') + (ds === today ? ' today' : '') + (ds === calSel ? ' sel' : '');
       const label = d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }) + (list.length ? ', ' + list.length + ' öğe' : '');
       h += '<button class="' + cls + '" type="button" role="gridcell" data-day="' + ds + '" aria-label="' + escAttr(label) + '">' +
         '<span class="cal-num">' + d.getDate() + '</span>' +
-        list.slice(0, 3).map(i => '<span class="cal-item ' + calCls(i) + '" data-open="' + i.id + '" title="' + escAttr(i.title || i.body) + '">' + esc(i.title || i.body || '(başlıksız)') + '</span>').join('') +
-        (list.length > 3 ? '<span class="cal-more">+' + (list.length - 3) + ' daha</span>' : '') +
-        (list.length ? '<span class="cal-dots">' + list.slice(0, 6).map(i => '<i class="' + calCls(i) + '"></i>').join('') + '</span>' : '') +
+        list.slice(0, lim).map(e => '<span class="cal-item ' + (e.ghost ? 'ghost' : calCls(e.i)) + '" data-open="' + e.i.id + '" title="' + escAttr(name(e.i) + (e.ghost ? ' · ' + repName(e.i.repeat) : '')) + '">' +
+          (e.ghost ? REP_ICO + ' ' : '') + esc(name(e.i)) + '</span>').join('') +
+        (list.length > lim ? '<span class="cal-more">+' + (list.length - lim) + ' daha</span>' : '') +
+        (list.length ? '<span class="cal-dots">' + list.slice(0, 6).map(e => '<i class="' + (e.ghost ? 'ghost' : calCls(e.i)) + '"></i>').join('') + '</span>' : '') +
       '</button>';
     }
     el('calGrid').innerHTML = h;
     renderCalDay(byDay[calSel] || []);
   }
+  function setCalMode(m) {
+    calMode = m === 'week' ? 'week' : 'month';
+    localSet('pref:calmode', calMode === 'week' ? 'week' : null);
+    if (calMode === 'week') {
+      // Ay görünümünde başka bir aya geçilmişse o ayın ilk haftası (bugün o aydaysa bugünün haftası) açılır
+      const s = parseDay(calSel || todayStr());
+      if (calMonth && (s.getMonth() !== calMonth.m || s.getFullYear() !== calMonth.y)) {
+        const t = new Date(); calSel = (t.getMonth() === calMonth.m && t.getFullYear() === calMonth.y) ? todayStr() : dateStr(new Date(calMonth.y, calMonth.m, 1));
+      }
+    } else if (calSel) { const s = parseDay(calSel); calMonth = { y: s.getFullYear(), m: s.getMonth() }; }
+    renderCalendar();
+  }
 
-  /* Seçili günün listesi */
+  /* Seçili günün listesi (list: { i, ghost }) */
   function renderCalDay(list) {
     const pname = id => (projects.find(p => p.id === id) || {}).name || '';
     const k = dayDiff(calSel);
@@ -4593,14 +4754,86 @@
     el('calDay').innerHTML =
       '<h4><span>' + esc(fmtLongDay(calSel)) + (rel ? ' · ' + rel : '') + '</span>' +
       '<button class="er-btn" type="button" data-caladd>+ Bu güne görev ekle</button></h4>' +
-      (list.length ? list.map(i =>
-        '<div class="cal-row" data-open="' + i.id + '">' +
+      (list.length ? list.map(({ i, ghost }) => ghost
+        ? '<div class="cal-row ghost" data-open="' + i.id + '" title="Tekrarlayan görev: bu gün için kopyası, önceki tamamlanınca açılır">' + REP_ICO +
+            '<span class="t">' + esc(i.title || i.body || '(başlıksız)') + '</span>' +
+            (calAll ? '<span class="pj">' + esc(pname(i.projectId)) + '</span>' : '') + '<span class="rep-tag">' + esc(repName(i.repeat)) + '</span>' +
+          '</div>'
+        : '<div class="cal-row" data-open="' + i.id + '">' +
           (i.type === 'task' ? '<input type="checkbox" data-caldone="' + i.id + '"' + (i.done ? ' checked' : '') + ' aria-label="Tamamlandı">' : '<span aria-hidden="true">&#9998;</span>') +
           '<span class="t' + (i.type === 'task' && i.done ? ' done' : '') + '">' + esc(i.title || i.body || '(başlıksız)') + '</span>' +
           (calAll ? '<span class="pj">' + esc(pname(i.projectId)) + '</span>' : '') + dueChip(i) +
         '</div>').join('')
       : '<p class="cal-empty">Bu güne tarihlenmiş bir şey yok.</p>');
   }
+
+  /* ---- HATIRLATMALAR ----
+     Takvimdeki "Hatırlat" açıksa bugün, yarın ya da gecikmiş görevler için bildirim gösterilir:
+     sayfa açılınca, sekmeye dönünce ve açıkken 5 dakikada bir bakılır; aynı görev için günde bir kez.
+     Sunucu olmadığı için tarayıcı tamamen kapalıyken bildirim gelmez (sekme ya da uygulama açık olmalı).
+     Telefonda bildirim, uygulamanın service worker'ı üzerinden gösterilir (Android buna izin verir). */
+  function remindOn() {
+    return localGet('pref:remind') === 'on' && 'Notification' in window && Notification.permission === 'granted';
+  }
+  function updateRemindBtn() {
+    const b = el('calRemind'), on = remindOn();
+    b.classList.toggle('remind-on', on);
+    b.setAttribute('aria-pressed', on);
+    b.title = !('Notification' in window) ? 'Bu tarayıcı bildirim desteklemiyor'
+      : on ? 'Hatırlatmalar açık: bugün, yarın ve gecikmiş görevler için bildirim gelir. Kapatmak için tıkla.'
+      : 'Son tarihi gelen görevler için bildirim al';
+    b.innerHTML = '&#128276; ' + (on ? 'Hatırlatma açık' : 'Hatırlat');
+  }
+  async function toggleRemind() {
+    if (!('Notification' in window)) { alert('Bu tarayıcı bildirimleri desteklemiyor.'); return; }
+    if (remindOn()) { localSet('pref:remind', null); updateRemindBtn(); showSnack('Hatırlatmalar kapandı.'); return; }
+    let perm = Notification.permission;
+    if (perm === 'default') { try { perm = await Notification.requestPermission(); } catch (e) { perm = 'denied'; } }
+    if (perm !== 'granted') {
+      alert('Bildirim izni verilmedi.\n\nAdres çubuğundaki kilit (site ayarları) simgesinden bu site için bildirimlere izin verip tekrar dene.');
+      updateRemindBtn(); return;
+    }
+    localSet('pref:remind', 'on'); localSet('pref:reminded', null);
+    updateRemindBtn();
+    showSnack('Hatırlatmalar açık: bugün, yarın ve gecikmiş görevler için bildirim gelecek.');
+    checkReminders();
+  }
+  async function showNotice(title, body, tag) {
+    const opt = { body: body, tag: tag, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png' };
+    try {
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        const r = await navigator.serviceWorker.ready;
+        await r.showNotification(title, opt);
+        return true;
+      }
+    } catch (e) {}
+    try {
+      const n = new Notification(title, opt);
+      n.onclick = () => { window.focus(); n.close(); setView('calendar'); };
+      return true;
+    } catch (e) { return false; }
+  }
+  function checkReminders() {
+    if (!remindOn() || cloud.on && !cloud.ready) return;
+    const today = todayStr();
+    let rec = localJSON('pref:reminded', null);
+    if (!rec || rec.d !== today || !Array.isArray(rec.ids)) rec = { d: today, ids: [] };
+    const list = items.filter(i => i.type === 'task' && !i.done && i.due && dayDiff(i.due) <= 1 && !rec.ids.includes(i.id))
+                      .sort((a, b) => a.due.localeCompare(b.due));
+    if (!list.length) return;
+    const n = k => list.filter(i => k(dayDiff(i.due))).length;
+    const late = n(k => k < 0), tod = n(k => k === 0), tom = n(k => k === 1);
+    const head = [tod ? tod + ' görev bugün' : '', tom ? tom + ' görev yarın' : '', late ? late + ' görev gecikmiş' : ''].filter(Boolean).join(', ');
+    const body = list.slice(0, 4).map(i => '• ' + (i.title || i.body || '(başlıksız)').slice(0, 60) + ' (' + dueInfo(i).txt + ')').join('\n') +
+                 (list.length > 4 ? '\n+' + (list.length - 4) + ' görev daha' : '');
+    showNotice('White Note: ' + head, body, 'wn-hatirlatma').then(ok => {
+      if (!ok) return;
+      rec.ids = rec.ids.concat(list.map(i => i.id));
+      localSet('pref:reminded', JSON.stringify(rec));
+    });
+  }
+  setInterval(() => checkReminders(), 5 * 60000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkReminders(); });
 
   async function calAddTask() {
     const title = prompt(fmtLongDay(calSel) + ' için yeni görev:', '');
@@ -10509,6 +10742,51 @@
   }
 
   /* Markdown ve düz metin indirme kısayolları */
+  /* ---- TAKVİM DOSYASI (.ics) ----
+     Son tarihi olan not ve görevler gün boyu etkinlik olarak yazılır (tamamlanmış görevler hariç);
+     tekrarlayan görevler tekrar kuralıyla (RRULE). Google Takvim: Ayarlar → İçe ve dışa aktar → İçe aktar.
+     Telefonda dosyaya dokununca takvim uygulaması açılır. */
+  function icsText(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/[;,]/g, m => '\\' + m); }
+  function icsFold(line) {   // 75 bayttan uzun satırlar bölünür; Türkçe harf ortadan bölünmez
+    const enc = new TextEncoder();
+    let out = '', cur = '', n = 0;
+    for (const ch of line) {
+      const b = enc.encode(ch).length;
+      if (n + b > 75) { out += cur + '\r\n '; cur = ''; n = 1; }
+      cur += ch; n += b;
+    }
+    return out + cur;
+  }
+  function buildICS(scope) {
+    const pids = scope === 'all' ? projects.map(p => p.id) : [activeProject];
+    const list = items.filter(i => pids.includes(i.projectId) && i.due && !(i.type === 'task' && i.done));
+    const ymd = d => d.replace(/-/g, '');
+    const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+    const RR = { daily: 'FREQ=DAILY', weekdays: 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR', weekly: 'FREQ=WEEKLY', monthly: 'FREQ=MONTHLY', yearly: 'FREQ=YEARLY' };
+    const pname = id => (projects.find(p => p.id === id) || {}).name || '';
+    const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//White Note//TR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+               'X-WR-CALNAME:' + icsText(scope === 'all' ? 'White Note' : 'White Note · ' + pname(activeProject))];
+    list.forEach(i => {
+      const end = parseDay(i.due); end.setDate(end.getDate() + 1);
+      L.push('BEGIN:VEVENT', 'UID:' + i.id + '@white-note', 'DTSTAMP:' + stamp,
+             'DTSTART;VALUE=DATE:' + ymd(i.due), 'DTEND;VALUE=DATE:' + ymd(dateStr(end)),
+             'SUMMARY:' + icsText(i.title || String(i.body || '').slice(0, 60) || '(başlıksız)'));
+      const desc = [scope === 'all' ? 'Proje: ' + pname(i.projectId) : '', i.type === 'task' ? '' : 'Not', i.body || ''].filter(Boolean).join('\n\n');
+      if (desc) L.push('DESCRIPTION:' + icsText(desc));
+      if (i.tags && i.tags.length) L.push('CATEGORIES:' + i.tags.map(icsText).join(','));
+      if (isRepeating(i)) L.push('RRULE:' + RR[i.repeat]);
+      L.push('END:VEVENT');
+    });
+    L.push('END:VCALENDAR');
+    return { text: L.map(icsFold).join('\r\n') + '\r\n', count: list.length };
+  }
+  function exportICS(scope) {
+    const r = buildICS(scope);
+    if (!r.count) { alert('Son tarihi olan (tamamlanmamış) bir not ya da görev yok.'); return; }
+    download(r.text, safeName(scope) + '-takvim.ics', 'text/calendar');
+    showSnack(r.count + ' etkinlik takvim dosyasına yazıldı.');
+  }
+
   function exportMarkdown(scope){ download(buildMarkdown(scope), safeName(scope)+'.md', 'text/markdown'); }
   function exportText(scope){ download(buildPlainText(scope), safeName(scope)+'.txt', 'text/plain'); }
 
@@ -10611,6 +10889,9 @@
       i.tags = Array.isArray(i.tags) ? i.tags.filter(t => typeof t === 'string') : [];
       i.type = i.type === 'task' ? 'task' : 'note';
       i.due = typeof i.due === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(i.due) ? i.due : null;
+      if (!repName(i.repeat)) delete i.repeat;                                              // tekrar: bilinen değerler
+      if (!(Number.isInteger(i.repeatDay) && i.repeatDay >= 1 && i.repeatDay <= 31)) delete i.repeatDay;
+      if (i.repeatNext != null && !SAFE_ID.test(i.repeatNext)) delete i.repeatNext;
       if (i.cover && !(typeof i.cover === 'string' && SAFE_COVER.test(i.cover))) i.cover = null;
       i.created = +i.created || Date.now();
       return i;
@@ -10878,6 +11159,8 @@
       case 'all-md': exportMarkdown('all'); break;
       case 'all-txt': exportText('all'); break;
       case 'all-pdf': exportPDF('all'); break;
+      case 'proj-ics': exportICS('one'); break;   // Google Takvim / Outlook / telefon takvimine aktarılır
+      case 'all-ics': exportICS('all'); break;
       case 'json-export': exportJSON(); break;
       case 'json-import': el('importFile').click(); break; // gizli dosya seçiciyi aç
       case 'install': installApp(); break;
@@ -10952,7 +11235,17 @@
   el('viewCal').addEventListener('click', () => setView('calendar'));
 
   /* ---- TAKVİM olayları ---- */
-  const calShift = d => { calMonth = { y: calMonth.y, m: calMonth.m + d }; if (calMonth.m < 0) calMonth = { y: calMonth.y - 1, m: 11 }; if (calMonth.m > 11) calMonth = { y: calMonth.y + 1, m: 0 }; renderCalendar(); };
+  const calShift = d => {
+    if (calMode === 'week') {   // haftalık görünüm: 7 gün ileri / geri
+      const s = parseDay(calSel); s.setDate(s.getDate() + 7 * d); calSel = dateStr(s); calMonth = { y: s.getFullYear(), m: s.getMonth() };
+      renderCalendar(); return;
+    }
+    calMonth = { y: calMonth.y, m: calMonth.m + d }; if (calMonth.m < 0) calMonth = { y: calMonth.y - 1, m: 11 }; if (calMonth.m > 11) calMonth = { y: calMonth.y + 1, m: 0 }; renderCalendar();
+  };
+  el('calModeMonth').addEventListener('click', () => setCalMode('month'));
+  el('calModeWeek').addEventListener('click', () => setCalMode('week'));
+  el('calRemind').addEventListener('click', toggleRemind);
+  if (localGet('pref:calmode') === 'week') calMode = 'week';
   el('calPrev').addEventListener('click', () => calShift(-1));
   el('calNext').addEventListener('click', () => calShift(1));
   el('calToday').addEventListener('click', () => { const t = new Date(); calMonth = { y: t.getFullYear(), m: t.getMonth() }; calSel = todayStr(); renderCalendar(); });
@@ -11001,14 +11294,28 @@
   });
   // Ctrl+K / Cmd+K her yerden; "/" yazı alanında değilken
   document.addEventListener('keydown', e => {
-    const typing = e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]');
+    // Yazı kutusundaysa kısayol çalışmaz. (Kapanmış bir pencerede odakta kalmış gizli kutu sayılmaz.)
+    const typing = e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]') && e.target.getClientRects().length > 0;
     if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')) {
       e.preventDefault();
       if (el('gsModal').classList.contains('open')) closeGs(); else openGs();
     } else if (e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !document.querySelector('.modal-overlay.open')) {
       e.preventDefault(); openGs();
+    } else if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat && !document.querySelector('.modal-overlay.open')) {
+      /* Kısayollar: 1–5 görünümler, N yeni not / görev (yazarken ve pencere açıkken çalışmaz) */
+      const v = { '1': 'list', '2': 'board', '3': 'schema', '4': 'flow', '5': 'calendar' }[e.key];
+      if (v) { e.preventDefault(); closeToolMenus(); closeExportMenu(); closeThemeMenu(); setView(v); }
+      else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); focusComposer(); }
     }
   });
+  /* N kısayolu: Liste'ye geçip ekleme kutusuna yazmaya başlatır */
+  async function focusComposer() {
+    closeExportMenu(); closeThemeMenu();
+    if (currentView !== 'list') await setView('list');
+    const t = el('cTitle');
+    t.scrollIntoView({ block: 'nearest' });
+    t.focus();
+  }
 
   /* ---- YEDEK YÜKLEME penceresi ---- */
   el('bkClose').addEventListener('click', closeBackupModal);
@@ -11069,7 +11376,12 @@
   /* ---- SON TARİH olayları ---- */
   el('dueFilters').addEventListener('click', e => { const b = e.target.closest('[data-df]'); if (!b) return; dueFilter = b.dataset.df || null; renderMain(); });
   el('modalDue').addEventListener('change', updateModalDueHint);
-  el('modalDueClear').addEventListener('click', () => { el('modalDue').value = ''; updateModalDueHint(); });
+  el('modalDueClear').addEventListener('click', () => { el('modalDue').value = ''; el('modalRepeat').value = ''; updateModalDueHint(); });
+  // Tekrar seçilince tarih yoksa bugün olur (tekrar son tarihe göre hesaplanır)
+  el('modalRepeat').addEventListener('change', () => {
+    if (el('modalRepeat').value && !el('modalDue').value) el('modalDue').value = todayStr();
+    updateModalDueHint();
+  });
 
   // Panoda fare tekerleği: sütun içi kartlar kaymıyorsa panoyu yatay kaydırsın
   el('boardWrap').addEventListener('wheel', e => {
@@ -11095,6 +11407,7 @@
   el('modalType').addEventListener('change', () => {
     const i = items.find(x => x.id === openCardId);
     updateModalCheckVisibility(el('modalType').value, i ? i.done : false);
+    if (el('modalType').value !== 'task') { el('modalRepeat').value = ''; updateModalDueHint(); }
   });
 
   // Kartı sil (pencereden)
@@ -12043,6 +12356,7 @@ service cloud.firestore {
   /* Uygulamanın açılışı: kişisel alan mı, ekip alanı mı? */
   async function startApp() {
     await loadTheme();
+    setTimeout(() => checkReminders(), 2500);   // veriler yüklendikten sonra bugün / yarın / gecikmiş görevler
     const inv = readInvite();
     const wsId = localGet('pref:ws');
     const team = wsId ? knownTeams().find(t => t.id === wsId) : null;

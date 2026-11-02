@@ -49,11 +49,22 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
   bağlantı ve **işaretlenebilir kontrol listesi** (`- [ ] yapılacak`) — maddeler kartın üstünden
   işaretlenir, ilerleme (☑ 2/5) görünür
 - Görev ilerleme çubuğu
-- Karta tıklayınca düzenleme penceresi (açıklama, etiket, tür, sütun, son tarih, kapak resmi)
+- Karta tıklayınca düzenleme penceresi (açıklama, etiket, tür, sütun, son tarih, tekrar, kapak resmi)
+- **Tekrarlayan görev:** kart penceresinde *Her gün / Hafta içi her gün / Her hafta / Her ay / Her yıl*.
+  Görev tamamlanınca bir sonraki tarihe yenisi açılır (tamamlanan geçmiş olarak kalır, panoda "Bitti"de durur);
+  yenisinde kontrol listesi maddeleri işaretsiz başlar. Alttaki bildirimden **Geri al** ile vazgeçilir.
+  Aylık tekrarda gün ayın sonuna sığdırılır ama unutulmaz (31 Ocak → 28 Şubat → 31 Mart).
 
 ### Takvim
-- Son tarihi olan not ve görevler aylık takvimde; güne tıklayınca o günün listesi
+- Son tarihi olan not ve görevler **aylık** ya da **haftalık** takvimde (Ay / Hafta); güne tıklayınca o günün listesi
 - O güne doğrudan görev ekleme, görevi oradan tamamlama, "Tüm projeler" seçeneği
+- Tekrarlayan görevlerin ileriki günleri takvimde soluk ve kesik çizgili görünür
+- **Hatırlat:** açınca (tarayıcı bildirim izni ister) bugün, yarın ve gecikmiş görevler için bildirim gelir:
+  sayfa açılınca, sekmeye dönünce ve açıkken 5 dakikada bir bakılır; aynı görev için günde bir kez.
+  Sunucu olmadığı için tarayıcı tamamen kapalıyken bildirim gelmez.
+- **Takvim dosyası (.ics):** *Dışa / İçe aktar → Takvim dosyası* son tarihli not ve görevleri Google Takvim,
+  Outlook ya da telefonun takvimine aktarılabilen dosyaya yazar (tekrarlayanlar tekrar kuralıyla).
+  Google Takvim'de: Ayarlar → İçe ve dışa aktar → İçe aktar.
 
 ### Pano
 - Trello tarzı sütunlar: ekle, yeniden adlandır, renk ver, sil
@@ -283,6 +294,8 @@ kayıtların artık o depoya gider. Bağlantıyı tanımadığın birinden aldı
 | Kısayol | Nerede | İş |
 | --- | --- | --- |
 | Ctrl+K (Mac'te ⌘K) ya da / | Her yerde | Tüm projelerde ara |
+| 1 – 5 | Her yerde (yazmıyorken) | Liste / Pano / Şema / Akış / Takvim |
+| N | Her yerde (yazmıyorken) | Yeni not ya da görev (ekleme kutusuna geçer) |
 | Ctrl+Enter | Ekleme kutusu | Not/görev ekle |
 | Ctrl+Enter | SQL konsolu | Çalıştır (seçili kısım varsa sadece o) |
 | Ctrl+Z / Ctrl+Y | Şema, Akış | Geri al / yinele |
