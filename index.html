@@ -1172,6 +1172,9 @@
   .fl-ico.k-process { fill: var(--fl-proc-bg); stroke: var(--fl-proc-bd); }
   .fl-ico.k-decision { fill: var(--fl-dec-bg); stroke: var(--fl-dec-bd); }
   .fl-ico.k-loop { fill: var(--fl-loop-bg); stroke: var(--fl-loop-bd); }
+  .fl-ico.k-sub { fill: var(--fl-proc-bg); stroke: var(--fl-proc-bd); }
+  .fl-ico.k-conn { fill: var(--fl-term-bg); stroke: var(--fl-term-bd); }
+  .fl-ico.k-note { fill: var(--fl-dec-bg); stroke: var(--fl-dec-bd); stroke-dasharray: 3 2; }
 
   /* Çizim alanı: SVG'nin kendisi; yakınlaştırmada width/height büyür, viewBox sabit kalır */
   .fl-svg { display: block; touch-action: pan-x pan-y; }
@@ -1182,6 +1185,10 @@
   .fl-node.k-process .fl-shape { fill: var(--fl-proc-bg); stroke: var(--fl-proc-bd); }
   .fl-node.k-decision .fl-shape { fill: var(--fl-dec-bg); stroke: var(--fl-dec-bd); }
   .fl-node.k-loop .fl-shape { fill: var(--fl-loop-bg); stroke: var(--fl-loop-bd); }
+  .fl-node.k-sub .fl-shape { fill: var(--fl-proc-bg); stroke: var(--fl-proc-bd); }
+  .fl-node.k-conn .fl-shape { fill: var(--fl-term-bg); stroke: var(--fl-term-bd); }
+  .fl-node.k-note .fl-shape { fill: color-mix(in srgb, var(--fl-dec-bg) 70%, var(--paper)); stroke: var(--fl-dec-bd); stroke-dasharray: 4 3; }
+  .fl-node.k-note .fl-text { font-style: italic; }
   .fl-text { fill: var(--ink); font-family: var(--font-sans); font-size: 14px; pointer-events: none; }
   .fl-text.empty { fill: var(--muted); font-style: italic; }
   .fl-kind { fill: var(--muted); font-family: var(--font-sans); font-size: 9.5px; font-weight: 640; pointer-events: none; }
@@ -2221,6 +2228,9 @@
             <button class="fl-shape-btn" type="button" data-addkind="loop" title="Döngü — sayaçlı tekrar (i = 1 .. 10)"><span class="lbl">Döngü</span></button>
             <button class="fl-shape-btn" type="button" data-addkind="output" title="Çıkış — ekrana yaz (Yaz toplam)"><span class="lbl">Çıkış</span></button>
             <button class="fl-shape-btn" type="button" data-addkind="end" title="Bitir — algoritmanın sonu"><span class="lbl">Bitir</span></button>
+            <button class="fl-shape-btn" type="button" data-addkind="sub" title="Alt program — projedeki başka bir akış şemasını çalıştır"><span class="lbl">Alt program</span></button>
+            <button class="fl-shape-btn" type="button" data-addkind="conn" title="Bağlantı noktası — uzak iki yeri ok çizmeden bağla (A)"><span class="lbl">Bağlantı</span></button>
+            <button class="fl-shape-btn" type="button" data-addkind="note" title="Yorum notu — açıklama yazısı (akışa katılmaz)"><span class="lbl">Not</span></button>
           </div>
         <div class="er-canvas" id="flCanvas">
           <div class="er-sizer" id="flSizer">
@@ -9113,9 +9123,28 @@
     output:   { name: 'Çıkış',  def: 'Yaz x', ask: 'Çıkış — ekrana ne yazılsın?',
                 help: 'Ekrana yazar. <code>Yaz toplam</code> · <code>Yaz "Sonuç:", toplam</code> — tırnak içindeki yazı olduğu gibi, diğerleri değer olarak yazılır.' },
     end:      { name: 'Bitir',  def: 'Bitir', ask: null,
-                help: 'Algoritmanın bittiği yer. Birden fazla olabilir (ör. hata durumunda erken bitiş).' }
+                help: 'Algoritmanın bittiği yer. Birden fazla olabilir (ör. hata durumunda erken bitiş).' },
+    sub:      { name: 'Alt program', def: 'Hesapla', ask: 'Alt program — hangi akış şeması çalıştırılsın? (bu projedeki bir şemanın adı)',
+                help: 'Projedeki başka bir akış şemasını (sekmeyi) adıyla çalıştırır: <code>Hesapla</code>. Değişkenler ortaktır; alt program Bitir\'e gelince buradan devam edilir. Uzun algoritmayı parçalara bölmek için. Alt programda Giriş (Oku) olamaz.' },
+    conn:     { name: 'Bağlantı', def: 'A', ask: 'Bağlantı noktası — harfi ne olsun? (ör. A)',
+                help: 'Şemanın uzak iki yerini ok çizmeden bağlar: devamı olmayan <code>A</code> noktasına gelince, aynı harfli ve <b>oku olan</b> <code>A</code> noktasından devam edilir.' },
+    note:     { name: 'Not', def: 'Açıklama', ask: 'Yorum notu — ne yazılsın?',
+                help: 'Okuyana açıklama. Akışa katılmaz: ok bağlanmaz, çalıştırılmaz, algoritmaya ve koda girmez.' }
   };
-  const FL_KIND_ORDER = ['start', 'input', 'process', 'decision', 'loop', 'output', 'end'];
+  const FL_KIND_ORDER = ['start', 'input', 'process', 'decision', 'loop', 'output', 'end', 'sub', 'conn', 'note'];
+  /* Akışa katılan şekiller (yorum notları hariç) ve bağlantı noktalarının görünmeyen okları:
+     devamı olmayan "A" noktasından, aynı harfli ve oku olan tek "A" noktasına */
+  function flLogicNodes(pid, cid) { return projectFlowNodes(pid, cid).filter(n => n.kind !== 'note'); }
+  function flConnEdges(nodes, edges) {
+    const conns = nodes.filter(n => n.kind === 'conn');
+    if (!conns.length) return edges;
+    const hasOut = new Set(edges.map(e => e.from)), key = n => flFold(n.text.trim());
+    const entry = {};
+    conns.forEach(n => { if (hasOut.has(n.id) && key(n)) (entry[key(n)] = entry[key(n)] || []).push(n); });
+    const extra = [];
+    conns.forEach(n => { const t = entry[key(n)]; if (!hasOut.has(n.id) && t && t.length === 1 && t[0].id !== n.id) extra.push({ id: 'v' + n.id, from: n.id, to: t[0].id, label: '', virtual: true }); });
+    return extra.length ? edges.concat(extra) : edges;
+  }
   const FL_SIDES = ['top', 'right', 'bottom', 'left'];
   const FL_DIR = { top: [0, -1], right: [1, 0], bottom: [0, 1], left: [-1, 0] };
   const FL_FONT = '14px "Recursive WN", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
@@ -9123,6 +9152,7 @@
   const ICO_PLAY = '<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.3v9.4L12.6 8z" fill="currentColor"/></svg>';
   const ICO_PAUSE = '<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 3h2.5v10H4.5zM9 3h2.5v10H9z" fill="currentColor"/></svg>';
   const FL_LINE_H = 18;   // satır yüksekliği (px)
+  const FL_SUB = 10;      // alt program şeklindeki çift çizgilerin kenara uzaklığı
   const FL_SLANT = 18;    // paralelkenarın eğikliği
   const FL_HEX = 16;      // altıgenin uç payı
   const FL_HINT = el('flHint').textContent;
@@ -9139,7 +9169,7 @@
     return flowEdges.filter(e => e.projectId === pid && e.chartId === cid).sort((a, b) => a.created - b.created);
   }
   function findFlowNode(id) { return flowNodes.find(n => n.id === id); }
-  function flOut(id) { return projectFlowEdges(activeProject).filter(e => e.from === id); }
+  function flOut(id) { return flowEdges.filter(e => e.from === id); } // şekil kimlikleri tek: alt program şemalarında da çalışır
   function flBranches(n) { return n.kind === 'decision' || n.kind === 'loop'; }
 
   /* Bozuk/eksik kayıtlarda çökmemek için düğüm ve okları tamamlar (yedekten gelen veriye karşı da). */
@@ -9362,7 +9392,7 @@
     let g = flGeomCache.get(key);
     if (g) return g;
     const shown = n.text.trim() || FL_KINDS[n.kind].name;
-    const maxW = { decision: 170, loop: 190, start: 160, end: 160 }[n.kind] || 220;
+    const maxW = { decision: 170, loop: 190, start: 160, end: 160, conn: 60, note: 200 }[n.kind] || 220;
     const lines = flWrap(shown, maxW);
     const tw = Math.max(20, ...lines.map(flTextWidth));
     const th = lines.length * FL_LINE_H;
@@ -9376,6 +9406,9 @@
       w = 2 * a; h = Math.max(72, 2 * a / 1.8);
     }
     else if (n.kind === 'loop') { h = Math.max(46, th + 20); w = Math.max(140, tw + 36 + 2 * FL_HEX); }
+    else if (n.kind === 'conn') { w = h = Math.max(42, Math.ceil(Math.max(tw, th) + 18)); }
+    else if (n.kind === 'sub') { h = Math.max(44, th + 20); w = Math.max(150, tw + 32 + 2 * FL_SUB); }
+    else if (n.kind === 'note') { h = Math.max(40, th + 18); w = Math.max(110, tw + 34); }
     else { h = Math.max(44, th + 20); w = Math.max(130, tw + 32); }
     g = { w: Math.round(w), h: Math.round(h), lines: lines, th: th, tag: tag, empty: !n.text.trim() };
     if (flGeomCache.size > 2000) flGeomCache.clear();
@@ -9402,6 +9435,15 @@
     if (kind === 'input' || kind === 'output') return 'M' + f(-x + s) + ',' + f(-y) + ' H' + f(x) + ' L' + f(x - s) + ',' + f(y) + ' H' + f(-x) + ' Z';
     if (kind === 'decision') return 'M0,' + f(-y) + ' L' + f(x) + ',0 L0,' + f(y) + ' L' + f(-x) + ',0 Z';
     if (kind === 'loop') return 'M' + f(-x + k) + ',' + f(-y) + ' H' + f(x - k) + ' L' + f(x) + ',0 L' + f(x - k) + ',' + f(y) + ' H' + f(-x + k) + ' L' + f(-x) + ',0 Z';
+    if (kind === 'conn') { const r = Math.min(x, y); return 'M' + f(-r) + ',0 A' + f(r) + ',' + f(r) + ' 0 1 1 ' + f(r) + ',0 A' + f(r) + ',' + f(r) + ' 0 1 1 ' + f(-r) + ',0 Z'; }
+    if (kind === 'sub') { // alt program: iki yanında çift çizgi
+      const d = Math.min(FL_SUB, w / 6);
+      return 'M' + f(-x) + ',' + f(-y) + ' H' + f(x) + ' V' + f(y) + ' H' + f(-x) + ' Z M' + f(-x + d) + ',' + f(-y) + ' V' + f(y) + ' M' + f(x - d) + ',' + f(-y) + ' V' + f(y);
+    }
+    if (kind === 'note') { // köşesi kıvrık kâğıt
+      const c = Math.min(12, h / 3);
+      return 'M' + f(-x) + ',' + f(-y) + ' H' + f(x - c) + ' L' + f(x) + ',' + f(-y + c) + ' V' + f(y) + ' H' + f(-x) + ' Z M' + f(x - c) + ',' + f(-y) + ' V' + f(-y + c) + ' H' + f(x);
+    }
     return 'M' + f(-x) + ',' + f(-y) + ' H' + f(x) + ' V' + f(y) + ' H' + f(-x) + ' Z';
   }
 
@@ -9682,7 +9724,7 @@
     }
     if (flStepNum && flStepNum[n.id]) s += flStepBadgeSVG(n, g, flStepNum[n.id]);
     if (flBps().has(n.id)) s += '<g class="fl-bp" data-bp="1"><title>Kesme noktası: Oynat bu adıma gelince durur (kaldırmak için tıkla ya da F9)</title><circle cx="' + (-g.w / 2 - 12) + '" cy="0" r="6.5"/></g>';
-    FL_SIDES.forEach(side => {
+    if (n.kind !== 'note') FL_SIDES.forEach(side => {
       const p = flPort(n, side);
       s += '<circle class="fl-port" data-port="' + side + '" cx="' + (p.x - n.x) + '" cy="' + (p.y - n.y) + '" r="6"><title>Buradan tutup başka şekle sürükle: ok çiz</title></circle>';
     });
@@ -10036,7 +10078,8 @@
       if (!src) return;
       const under = document.elementFromPoint(flDrag.lastX, flDrag.lastY);
       const tEl = under && under.closest ? under.closest('.fl-node') : null;
-      const target = tEl && tEl.dataset.node !== src.id ? tEl : null;
+      const tN = tEl && findFlowNode(tEl.dataset.node);
+      const target = tEl && tEl.dataset.node !== src.id && tN && tN.kind !== 'note' ? tEl : null;
       if (target !== flDrag.target) {
         if (flDrag.target) flDrag.target.classList.remove('link-target');
         if (target) target.classList.add('link-target');
@@ -10168,7 +10211,7 @@
     const g = flGeom(n);
     const src = flSel && flSel.type === 'node' ? findFlowNode(flSel.id) : null;
     let from = null, label = '';
-    if (src && src.kind !== 'end' && kind !== 'start') {
+    if (src && src.kind !== 'end' && src.kind !== 'note' && kind !== 'start' && kind !== 'note') {
       const outs = flOut(src.id);
       if (flBranches(src) ? outs.length < 2 : !outs.length) { from = src; label = flBranches(src) ? flNextLabel(src) : ''; }
     }
@@ -10190,7 +10233,7 @@
     flSel = { type: 'node', id: n.id }; // yeni şekil seçili kalsın: sıradaki şekil buna bağlanır
     renderFlow();
     flJumpTo(n.id, false, true);
-    if (!from && src && src.kind !== 'end') flToast('Seçili şeklin boş çıkışı yoktu; yeni şekil bağlanmadan eklendi.');
+    if (!from && src && src.kind !== 'end' && src.kind !== 'note' && kind !== 'note') flToast('Seçili şeklin boş çıkışı yoktu; yeni şekil bağlanmadan eklendi.');
   }
 
   /* ---- OK ÇİZ ----
@@ -10326,7 +10369,7 @@
     const cs = getComputedStyle(document.body);
     const C = k => cs.getPropertyValue(k).trim();
     const P = { ink: C('--ink'), muted: C('--muted'), paper: C('--paper'), bg: C('--canvas'), green: C('--green') }; // zemin: tuvalin rengi
-    const fill = { start: 'term', end: 'term', input: 'io', output: 'io', process: 'proc', decision: 'dec', loop: 'loop' };
+    const fill = { start: 'term', end: 'term', input: 'io', output: 'io', process: 'proc', decision: 'dec', loop: 'loop', sub: 'proc', conn: 'term', note: 'dec' };
     const routes = flRouteAll(nodes, projectFlowEdges(pid, cid)).routes;
     const byId = {};
     nodes.forEach(n => { byId[n.id] = n; });
@@ -10399,7 +10442,9 @@
   function lintFlow(pid, cid) {
     const out = [];
     const add = (lvl, nid, msg) => out.push({ lvl: lvl, nid: nid, msg: msg });
-    const nodes = projectFlowNodes(pid, cid), edges = projectFlowEdges(pid, cid);
+    const all = projectFlowNodes(pid, cid), real = projectFlowEdges(pid, cid);
+    const nodes = all.filter(n => n.kind !== 'note'), edges = flConnEdges(nodes, real);
+    all.filter(n => n.kind === 'note' && real.some(e => e.from === n.id || e.to === n.id)).forEach(n => add('warn', n.id, 'Yorum notuna ok bağlanmaz; oku sil (not akışa katılmaz).'));
     if (!nodes.length) return out;
     const starts = nodes.filter(n => n.kind === 'start');
     if (!starts.length) add('err', null, 'Başla şekli yok: algoritmanın nereden başlayacağı belli değil.');
@@ -10410,6 +10455,13 @@
       const outs = edges.filter(e => e.from === n.id), ins = edges.filter(e => e.to === n.id);
       const nm = flName(n), kn = FL_KINDS[n.kind].name;
       if (n.kind !== 'start' && n.kind !== 'end' && !n.text.trim()) add('warn', n.id, kn + ' şeklinin içi boş (çift tıklayıp yaz).');
+      if (n.kind === 'sub' && n.text.trim() && !flSubChart(n.text, pid)) add('warn', n.id, nm + ': “' + flSubName(n.text) + '” adında bir akış şeması yok (alt program, bu projedeki bir şemanın adıdır).');
+      if (n.kind === 'conn' && n.text.trim()) {
+        const same = nodes.filter(x => x.kind === 'conn' && flFold(x.text.trim()) === flFold(n.text.trim()) && real.some(e => e.from === x.id));
+        if (!outs.length) add('err', n.id, '“' + n.text.trim() + '” bağlantısının devamı yok: aynı harfli ve oku olan bir bağlantı noktası ekle.');
+        else if (same.length > 1 && real.some(e => e.from === n.id)) add('err', n.id, '“' + n.text.trim() + '” harfli birden çok bağlantı noktasından ok çıkıyor; hangisine gidileceği belirsiz.');
+        return;
+      }
       if (n.kind === 'start' && ins.length) add('warn', n.id, 'Başla şekline ok girmemeli.');
       if (n.kind === 'end') {
         if (outs.length) add('err', n.id, 'Bitir şeklinden ok çıkmamalı.');
@@ -10450,7 +10502,7 @@
   function flLabelRank(l) { return l === 'Evet' ? 0 : (l === 'Hayır' ? 2 : 1); }
 
   function flowOrder(pid, cid) {
-    const nodes = projectFlowNodes(pid, cid), edges = projectFlowEdges(pid, cid);
+    const nodes = flLogicNodes(pid, cid), edges = flConnEdges(nodes, projectFlowEdges(pid, cid));
     const byId = {};
     nodes.forEach(n => { byId[n.id] = n; });
     const outs = {};
@@ -10507,6 +10559,8 @@
     const lines = [];
     order.forEach(n => {
       let t = oneLine(n.text) || FL_KINDS[n.kind].def;
+      if (n.kind === 'sub') t = 'Alt program ' + (flSubName(t) || t);
+      else if (n.kind === 'conn') t = 'Bağlantı ' + t;
       if (n.kind === 'decision') {
         const yes = branch(n, 'Evet') || (outs[n.id] || [])[0], no = branch(n, 'Hayır') || (outs[n.id] || []).find(e => e !== yes);
         t = 'Eğer ' + t.replace(/\?\s*$/, '').trim() + ' ise ' + step(yes && yes.to) + ' git, değilse ' + step(no && no.to) + ' git.';
@@ -10635,6 +10689,8 @@
     if ((r = pre(/^(?:until|kadar)\s+/)) != null) return { type: 'until', cond: stripCond(r) };
     if ((r = suf(/\s+(?:olana|olunca|olasiya)\s+kadar(?:\s+tekrarla)?$/)) != null) return { type: 'until', cond: r };
     if (/^(?:basla|baslat|baslangic|start|begin)$/.test(f)) return { type: 'start' };
+    if ((r = pre(/^(?:alt ?program[i]?|cagir|call)\s*:?\s+/)) != null && r) return { type: 'sub', text: r };
+    if ((r = pre(/^(?:baglanti(?: noktasi)?|connector)\s*:?\s+/)) != null && r && r.length <= 12) return { type: 'conn', text: r };
     if (/^(?:bitir|bitis|bitti|dur|son|stop|end|programi bitir|cik)$/.test(f)) return { type: 'end' };
     let g = gotoStep(t);
     if (g != null) return { type: 'goto', step: g };
@@ -10786,7 +10842,7 @@
           warn.push('Satır ' + l.no + ': "' + l.text + '" beklenmedik yerde, atlandı.');
           return pend;
         default:
-          n = mk(c.type, l.text); link(pend, n); return [{ n: n }];
+          n = mk(c.type, c.text != null ? c.text : l.text); link(pend, n); return [{ n: n }];
       }
     }
 
@@ -12313,10 +12369,10 @@
   }
 
   async function flAutoLayoutCmd() {
-    const nodes = projectFlowNodes(activeProject);
+    const nodes = flLogicNodes(activeProject);
     if (!nodes.length) { flToast('Dizilecek şekil yok. Önce şablondan bir şekil ekle.'); return; }
     flCheckpoint();
-    flLayoutGraph(nodes, projectFlowEdges(activeProject), 90, 50);
+    flLayoutGraph(nodes, flConnEdges(nodes, projectFlowEdges(activeProject)), 90, 50);
     for (const n of nodes) await saveFlowNode(n);
     renderFlow();
     // Telefonda bütün şemayı tek ekrana sığdırmak yazıları okunmaz yapıyordu: genişliğe göre sığdır
@@ -12984,6 +13040,16 @@
           flRunOutLine(vals.join(' '));
           break;
         }
+        case 'sub': flRunSub(t); break;
+        case 'note': break; // yorum notu: akışa katılmaz (oka bağlanmışsa geçilir)
+        case 'conn': {
+          if (!flOut(n.id).length) {
+            const v = flConnEdges(projectFlowNodes(activeProject, R.pid), projectFlowEdges(activeProject, R.pid)).find(e => e.from === n.id);
+            if (!v) throw flErr('“' + (t || '?') + '” bağlantı noktasının devamı yok: aynı harfli ve oku olan bir bağlantı noktası ekle.');
+            next = { id: null, to: v.to };
+          }
+          break;
+        }
         case 'decision': {
           let c = t.slice((flFold(t).match(/^(?:eger|if)\s+/) || [''])[0].length);
           c = c.slice(0, c.length - (flFold(c).match(/\s*(?:\s(?:ise|then))?\s*[?:]*\s*$/) || [''])[0].length);
@@ -13025,6 +13091,35 @@
       R.error = err.fl ? err.message : 'Beklenmeyen hata: ' + err.message;
       return 'error';
     }
+  }
+
+  /* Alt program: projedeki başka bir şemayı (adıyla) tek adımda baştan sona çalıştırır. Değişkenler ortak. */
+  const flSubName = t => String(t).trim().replace(/^(?:alt\s*program[ıi]?|çağır|cagir|call)\s*:?\s*/i, '').trim();
+  function flSubChart(t, pid) { const k = flFold(flSubName(t)); return k ? projectCharts(pid || activeProject).find(c => flFold(c.name.trim()) === k) : null; }
+  function flRunSub(t) {
+    const R = flRun, name = flSubName(t), ch = flSubChart(t);
+    if (!ch) throw flErr('“' + name + '” adında bir akış şeması yok. Alt program, bu projedeki başka bir şemanın (sekmenin) adıdır.');
+    if ((R.subDepth || 0) >= 20) throw flErr('Alt programlar birbirini çok derin çağırıyor (en fazla 20); kendini mi çağırıyor?');
+    const start = projectFlowNodes(activeProject, ch.id).find(x => x.kind === 'start');
+    if (!start) throw flErr('“' + ch.name + '” şemasında Başla yok.');
+    const save = { pid: R.pid, cur: R.cur, loops: R.loops, lastEdge: R.lastEdge, lastCond: R.lastCond }, changed = R.changed;
+    R.subDepth = (R.subDepth || 0) + 1;
+    R.pid = ch.id; R.cur = start.id; R.loops = {};
+    let err = null;
+    try {
+      for (let k = 0; ; k++) {
+        if (k >= FL_MAX_STEPS) { err = '“' + ch.name + '” alt programı ' + FL_MAX_STEPS + ' adımda bitmedi (sonsuz döngü olabilir).'; break; }
+        const r = flStepCore();
+        R.changed.forEach(x => changed.add(x));
+        if (r === 'done') break;
+        if (r === 'ask') { R.ask = null; err = '“' + ch.name + '” alt programında Giriş (Oku) var; alt programda değer okunamaz, değeri ana şemada oku.'; break; }
+        if (r === 'error') { err = '“' + ch.name + '” alt programında: ' + R.error; R.error = null; break; }
+      }
+    } finally {
+      R.subDepth--;
+      Object.assign(R, save, { changed: changed, done: false });
+    }
+    if (err) throw flErr(err);
   }
 
   /* Giriş sorusuna verilen cevabı işler */
@@ -13574,6 +13669,8 @@
   function flAnalyzeNode(n) {
     const t = n.text.trim().replace(/\s*\n\s*/g, '; ');
     const desc = { kind: 'call', text: t || FL_KINDS[n.kind].name };
+    if (n.kind === 'sub') return { kind: 'call', text: flSubName(t) || FL_KINDS.sub.def, sub: true }; // doldurulacak metot (alt programın adıyla)
+    if (n.kind === 'conn' || n.kind === 'note') return { kind: 'multi', stmts: [] }; // bağlantı noktası: komut yok
     if (n.kind === 'decision') {
       const c = flCondText(t);
       const ast = flTryExpr(c);
@@ -13630,7 +13727,7 @@
 
   /* ---------- Grafı düz bloklara ayırma ---------- */
   function flStructure(pid, cid) {
-    const nodes = projectFlowNodes(pid, cid), edges = projectFlowEdges(pid, cid);
+    const nodes = flLogicNodes(pid, cid), edges = flConnEdges(nodes, projectFlowEdges(pid, cid));
     const byId = {}, succ = {}, pred = {};
     nodes.forEach(n => { byId[n.id] = n; succ[n.id] = []; pred[n.id] = []; });
     edges.slice().sort((a, b) => flLabelRank(a.label) - flLabelRank(b.label)).forEach(e => {
@@ -15006,7 +15103,8 @@
       return '# Bu şema düz bloklara ayrılamadı (atlamalar var); numaralı adım biçimi kullanıldı.\n' + flowToSteps(pid, cid) + '\n';
     }
     const out = [];
-    const txt = id => S.byId[id].text.trim().replace(/\s*\n\s*/g, '; ');
+    const txt = id => { const n = S.byId[id], t = n.text.trim().replace(/\s*\n\s*/g, '; ');
+      return n.kind === 'sub' ? 'Alt program ' + (flSubName(t) || FL_KINDS.sub.def) : n.kind === 'conn' ? 'Bağlantı ' + (t || 'A') : t; };
     const condTxt = (id, neg) => {
       const c = S.byId[id].kind === 'decision' ? flCondText(txt(id)) : txt(id);
       return neg ? 'değil (' + c + ')' : c;
@@ -15085,7 +15183,10 @@
     decision: ['Bir soru (koşul) sorulur. Doğruysa <b>Evet</b>, yanlışsa <b>Hayır</b> okundan devam edilir.', 'a > b'],
     loop:     ['Sayaçlı tekrar. Sayaç bitene kadar <b>Evet</b> yoluna girilir, bitince <b>Hayır</b> okundan çıkılır.', 'i = 1 .. 10'],
     output:   ['Sonuç ya da mesaj ekrana yazdırılır.', 'Yaz toplam'],
-    end:      ['Bitiş noktası. Algoritma burada sona erer.', 'Bitir']
+    end:      ['Bitiş noktası. Algoritma burada sona erer.', 'Bitir'],
+    sub:      ['Alt program: projedeki başka bir akış şemasını adıyla çalıştırır, bitince buradan devam edilir.', 'Hesapla'],
+    conn:     ['Bağlantı noktası: uzak iki yeri ok çizmeden bağlar. Devamı olmayan “A”dan, oku olan “A”ya geçilir.', 'A'],
+    note:     ['Yorum notu: açıklama yazısı; akışa katılmaz, çalıştırılmaz.', 'Açıklama']
   };
 
   function renderFlLegend() {
