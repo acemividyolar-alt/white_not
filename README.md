@@ -129,6 +129,15 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
   - `Tekrarla` … `tahmin = gizli olana kadar`
   - Numaralı biçim: `Adım 4: Eğer x > 0 ise Adım 6'ya git` · `Adım 7: Adım 3'e git`
   - İngilizce anahtar kelimeler de olur (`IF / ELSE / WHILE / FOR / INPUT / PRINT`)
+- **Diziler (listeler):** `A = [3, 1, 2]`, `A = dizi(5, 0)` (beş tane 0), `Dizi A[10]`, iç içe `M[i][j]`.
+  Sıra numaraları 0'dan başlar: `A[0]` ilk eleman, `A[i] = 7` ile değişir, `Oku A[i]` ile okunur,
+  `ekle(A, x)` sona ekler. `uzunluk(A)` `toplam(A)` `min(A)` `max(A)` `ters(A)`. Olmayan bir elemana
+  ulaşılınca ne olduğu Türkçe anlatılır (`A[3] yok: A içinde 3 eleman var (A[0] … A[2])`).
+  `B = A` aynı diziyi gösterir (Python'daki gibi). En fazla 1.000.000 eleman.
+- **Metin fonksiyonları:** `s[0]` (harf), `uzunluk(s)`, `parça(s, 1, 3)`, `büyükharf(s)` `küçükharf(s)`
+  (Türkçe i/İ, ı/I), `içerir(s, "a")`, `bul(s, "a")` (yoksa -1), `ters(s)`, `kırp(s)`,
+  `değiştir(s, "a", "e")`, `kod("A")` → 65, `karakter(65)` → "A". Türkçe harfler (ç, ğ, İ …) her
+  dilde tek harf sayılır
 - **Adım numaralarını kendiliğinden yaz** (kutunun üstünde, varsayılan açık; cihazda hatırlanır):
   - Boş kutuya yazmaya başlayınca satırın başına `Adım 1: ` gelir; Enter'a basınca alt satıra sıradaki
     `Adım N: ` yazılır. `Eğer … ise`, `İken`, `İçin`, `Değilse` gibi blok açan satırdan sonra bir içeride başlar.
@@ -143,10 +152,15 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
   - `for i in range(...)` → `İçin` · `while True` + `break` → `Tekrarla … olana kadar`
   - `break` / `continue` / `return` → `Adım N'e git` · `match/case` → `Eğer` zinciri
   - `0 < x < 10` → `0 < x ve x < 10` · `x in (1, 2)` → `x = 1 veya x = 2` · `a, b = b, a` geçici değişkenle
+  - Listeler: `[1, 2]`, `[0] * n`, `a[i]`, `a[-1]`, `a.append(x)`, `a += [x]`, `for x in a` /
+    `for i, x in enumerate(a)` (sıra numarasıyla `İçin`), `a[i], a[j] = a[j], a[i]`, `len` `sum` `min` `max`
+  - Metinler: `s[1:3]` `s[2:]` `s[::-1]` → `parça` / `ters`, `.upper()` `.lower()` `.strip()` `.replace()`
+    `.find()` `.startswith()`, `"a" in s` → `içerir`, `ord` / `chr` → `kod` / `karakter`;
+    `input().lower()` küçük harfe çevirerek okunur
   - `def` ile yazılan fonksiyonlar çağrıldıkları yere açılır (`main()` dahil); tek satırlık
     `return ifade` fonksiyonları ifadenin içine yazılır
-  - Listeler, sözlükler, sınıflar gibi akış şemasında karşılığı olmayan satırlar uyarıyla atlanır
-    ya da şekle olduğu gibi yazılır; uyarılar satır numarasıyla gösterilir
+  - Sözlükler, sınıflar, `x in liste`, liste dilimleri, `list(a)` gibi akış şemasında karşılığı olmayan
+    satırlar uyarıyla atlanır ya da şekle olduğu gibi yazılır; uyarılar satır numarasıyla gösterilir
 - **Şemadan algoritma:** şema "Adım 1: Başla …" biçiminde numaralı adımlara çevrilir
   (kopyala / .txt indir); bu metin tekrar şemaya çevrilebilir
 - **Adım no:** her şeklin sol üst köşesinde adım numarası durur; "Adım N'e git" satırları (geri dönen ya da
@@ -154,20 +168,28 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
   adımlarla aynıdır. Numaralı yazılmış bir algoritmadan çizilen şemada yazdığın numaralar korunur (kollar
   yazılış sırasıyla numaralanır). Araç çubuğundaki **Adım no** ile gizlenip gösterilir; açıkken PNG / SVG
   resminde de çıkar.
-- **Koda çevir:** şema **C#** (konsol uygulaması), **Python** ya da sözde koda çevrilir.
-  Eğer / İken / İçin yapıları gerçek `if` / `while` / `for` olur; iç içe geçen "git"ler varsa
-  durum makinesi yazılır. Veritabanı gibi açıklama adımları `// TODO` boş metotlar olarak çıkar.
+- **Koda çevir:** şema **C#** (konsol uygulaması), **Java**, **C**, **C++**, **JavaScript**, **Python**
+  ya da sözde koda çevrilir. Eğer / İken / İçin yapıları gerçek `if` / `while` / `for` olur; iç içe geçen
+  "git"ler varsa durum makinesi yazılır. Değişken türleri (tam sayı, ondalık, metin, doğru/yanlış, dizi)
+  kullanımdan çıkarılır; diziler C#'ta `double[]` / `List`, Java'da dizi / `ArrayList`, C++'ta `vector`,
+  C'de sabit boyutlu dizi olur. Metin fonksiyonları her dilde aynı sonucu verir (Türkçe büyük/küçük harf,
+  UTF-8 harf sayma). Bir dilde karşılığı olmayan adımlar (ör. C'de metin dizisini ters çevirip yazdırmak)
+  ve veritabanı gibi açıklama adımları `// TODO` olarak çıkar. Java dosyası `Main.java` adıyla iner.
 - **Çalıştır:** şema adım adım yürütülür; sıradaki şekil fosforlu kalemle, geçilen ok yeşil gösterilir,
   değişkenler ve ekran çıktısı izlenir, Giriş şeklinde değer sorulur. Hız seçilebilir,
   sonsuz döngüye karşı adım sınırı vardır. İfadeler güvenli bir ayrıştırıcıyla hesaplanır
-  (`+ - * / mod ^`, `= <> < > <= >=`, `ve veya değil`, `karekök() mutlak() yuvarla() tam() rastgele(a, b)`)
+  (`+ - * / mod div ^`, `= <> < > <= >=`, `ve veya değil`, `karekök() mutlak() yuvarla() tam() taban() tavan()
+  us() rastgele(a, b) metin() sayı()`, dizi ve metin fonksiyonları). Değişken panelinde diziler `[1, 2, 3]`,
+  metinler tırnak içinde gösterilir
 - **? düğmesi:** "Şekiller ne işe yarar?" hatırlatması — her şeklin anlamı, kısa örneği ve
   tek tıkla ekleme (klavyede `?` tuşu da açar)
 - Hata kontrolü: Başla yok, kararın iki çıkışı yok, bağlanmamış adım, ulaşılamayan adım…
 - **Yerleştir** (şekilleri akışa göre dizer, telefonda ekran genişliğine sığdırır), ekrana sığdır,
   geri al / yinele, PNG / SVG indirme
-- Hazır örnekler: toplam, büyük olanı bul, not harfi, faktöriyel, asal sayı, sayı tahmin oyunu,
-  bu uygulamanın kendi çalışma akışı ve bir Python kodu (not ortalaması)
+- Hazır örnekler (gruplu liste): toplam, büyük olanı bul, not harfi, faktöriyel, asal sayı, sayı tahmin
+  oyunu, EBOB / EKOK; **diziler:** Fibonacci, en büyük / en küçük, kabarcık sıralama, ikili arama;
+  **metinler:** palindrom, sesli harf sayma; bu uygulamanın kendi çalışma akışı ve bir Python kodu
+  (not ortalaması)
 
 ## Her yerde ara (Ctrl+K)
 

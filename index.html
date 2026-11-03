@@ -8109,7 +8109,7 @@
     conLast = rest > 0 ? { sql: sql, next: stop + 1 } : null;
     if (rest > 0) blocks.push('<div class="con-note con-rest">Kalan ' + rest + ' komut çalıştırılmadı. <button class="link-btn" type="button" id="conRest">Bu komutu atla, kalanları çalıştır</button></div>');
     if (!n) blocks.push('<div class="con-note">Çalıştırılacak komut yok.</div>');
-    conMsg(n ? ok + ' / ' + n + ' komut çalıştı (' + Math.round(performance.now() - t0) + ' ms)' + (stop >= 0 ? ' · ' + (stop + 1) + '. komutta hata' : '') + '.' : '', stop >= 0 ? 'err' : 'info');
+    conMsg(n ? ok + ' / ' + (stmts.length - (from || 0)) + ' komut çalıştı (' + Math.round(performance.now() - t0) + ' ms)' + (stop >= 0 ? ' · ' + (stop + 1) + '. komutta hata' : '') + '.' : '', stop >= 0 ? 'err' : 'info');
     const out = el('conOut');
     if (append) { const old = out.querySelector('.con-rest'); if (old) old.remove(); out.insertAdjacentHTML('beforeend', blocks.join('')); }
     else out.innerHTML = blocks.join('');
@@ -11063,7 +11063,7 @@
     // liste olduğu belli olan adlar ("x in L", "L[1:3]", "L.index(x)" metin fonksiyonlarına çevrilmesin)
     const lists = new Set();
     String(src).replace(/(?:^|[\n;])[ \t]*([\p{L}_][\p{L}\p{N}_]*)[ \t]*(?::[^=\n]*)?=(?!=)[ \t]*(?:\[|list\(|sorted\(|[\p{L}_][\p{L}\p{N}_.]*\.split\()/gu, (m, v) => { lists.add(v); return m; });
-    String(src).replace(/([\p{L}_][\p{L}\p{N}_]*)\.(?:append|extend|insert|pop|remove|sort|reverse)\(/gu, (m, v) => { lists.add(v); return m; });
+    String(src).replace(/(?<![\p{L}\p{N}_])([\p{L}_][\p{L}\p{N}_]*)\.(?:append|extend|insert|pop|remove|sort|reverse)\(/gu, (m, v) => { lists.add(v); return m; });
     const isList = n => { const u = unparen(n); return !!u && (u.t === 'list' || (u.t === 'name' && lists.has(u.v))); };
     const frames = [];
     const S = (text, no, free) => ({ k: 's', text: text, no: no, free: !!free });
@@ -12293,7 +12293,23 @@
     seen.add(v);
     return v.reduce((n, x) => n + flCount(x, seen), 0) + 1;
   }
-  function flCopyArr(v) { return Array.isArray(v) ? v.map(flCopyArr) : v; }
+  function flCopyArr(v, seen) { // kendini içeren dizilerde de biter (ekle(A, A))
+    if (!Array.isArray(v)) return v;
+    seen = seen || new Map();
+    if (seen.has(v)) return seen.get(v);
+    const out = [];
+    seen.set(v, out);
+    v.forEach(x => out.push(flCopyArr(x, seen)));
+    return out;
+  }
+  /* Bir çalıştırmada oluşturulan toplam dizi elemanı sınırı: döngüde her adımda büyük dizi
+     oluşturan bir şema sekmeyi (belleği) doldurmasın */
+  const FL_MAX_CELLS = 2e7;
+  function flAlloc(n) {
+    if (typeof flRun === 'undefined' || !flRun) return;
+    flRun.cells = (flRun.cells || 0) + n;
+    if (flRun.cells > FL_MAX_CELLS) throw flErr('Bu çalıştırmada çok fazla dizi elemanı oluşturuldu (en fazla 20.000.000). Döngünün her adımında yeni bir dizi oluşturuluyor olabilir.');
+  }
   /* Metin birleştirme (çok uzun metinler tarayıcıyı dondurmasın) */
   function flJoin(a, b) {
     if (Array.isArray(a) || Array.isArray(b)) throw flErr('Dizi + ile metne eklenemez; Yaz ile ayrı yaz ya da metin(A) kullan.');
@@ -12317,8 +12333,9 @@
   function flMinMax(a, big) {
     let list = a;
     if (a.length === 1 && Array.isArray(a[0])) { list = a[0]; if (!list.length) throw flErr('Boş dizinin en ' + (big ? 'büyüğü' : 'küçüğü') + ' yok.'); }
-    const nums = list.map(x => flNum(x, big ? 'max( )' : 'min( )'));
-    return big ? Math.max(...nums) : Math.min(...nums);
+    let m = big ? -Infinity : Infinity; // (Math.max(...) çok uzun dizide yığın taşırır)
+    for (const x of list) { const v = flNum(x, big ? 'max( )' : 'min( )'); if (big ? v > m : v < m) m = v; }
+    return m;
   }
 
   /* Hazır fonksiyonlar (adların sadeleşmiş hali): [en az değer sayısı, fonksiyon, en fazla değer sayısı] ya da başka bir adın takma adı */
@@ -12348,7 +12365,7 @@
     kucukharf: [1, s => flStr(s, 'küçükharf( )').toLocaleLowerCase('tr'), 1], lower: 'kucukharf',
     icerir: [2, (s, t) => flStr(s, 'içerir( )').includes(flStr(t, 'içerir( )')), 2], contains: 'icerir',
     bul: [2, (s, t) => { s = flStr(s, 'bul( )'); const i = s.indexOf(flStr(t, 'bul( )')); return i < 0 ? -1 : flChars(s.slice(0, i)).length; }, 2], find: 'bul',
-    ters: [1, x => (Array.isArray(x) ? x.slice().reverse() : flChars(flStr(x, 'ters( )')).reverse().join('')), 1], reverse: 'ters',
+    ters: [1, x => { if (Array.isArray(x)) { flAlloc(x.length); return x.slice().reverse(); } return flChars(flStr(x, 'ters( )')).reverse().join(''); }, 1], reverse: 'ters',
     kirp: [1, s => flStr(s, 'kırp( )').trim(), 1], trim: 'kirp',
     degistir: [3, (s, a, b) => {
       s = flStr(s, 'değiştir( )'); a = flStr(a, 'değiştir( )'); b = flStr(b, 'değiştir( )');
@@ -12365,6 +12382,7 @@
       if (k < 0) throw flErr('dizi( ): eleman sayısı negatif olamaz.');
       const fill = v == null ? 0 : v;
       if (k * flCount(fill) > FL_MAX_ITEMS) throw flErr('Dizi çok büyük (en fazla 1.000.000 eleman).');
+      flAlloc(k * flCount(fill));
       return Array.from({ length: k }, () => flCopyArr(fill));
     }, 2], array: 'dizi',
     toplam: [1, A => flArr(A, 'toplam( )').reduce((s, x) => s + flNum(x, 'toplam( )'), 0), 1], sum: 'toplam',
@@ -12450,6 +12468,7 @@
         if (!isOp(']')) { items.push(or()); while (isOp(',')) { p++; items.push(or()); } }
         take(']');
         if (items.length > FL_MAX_ITEMS) throw flErr('Dizi çok büyük.');
+        flAlloc(items.length + 1);
         label = null;
         return items;
       }
@@ -12638,6 +12657,7 @@
       const A = R.vars.get(key).value;
       if (!Array.isArray(A)) throw flErr('ekle( ): ' + P.name + ' bir dizi değil.');
       if (A.length >= FL_MAX_ITEMS) throw flErr('Dizi çok büyük (en fazla 1.000.000 eleman).');
+      flAlloc(1);
       A.push(flEval(P.value, R.vars));
       R.changed.add(key);
       return;
@@ -12645,7 +12665,9 @@
     flAssign(P.name, P.idx, P.op, flEval(P.value, R.vars), P.inc);
   }
 
+  const FL_MAX_LINE = 20000; // ekrandaki bir satırın en fazla harf sayısı (büyük diziler belleği doldurmasın)
   function flRunOutLine(text, cls) {
+    if (text.length > FL_MAX_LINE) text = text.slice(0, FL_MAX_LINE) + ' … (' + (text.length - FL_MAX_LINE) + ' harf daha)';
     flRun.out.push({ text: text, cls: cls || '' });
     if (flRun.out.length > 500) flRun.out.shift();
   }
@@ -12786,6 +12808,7 @@
     if (!flRun) return;
     clearTimeout(flRun.timer);
     flRun.timer = null;
+    flRun.burst = 0;
     if (flRun.playing) { flRun.playing = false; renderFlRun(); }
   }
 
@@ -12814,8 +12837,16 @@
     if (!R || !R.playing) return;
     const speed = +el('flRunSpeed').value;
     if (speed === 0) {
-      let r = 'ok', k = 0;
-      while (r === 'ok' && k++ < FL_MAX_STEPS) r = flStepOnce();
+      let r = 'ok';
+      const t0 = performance.now();
+      R.burst = R.burst || 0;
+      while (r === 'ok' && R.burst < FL_MAX_STEPS) {
+        r = flStepOnce();
+        R.burst++;
+        // uzun süren adımlarda sekme donmasın: ara verip kaldığı yerden sürer (Duraklat çalışır)
+        if (r === 'ok' && R.burst < FL_MAX_STEPS && performance.now() - t0 > 150) { renderFlRun(); R.timer = setTimeout(flSchedule, 0); return; }
+      }
+      R.burst = 0;
       if (r === 'ok') { R.playing = false; flRunOutLine('(' + FL_MAX_STEPS + ' adımda bitmedi — sonsuz döngü olabilir; devam için tekrar Oynat)', 'err'); }
       if (r !== 'ok') R.playing = false;
       if (r === 'ask') R.playing = true; // giriş girilince devam etsin
@@ -13400,7 +13431,6 @@
   function flCodeGen(pid, cid, lang) {
     const S = flStructure(pid, cid);
     const chart = findChart(cid);
-    const title = (chart ? chart.name : 'Akış') + ' — White Note akış şemasından üretildi';
     const py = lang === 'python', js = lang === 'js', cs = lang === 'csharp', java = lang === 'java', c = lang === 'c', cpp = lang === 'cpp';
     const CM = py ? '# ' : '// ';
     if (!S) return lang === 'pseudo' ? '' : CM + 'Şema boş.\n';
@@ -13436,7 +13466,14 @@
       }
       return stubs.get(k).name + '()';
     };
-    const strLit = s => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t') + '"';
+    // metin sabiti: kontrol karakterleri ve satır ayırıcıları kaçışla yazılır (C#'ta U+2028 / U+0085 satır sonudur)
+    const ctlEsc = ch => { const n = ch.charCodeAt(0); return c || cpp ? (n < 0x80 ? '\\' + n.toString(8).padStart(3, '0') : ch) : '\\u' + n.toString(16).padStart(4, '0'); };
+    const strLit = s => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t')
+      .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\u0085\u2028\u2029]/g, ctlEsc) + '"';
+    // yorum satırına giren kullanıcı metni: satır sonları boşluk olur; ters bölü "/" olur (C/C++'ta satır sonundaki \
+    // alttaki satırı yoruma katar, Java'da \u000a yeni satır sayılır), C üçlüsü ??/ bozulur
+    const cmt = t => String(t).replace(/[\s\u0085]+/g, ' ').replace(/\\/g, '/').replace(/\?\?\//g, '?? /').trim();
+    const title = cmt(chart ? chart.name : 'Akış') + ' — White Note akış şemasından üretildi';
     const isInt = a => tyOf(a) === 'int';
     const isStr = a => tyOf(a) === 'string';
     const typed = cs || java || c || cpp;
@@ -13798,7 +13835,7 @@
       const m = [];
       seq.forEach(x => { const last = m[m.length - 1]; if (x.lit != null && last && last.lit != null) last.lit += x.lit; else m.push(Object.assign({}, x)); });
       if (c) {
-        const fmt = m.map(x => (x.lit != null ? x.lit.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/%/g, '%%').replace(/\n/g, '\\n') : '%s')).join('');
+        const fmt = m.map(x => (x.lit != null ? strLit(x.lit).slice(1, -1).replace(/%/g, '%%') : '%s')).join('');
         const args = m.filter(x => x.code != null).map(x => x.code);
         return 'printf("' + fmt + '\\n"' + (args.length ? ', ' + args.join(', ') : '') + ');';
       }
@@ -13973,7 +14010,7 @@
           case 'end': out.push(ind + (py ? 'return' : c || cpp ? 'return 0;' : 'return;')); break;
           case 'break': out.push(ind + 'break' + SEMI); break;
           case 'continue': out.push(ind + 'continue' + SEMI); break;
-          case 'goto': out.push(ind + (py ? 'pass  # Buradan "' + S.byId[x.node].text.replace(/\s+/g, ' ') + '" adımına gidilir' : 'goto ' + label(x.node) + ';')); break;
+          case 'goto': out.push(ind + (py ? 'pass  # Buradan "' + cmt(S.byId[x.node].text) + '" adımına gidilir' : 'goto ' + label(x.node) + ';')); break;
           case 'if': {
             let cur = x, first = true;
             for (;;) {
@@ -14091,7 +14128,7 @@
             body.push('if (' + v + (neg ? ' >= ' : ' <= ') + ex(inf.b, 5) + ') adim = ' + go(y) + '; else { ' + f + ' = false; adim = ' + go(h) + '; }');
           }
         } else { stmtLines(id).forEach(l => body.push(l)); body.push(set(go(S.next(id)))); }
-        const note = N.text.replace(/\s+/g, ' ').trim() || FL_KINDS[N.kind].name;
+        const note = cmt(N.text) || FL_KINDS[N.kind].name;
         if (py) { L.push(ind + IND + (i ? 'elif' : 'if') + ' adim == ' + num[id] + ':  # ' + note); body.forEach(l => L.push(ind + IND + IND + l)); }
         else { L.push(ind + IND + IND + 'case ' + num[id] + ': // ' + note); body.forEach(l => L.push(ind + IND + IND + IND + l)); L.push(ind + IND + IND + IND + 'break;'); }
       });
@@ -14157,7 +14194,7 @@
       const ind = cs || java ? IND : '';
       const sig = cs ? 'static ' + (st.bool ? 'bool' : 'void') + ' ' + st.name + '()' : java ? 'static ' + (st.bool ? 'boolean' : 'void') + ' ' + st.name + '()'
         : js ? 'function ' + st.name + '()' : (st.bool ? 'bool' : 'void') + ' ' + st.name + (c ? '(void)' : '()');
-      stubLines.push('', ind + sig, ind + '{', ind + IND + '// TODO: ' + st.text);
+      stubLines.push('', ind + sig, ind + '{', ind + IND + '// TODO: ' + cmt(st.text));
       if (st.bool) stubLines.push(ind + IND + 'return false;');
       stubLines.push(ind + '}');
     });
@@ -14168,7 +14205,7 @@
       if (need.has('random')) lines.push('import random');
       if (need.has('math') || need.has('random')) lines.push('');
       helpers.forEach(l => lines.push(l));
-      stubs.forEach(s => lines.push('', 'def ' + s.name + '():', IND + '# TODO: ' + s.text, IND + (s.bool ? 'return False' : 'pass')));
+      stubs.forEach(s => lines.push('', 'def ' + s.name + '():', IND + '# TODO: ' + cmt(s.text), IND + (s.bool ? 'return False' : 'pass')));
       lines.push('', '', 'def main():');
       notes.forEach(n => lines.push(IND + n));
       declLines.forEach(l => lines.push(IND + l));
