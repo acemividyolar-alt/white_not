@@ -1254,6 +1254,62 @@
   }
   .fl-out .in { color: var(--muted); }
   .fl-out .err { color: var(--danger); }
+
+  /* Kesme noktası (şeklin solunda kırmızı nokta), izleme tablosu, testler */
+  .fl-bp circle { fill: var(--danger); stroke: var(--paper); stroke-width: 2; cursor: pointer; }
+  .fl-bp:hover circle { stroke: var(--danger); stroke-width: 3; }
+  .fl-bp-ico { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--danger); margin-right: 0.4rem; flex-shrink: 0; }
+  .fl-run .lbl-short { display: none; }
+  .fl-trace { display: flex; flex-direction: column; gap: 0.4rem; min-height: 0; }
+  .fl-trace-bar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .fl-trace-info { flex: 1; min-width: 9rem; font-size: 0.8rem; color: var(--muted); }
+  .fl-trace-wrap { overflow: auto; max-height: 15rem; border: 1px solid var(--line); border-radius: var(--r); background: var(--paper); }
+  .fl-trace-t { border-collapse: separate; border-spacing: 0; font-size: 0.78rem; min-width: 100%; }
+  .fl-trace-t th, .fl-trace-t td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 0.2rem 0.5rem; text-align: left; white-space: nowrap; }
+  .fl-trace-t th { position: sticky; top: 0; background: var(--paper-2); color: var(--ink-2); font-weight: 640; z-index: 1; }
+  .fl-trace-t td.no { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+  .fl-trace-t td.ch { background: var(--hl); color: var(--hl-ink); font-weight: 600; }
+  .fl-trace-t td.old { color: var(--muted); }
+  .fl-trace-t td.yes { color: var(--green); font-weight: 600; }
+  .fl-trace-t td.nope { color: var(--danger); font-weight: 600; }
+  .fl-trace-t td.err { color: var(--danger); white-space: normal; min-width: 12rem; }
+  .fl-trace-t td.step { max-width: 16rem; overflow: hidden; text-overflow: ellipsis; }
+  .fl-trace-empty { padding: 0.6rem; font-size: 0.8rem; color: var(--muted); }
+  .fl-test-badge:empty { display: none; }
+  .fl-test-badge { margin-left: 0.4rem; font-size: 0.72rem; font-weight: 700; padding: 0 0.4rem; border-radius: 99px; border: 1px solid var(--line); background: var(--paper-2); }
+  .fl-test-badge.ok { color: var(--green); border-color: var(--green); }
+  .fl-test-badge.bad { color: var(--danger); border-color: var(--danger); }
+  .fl-test-sum { font-size: 0.875rem; font-weight: 640; min-height: 1.2rem; }
+  .fl-test-sum.ok { color: var(--green); }
+  .fl-test-sum.bad { color: var(--danger); }
+  .fl-tests { display: flex; flex-direction: column; gap: 0.6rem; max-height: 52vh; overflow-y: auto; margin: 0.55rem 0 0; padding-right: 0.15rem; }
+  .fl-tests .fl-none { font-size: 0.85rem; color: var(--muted); padding: 0.4rem 0; }
+  .fl-test { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 0.55rem 0.65rem; background: var(--paper); }
+  .fl-test.ok { border-color: color-mix(in srgb, var(--green) 60%, var(--line)); }
+  .fl-test.bad { border-color: color-mix(in srgb, var(--danger) 60%, var(--line)); }
+  .fl-test-head { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+  .fl-test-head .modal-tags-input { flex: 1; width: auto; min-width: 7rem; }
+  .fl-test-res { font-size: 0.8125rem; font-weight: 700; }
+  .fl-test-res.ok { color: var(--green); }
+  .fl-test-res.bad { color: var(--danger); }
+  .fl-test-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.5rem; margin-top: 0.45rem; }
+  .fl-test-grid label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.75rem; font-weight: 640; color: var(--ink-2); }
+  .fl-test-grid textarea {
+    width: 100%; min-height: 4.4rem; resize: vertical; font-size: 0.82rem; line-height: 1.5; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--line-2); border-radius: var(--r); padding: 0.35rem 0.5rem; outline: none;
+  }
+  .fl-test-grid textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .fl-test-diff { margin-top: 0.45rem; font-size: 0.8rem; }
+  .fl-test-diff .msg { color: var(--danger); }
+  .fl-test-diff table { border-collapse: collapse; width: 100%; margin-top: 0.25rem; }
+  .fl-test-diff td, .fl-test-diff th { border-bottom: 1px solid var(--line); padding: 0.15rem 0.4rem; text-align: left; vertical-align: top; word-break: break-word; }
+  .fl-test-diff th { color: var(--muted); font-weight: 640; font-size: 0.75rem; }
+  .fl-test-diff tr.bad td { background: var(--danger-soft); }
+  .fl-test-diff td.no { color: var(--muted); width: 2.2rem; text-align: right; }
+  .fl-test-add { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .fl-hw-grid { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.45rem 0.75rem; align-items: center; margin-bottom: 0.85rem; }
+  .fl-hw-parts { display: flex; flex-direction: column; gap: 0.45rem; align-items: flex-start; }
+  .fl-hw-parts .modal-select { height: calc(var(--ctl-h) - 6px); margin-left: 0.2rem; }
   .fl-ask { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; font-size: 0.875rem; }
   .fl-ask input {
     flex: 1; min-width: 8rem; height: var(--ctl-h); font-size: 0.9rem; color: var(--ink); background: var(--paper);
@@ -1659,7 +1715,7 @@
      =================================================================== */
   code, pre, kbd, .mono, .er-fname, .er-ftype, .er-badge, .er-ai, .er-card, .er-act, .elp-title, .tbl-in, .tbl-link-row,
   .sql-out, .sql-in, .con-table, .con-res-head, .con-ok, .con-err, .con-hint, .fl-out, .fl-vars, .fl-ask input,
-  .fl-algo-out, .fl-code-out, .fl-text-in, .fl-leg-ex, #flSource, .gs-esc {
+  .fl-algo-out, .fl-code-out, .fl-text-in, .fl-leg-ex, #flSource, .gs-esc, .fl-trace-t td, .fl-test-grid textarea, .fl-test-diff td {
     font-family: var(--font-mono); font-variation-settings: "MONO" 1;
   }
   .tbl-flag, .er-zoom { font-variant-numeric: tabular-nums; }
@@ -1817,6 +1873,17 @@
     .fl-shape-btn { width: auto; min-width: 48px; flex: 1; height: 50px; font-size: 0.6875rem; }
     .fl-run-body { grid-template-columns: 1fr; }
     .fl-run { max-height: 45vh; }
+    .fl-test-grid { grid-template-columns: 1fr; }
+    .fl-trace-wrap { max-height: 11rem; }
+    /* telefonda çalıştırma çubuğu kısa yazılarla iki satıra sığsın */
+    .fl-run .lbl-long, .fl-trace-info { display: none; }
+    .fl-run .lbl-short { display: inline; }
+    #flRunBp { width: var(--ctl-h); padding: 0; justify-content: center; }
+    #flRunBp .fl-bp-ico { margin: 0; }
+    .fl-run-bar { gap: 0.3rem; }
+    .fl-run-bar .er-btn, .fl-trace-bar .er-btn { padding-left: 0.55rem; padding-right: 0.55rem; }
+    .fl-run-state { min-width: 100%; order: 9; }
+    .fl-trace-t td.step { max-width: 8.5rem; }
     .fl-leg-row { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 0.5rem; }
     .fl-leg-row > svg { width: 54px; }
 
@@ -2130,6 +2197,7 @@
                 <button data-flact="svg">Akış şeması vektör (.svg)</button>
                 <button data-flact="txt">Algoritma adımları (.txt)</button>
                 <button data-flact="code">Koda çevir (C#, Java, C, C++, JavaScript, Python)&hellip;</button>
+                <button data-flact="homework">Ödev çıktısı (yazdır / PDF)&hellip;</button>
                 <div class="sep"></div>
                 <button data-flact="clear" class="danger">Şemayı temizle&hellip;</button>
               </div>
@@ -2176,6 +2244,7 @@
         <div class="fl-run" id="flRun" style="display:none">
           <div class="fl-run-bar">
             <button class="er-btn primary" id="flRunPlay" title="Sonuna kadar (ya da bir giriş istenene kadar) çalıştır"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.3v9.4L12.6 8z" fill="currentColor"/></svg>Oynat</button>
+            <button class="er-btn" id="flRunBack" title="Bir adım geri al (değişkenler ve ekran da geri gelir)" disabled>&lsaquo; Geri</button>
             <button class="er-btn" id="flRunStep" title="Sadece bir adım ilerle">Adım &rsaquo;</button>
             <button class="er-btn" id="flRunReset" title="Değişkenleri silip baştan başla"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.75 8a5.25 5.25 0 1 0 1.6-3.8M2.5 2.5v2.75h2.75"/></svg>Baştan</button>
             <select class="er-select" id="flRunSpeed" title="Oynatma hızı">
@@ -2184,6 +2253,9 @@
               <option value="60">Hızlı</option>
               <option value="0">Anında</option>
             </select>
+            <button class="er-btn" id="flRunBp" aria-label="Kesme noktası" title="Seçili şekle kesme noktası koy / kaldır (F9): Oynat o adıma gelince durur"><span class="fl-bp-ico" aria-hidden="true"></span><span class="lbl-long">Kesme noktası</span></button>
+            <button class="er-btn tgl" id="flRunTrace" type="button" aria-pressed="false" title="Değişken izleme tablosu: her adımda değişkenlerin aldığı değerler"><span class="lbl-long">İzleme tablosu</span><span class="lbl-short">Tablo</span></button>
+            <button class="er-btn" id="flRunTests" title="Test senaryoları: girdileri ve beklenen çıktıyı yaz, hepsini tek tıkla dene">Testler<span class="fl-test-badge" id="flTestBadge"></span></button>
             <span class="fl-run-state" id="flRunState"></span>
             <button class="er-btn icon" id="flRunClose" title="Paneli kapat" aria-label="Paneli kapat">&times;</button>
           </div>
@@ -2192,9 +2264,18 @@
             <input id="flAskIn" type="text" autocomplete="off" spellcheck="false" enterkeyhint="done">
             <button class="er-btn primary" id="flAskBtn">Gir</button>
           </div>
-          <div class="fl-run-body">
+          <div class="fl-run-body" id="flRunBody">
             <div><div class="fl-run-label">Değişkenler</div><div id="flVars"></div></div>
             <div><div class="fl-run-label">Ekran (çıktı)</div><div class="fl-out" id="flOut"></div></div>
+          </div>
+          <div class="fl-trace" id="flTrace" style="display:none">
+            <div class="fl-trace-bar">
+              <span class="fl-trace-info" id="flTraceInfo"></span>
+              <label class="opt" title="Her satırda o anki bütün değerler yazılsın (değişenler yine vurgulu)"><input type="checkbox" id="flTraceAll"> <span class="lbl-long">Değişmeyen değerleri de yaz</span><span class="lbl-short">Hepsini yaz</span></label>
+              <button class="er-btn" id="flTraceCopy" title="Tabloyu kopyala (Excel / Word'e yapıştırılabilir)">Kopyala</button>
+              <button class="er-btn" id="flTraceCsv">CSV indir</button>
+            </div>
+            <div class="fl-trace-wrap" id="flTraceWrap"></div>
           </div>
         </div>
         <div class="er-status">
@@ -2618,6 +2699,71 @@
       <div class="modal-actions">
         <span></span>
         <button class="modal-btn primary" id="flHelpDone">Tamam</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     TEST SENARYOLARI PENCERESİ (Akış görünümü)
+     Her test şemayı verilen girdilerle baştan çalıştırır, ekrana yazılanı beklenenle karşılaştırır.
+     Testler şemayla birlikte saklanır (yedek, ekip, GitHub).
+     =================================================================== -->
+<div class="modal-overlay" id="flTestModal">
+  <div class="modal wide">
+    <div class="modal-head">
+      <div class="modal-heading">Test senaryoları</div>
+      <button class="modal-close" id="flTestClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-note">Her test şemayı baştan çalıştırır: <b>Girdiler</b> sırayla Giriş adımlarına verilir (her satıra bir değer), ekrana yazılanlar <b>Beklenen çıktı</b> ile satır satır karşılaştırılır.</p>
+      <div class="fl-test-sum" id="flTestSum"></div>
+      <div class="fl-tests" id="flTestList"></div>
+      <div class="modal-actions">
+        <div class="fl-test-add">
+          <button class="modal-btn" id="flTestAdd" type="button">+ Yeni test</button>
+          <button class="modal-btn" id="flTestFromRun" type="button" title="Çalıştır panelinde son yaptığın çalıştırmanın girdileri ve çıktısıyla test oluşturur">Son çalıştırmadan test oluştur</button>
+        </div>
+        <div class="modal-actions-right">
+          <button class="modal-btn primary" id="flTestRunAll" type="button">Hepsini çalıştır</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     ÖDEV ÇIKTISI PENCERESİ (Akış görünümü)
+     Seçilen bölümlerle yazdırılabilir bir sayfa hazırlar; tarayıcının yazdır penceresinden PDF kaydedilir.
+     =================================================================== -->
+<div class="modal-overlay" id="flHwModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-heading">Ödev çıktısı</div>
+      <button class="modal-close" id="flHwClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-note">Yazdırılabilir bir sayfa açılır; yazdır penceresinde <b>PDF olarak kaydet</b>'i seçersen PDF olur. Ad ve sınıf bu cihazda hatırlanır.</p>
+      <div class="fl-hw-grid">
+        <label class="opt" for="flHwTitle">Başlık</label><input class="modal-tags-input" id="flHwTitle" maxlength="100">
+        <label class="opt" for="flHwName">Ad Soyad</label><input class="modal-tags-input" id="flHwName" maxlength="80" autocomplete="name">
+        <label class="opt" for="flHwClass">Sınıf / No</label><input class="modal-tags-input" id="flHwClass" maxlength="60">
+      </div>
+      <div class="fl-hw-parts">
+        <label class="opt"><input type="checkbox" data-hw="chart" checked> Akış şeması</label>
+        <label class="opt"><input type="checkbox" data-hw="steps" checked> Algoritma adımları</label>
+        <label class="opt"><input type="checkbox" data-hw="code" checked> Kod:
+          <select class="modal-select" id="flHwLang">
+            <option value="csharp">C#</option><option value="java">Java</option><option value="c">C</option><option value="cpp">C++</option>
+            <option value="js">JavaScript</option><option value="python">Python</option><option value="pseudo">Sözde kod</option>
+          </select></label>
+        <label class="opt"><input type="checkbox" data-hw="trace" checked> İzleme tablosu (son çalıştırma)</label>
+        <label class="opt"><input type="checkbox" data-hw="tests" checked> Test sonuçları</label>
+      </div>
+      <div class="er-msg" id="flHwMsg"></div>
+      <div class="modal-actions">
+        <span></span>
+        <div class="modal-actions-right"><button class="modal-btn primary" id="flHwPrint" type="button">Yazdır / PDF</button></div>
       </div>
     </div>
   </div>
@@ -9023,6 +9169,7 @@
       c.name = String(c.name || 'Akış').slice(0, 60);
       c.source = typeof c.source === 'string' ? c.source : '';
       c.created = +c.created || Date.now();
+      if (c.tests !== undefined) c.tests = flCleanTests(c.tests);
       return c;
     });
   }
@@ -9531,6 +9678,7 @@
       s += '<circle class="fl-badge' + (err ? '' : ' warn') + '" cx="' + bx + '" cy="' + by + '" r="8"/><text class="fl-badge-t" x="' + bx + '" y="' + (by + 4) + '">!</text>';
     }
     if (flStepNum && flStepNum[n.id]) s += flStepBadgeSVG(n, g, flStepNum[n.id]);
+    if (flBps().has(n.id)) s += '<g class="fl-bp" data-bp="1"><title>Kesme noktası: Oynat bu adıma gelince durur (kaldırmak için tıkla ya da F9)</title><circle cx="' + (-g.w / 2 - 12) + '" cy="0" r="6.5"/></g>';
     FL_SIDES.forEach(side => {
       const p = flPort(n, side);
       s += '<circle class="fl-port" data-port="' + side + '" cx="' + (p.x - n.x) + '" cy="' + (p.y - n.y) + '" r="6"><title>Buradan tutup başka şekle sürükle: ok çiz</title></circle>';
@@ -9554,6 +9702,10 @@
     updateFlNumBtn();
 
     renderFlCharts();
+    // şema değişince eski test sonuçları geçersiz (konumlar sonucu etkilemez)
+    const sig = flKey() + '|' + nodes.map(n => n.id + n.kind + n.text).join('\u0001') + '|' + edges.map(e => e.from + '>' + e.to + (e.label || '')).join('\u0001');
+    if (sig !== flTestSig) { flTestSig = sig; flTestsStale(); }
+    flTestSummary();
     el('flNodes').innerHTML = nodes.map(flNodeSVG).join('');
     el('flEmpty').style.display = nodes.length ? 'none' : '';
     el('flZoomLabel').textContent = Math.round(flZoom * 100) + '%';
@@ -9619,6 +9771,7 @@
     if (!c) { flToast('Çoğaltılacak şema yok.'); return; }
     const nodes = projectFlowNodes(activeProject), edges = projectFlowEdges(activeProject);
     const copy = await createChart(activeProject, (c.name + ' (kopya)').slice(0, 60), c.source);
+    if (flTestsOf(c).length) { copy.tests = flCleanTests(c.tests).map(t => Object.assign(t, { id: uid() })); await saveFlowChart(copy); }
     const idMap = {}, now = Date.now();
     for (const [i, n] of nodes.entries()) {
       const nn = Object.assign({}, n, { id: uid(), chartId: copy.id, created: now + i });
@@ -12570,6 +12723,7 @@
   function flSetVar(name, value) {
     const key = flFold(name);
     const old = flRun.vars.get(key);
+    flLog({ t: 'var', key: key, old: old }, old && old.value);
     flRun.vars.set(key, { name: old ? old.name : name, value: value });
     flRun.changed.add(key);
   }
@@ -12635,7 +12789,7 @@
       if (typeof cont === 'string') throw flErr(label + ': metnin harfleri tek tek değiştirilemez; yeni bir metin oluştur (ör. parça( ) ile).');
       if (!Array.isArray(cont)) throw flErr(label + ' bir dizi değil (değeri: ' + flFmt(cont) + ').');
       const k = flPos(ks[j], cont.length, label, 'eleman');
-      if (j === ks.length - 1) { cont[k] = op ? combine(cont[k], label + '[' + k + ']') : v; }
+      if (j === ks.length - 1) { const nv = op ? combine(cont[k], label + '[' + k + ']') : v; flLog({ t: 'el', arr: cont, k: k, old: cont[k] }, cont[k]); cont[k] = nv; }
       else { cont = cont[k]; label += '[' + k + ']'; }
     }
     R.changed.add(key);
@@ -12658,7 +12812,9 @@
       if (!Array.isArray(A)) throw flErr('ekle( ): ' + P.name + ' bir dizi değil.');
       if (A.length >= FL_MAX_ITEMS) throw flErr('Dizi çok büyük (en fazla 1.000.000 eleman).');
       flAlloc(1);
-      A.push(flEval(P.value, R.vars));
+      const nv = flEval(P.value, R.vars);
+      flLog({ t: 'pop', arr: A });
+      A.push(nv);
       R.changed.add(key);
       return;
     }
@@ -12669,7 +12825,102 @@
   function flRunOutLine(text, cls) {
     if (text.length > FL_MAX_LINE) text = text.slice(0, FL_MAX_LINE) + ' … (' + (text.length - FL_MAX_LINE) + ' harf daha)';
     flRun.out.push({ text: text, cls: cls || '' });
-    if (flRun.out.length > 500) flRun.out.shift();
+    flRun.outPushes = (flRun.outPushes || 0) + 1;
+    flLog({ t: 'out' });
+    if (flRun.out.length > 500) flLog({ t: 'unshift', line: flRun.out.shift() });
+  }
+
+  /* ---- Geri adım: her adımın geri alma kaydı tutulur (değişkenlerin önceki değerleri, değişen dizi
+     elemanları, ekrana yazılanlar). Geri'ye basınca son kayıt tersinden uygulanır. ---- */
+  const FL_HIST_MAX = 3000, FL_HIST_SIZE = 4e6;
+  const flUndoSize = v => (typeof v === 'string' ? v.length / 4 + 1 : Array.isArray(v) ? v.length + 1 : 1);
+  function flLog(op, v) {
+    const R = flRun, u = R && R.undoCur;
+    if (!u) return;
+    u.ops.push(op);
+    const sz = flUndoSize(v);
+    u.size += sz; R.histSize += sz;
+  }
+  function flBeginUndo() {
+    const R = flRun;
+    if (R.headless) { R.undoCur = null; return; }
+    const u = { cur: R.cur, steps: R.steps, lastEdge: R.lastEdge, loops: Object.assign({}, R.loops), changed: R.changed,
+                trace: R.trace.length, inputs: R.inputs.length, ops: [], size: 1 };
+    R.hist.push(u); R.undoCur = u; R.histSize += 1;
+    while (R.hist.length > 1 && (R.hist.length > FL_HIST_MAX || R.histSize > FL_HIST_SIZE)) { const x = R.hist.shift(); R.histSize -= x.size; }
+  }
+  function flStepBack() {
+    const R = flRun;
+    if (!R || R.pid !== flKey() || !R.hist.length) return;
+    flStopRun();
+    const u = R.hist.pop();
+    R.histSize -= u.size;
+    for (let i = u.ops.length - 1; i >= 0; i--) {
+      const o = u.ops[i];
+      if (o.t === 'var') { if (o.old) R.vars.set(o.key, o.old); else R.vars.delete(o.key); }
+      else if (o.t === 'el') o.arr[o.k] = o.old;
+      else if (o.t === 'pop') o.arr.pop();
+      else if (o.t === 'out') R.out.pop();
+      else if (o.t === 'unshift') R.out.unshift(o.line);
+    }
+    Object.assign(R, { cur: u.cur, steps: u.steps, lastEdge: u.lastEdge, loops: u.loops, changed: u.changed, done: false, error: null, ask: null, bpHit: null });
+    R.trace.length = Math.min(R.trace.length, u.trace);
+    R.inputs.length = Math.min(R.inputs.length, u.inputs);
+    R.undoCur = R.hist[R.hist.length - 1] || null;
+    R.bpSkip = R.cur; // geri gelince aynı kesme noktasında hemen durmasın
+    renderFlRun();
+  }
+
+  /* ---- İzleme tablosu: her adımda değişen değişkenler, kararın sonucu ve ekrana yazılanlar ---- */
+  const FL_TRACE_MAX = 5000;
+  const flTraceVal = e => { if (!e) return ''; const t = flShow(e.value); return t.length > 60 ? t.slice(0, 59) + '…' : t; };
+  function flTraceRow(id, r, mark) {
+    const R = flRun;
+    if (R.headless) return;
+    if (R.trace.length >= FL_TRACE_MAX) { R.traceCut = true; return; }
+    const n = findFlowNode(id);
+    if (!n) return;
+    const row = { k: R.steps, id: id, vals: {}, names: {}, cond: null, out: [], err: r === 'error' ? R.error : null };
+    R.changed.forEach(key => { const e = R.vars.get(key); if (e) { row.vals[key] = flTraceVal(e); row.names[key] = e.name; } });
+    if ((n.kind === 'decision' || n.kind === 'loop') && r === 'ok' && R.lastCond != null) row.cond = R.lastCond ? 'Evet' : 'Hayır';
+    const pushed = (R.outPushes || 0) - mark;
+    if (pushed > 0) row.out = R.out.slice(-pushed).filter(o => o.cls !== 'in').map(o => o.text.length > 80 ? o.text.slice(0, 79) + '…' : o.text);
+    R.trace.push(row);
+  }
+  /* Giriş adımının satırına okunan değeri yazar (değer adım bittikten sonra girilir) */
+  function flTraceInput(key) {
+    const R = flRun, row = R.trace[R.trace.length - 1], e = R.vars.get(key);
+    if (R.headless || !row || !R.ask || row.id !== R.ask.node || !e) return;
+    row.vals[key] = flTraceVal(e); row.names[key] = e.name;
+  }
+
+  /* ---- Kesme noktaları: şemaya göre cihazda saklanır (ekip arkadaşlarına gitmez) ---- */
+  const flBpCache = {};
+  function flBps(cid) {
+    cid = cid || flKey();
+    if (!flBpCache[cid]) {
+      let a = [];
+      try { a = JSON.parse(localGet('pref:flbp:' + cid) || '[]'); } catch (e) {}
+      flBpCache[cid] = new Set(Array.isArray(a) ? a.filter(x => typeof x === 'string' && x.length < 80).slice(0, 500) : []);
+    }
+    return flBpCache[cid];
+  }
+  function flToggleBp(id) {
+    const n = findFlowNode(id);
+    if (!n) return;
+    const set = flBps();
+    if (set.has(id)) set.delete(id); else set.add(id);
+    [...set].forEach(x => { if (!findFlowNode(x)) set.delete(x); }); // silinen şekillerinkini temizle
+    localSet('pref:flbp:' + flKey(), set.size ? JSON.stringify([...set]) : '');
+    renderFlow();
+    flToast(set.has(id) ? 'Kesme noktası kondu: Oynat bu adıma gelince durur.' : 'Kesme noktası kaldırıldı.');
+  }
+  /* Oynatırken bir adım: sıradaki şekilde kesme noktası varsa durur */
+  function flPlayStep() {
+    const R = flRun;
+    if (R.cur && !R.ask && !R.done && !R.error && R.cur !== R.bpSkip && flBps().has(R.cur)) { R.playing = false; R.bpHit = R.cur; return 'bp'; }
+    R.bpSkip = null;
+    return flStepOnce();
   }
 
   function flEdgeFor(n, yes) {
@@ -12687,6 +12938,15 @@
   function flStepOnce() {
     const R = flRun;
     if (!R || R.done || R.error || R.ask) return R && R.ask ? 'ask' : 'done';
+    const id = R.cur, mark = R.outPushes || 0;
+    flBeginUndo();
+    R.lastCond = null; R.bpHit = null;
+    const r = flStepCore();
+    flTraceRow(id, r, mark);
+    return r;
+  }
+  function flStepCore() {
+    const R = flRun;
     const n = findFlowNode(R.cur);
     if (!n || n.chartId !== R.pid) { R.error = 'Şema değişti; "Baştan" ile yeniden başlat.'; return 'error'; }
     R.changed = new Set();
@@ -12725,7 +12985,8 @@
           let c = t.slice((flFold(t).match(/^(?:eger|if)\s+/) || [''])[0].length);
           c = c.slice(0, c.length - (flFold(c).match(/\s*(?:\s(?:ise|then))?\s*[?:]*\s*$/) || [''])[0].length);
           if (!c.trim()) throw flErr('Karar şeklinde koşul yok.');
-          next = flEdgeFor(n, flTruthy(flEval(c, R.vars)));
+          R.lastCond = flTruthy(flEval(c, R.vars));
+          next = flEdgeFor(n, R.lastCond);
           break;
         }
         case 'loop': {
@@ -12744,6 +13005,7 @@
           const v = R.vars.get(flFold(h.v)).value;
           const go = st.step > 0 ? v <= st.end : v >= st.end;
           if (!go) delete R.loops[n.id]; // döngü bitti: bir dahaki gelişte baştan başlar
+          R.lastCond = go;
           next = flEdgeFor(n, go);
           break;
         }
@@ -12766,14 +13028,23 @@
   function flAnswer(raw) {
     const R = flRun;
     if (!R || !R.ask) return;
+    el('flAskIn').value = '';
+    flAnswerCore(raw);
+    renderFlRun();
+    if (R.playing && !R.ask && !R.error) flSchedule();
+  }
+  function flAnswerCore(raw) {
+    const R = flRun;
+    if (!R || !R.ask) return;
     const s = String(raw).trim();
     const num = s.replace(',', '.');
     const val = /^[-+]?(\d+\.?\d*|\.\d+)$/.test(num) ? parseFloat(num) : s;
-    el('flAskIn').value = '';
     if (R.ask.i === 0) R.changed = new Set();
     const target = R.ask.names[R.ask.i], label = flTargetLabel(target), tp = flScanTarget(target, 0);
     try { flAssign(tp ? tp.name : target, tp ? tp.idx : [], '', val); }
-    catch (err) { R.ask = null; R.error = err.fl ? err.message : 'Beklenmeyen hata: ' + err.message; R.playing = false; renderFlRun(); return; }
+    catch (err) { R.ask = null; R.error = err.fl ? err.message : 'Beklenmeyen hata: ' + err.message; R.playing = false; return; }
+    if (R.inputs) R.inputs.push(s);
+    flTraceInput(flFold(tp ? tp.name : target));
     flRunOutLine('> ' + label + ' = ' + flFmt(val), 'in');
     R.ask.i++;
     if (R.ask.i >= R.ask.names.length) {
@@ -12783,8 +13054,30 @@
       if (!outs.length) R.error = (n ? flName(n) : 'Giriş') + ' adımından sonra devam eden ok yok.';
       else { R.lastEdge = outs[0].id; R.cur = outs[0].to; }
     }
-    renderFlRun();
-    if (R.playing && !R.ask) flSchedule();
+  }
+
+  /* Şemayı ekranda göstermeden baştan çalıştırır (testler, ödev çıktısı): girdiler sırayla verilir */
+  function flRunHeadless(inputs, maxSteps) {
+    const saved = flRun, lim = maxSteps || 50000;
+    const start = projectFlowNodes(activeProject).find(n => n.kind === 'start');
+    flRun = { pid: flKey(), cur: start ? start.id : null, vars: new Map(), out: [], steps: 0, loops: {}, ask: null, done: false,
+              error: start ? null : 'Başla şekli yok.', timer: null, playing: false, lastEdge: null, changed: new Set(),
+              hist: [], histSize: 0, trace: [], inputs: [], headless: true };
+    let k = 0, status = 'limit';
+    try {
+      for (let g = 0; g < lim; g++) {
+        const r = flStepOnce();
+        if (r === 'ask') {
+          if (k >= inputs.length) { status = 'noinput'; break; }
+          flAnswerCore(inputs[k++]);
+          if (flRun.error) { status = 'error'; break; }
+          continue;
+        }
+        if (r === 'done' || r === 'error') { status = flRun.error ? 'error' : 'done'; break; }
+      }
+      return { status: status, out: flRun.out.filter(o => o.cls !== 'in').map(o => o.text), error: flRun.error, used: k, steps: flRun.steps,
+               ask: flRun.ask ? flTargetLabel(flRun.ask.names[flRun.ask.i]) : null };
+    } finally { flRun = saved; }
   }
 
   function flOpenRun() {
@@ -12799,7 +13092,7 @@
     const start = projectFlowNodes(activeProject).find(n => n.kind === 'start');
     flRun = { pid: flKey(), cur: start ? start.id : null, vars: new Map(), out: [], steps: 0, loops: {}, ask: null,
               done: false, error: start ? null : 'Başla şekli yok; çalıştırmak için önce bir Başla ekle.', timer: null, playing: false,
-              lastEdge: null, changed: new Set() };
+              lastEdge: null, changed: new Set(), hist: [], histSize: 0, trace: [], inputs: [] };
     renderFlRun();
     if (start) flJumpTo(start.id, false, true);
   }
@@ -12827,6 +13120,8 @@
     if (R.done || R.error) flResetRun();
     if (flRun.error) { renderFlRun(); return; }
     if (flRun.playing) { flStopRun(); return; } // düğme "Duraklat" iken
+    if (flRun.bpHit && flRun.bpHit === flRun.cur) flRun.bpSkip = flRun.cur; // kesme noktasından devam
+    flRun.bpHit = null;
     flRun.playing = true;
     flSchedule();
     renderFlRun();
@@ -12841,7 +13136,7 @@
       const t0 = performance.now();
       R.burst = R.burst || 0;
       while (r === 'ok' && R.burst < FL_MAX_STEPS) {
-        r = flStepOnce();
+        r = flPlayStep();
         R.burst++;
         // uzun süren adımlarda sekme donmasın: ara verip kaldığı yerden sürer (Duraklat çalışır)
         if (r === 'ok' && R.burst < FL_MAX_STEPS && performance.now() - t0 > 150) { renderFlRun(); R.timer = setTimeout(flSchedule, 0); return; }
@@ -12854,7 +13149,7 @@
       return;
     }
     R.timer = setTimeout(() => {
-      const r = flStepOnce();
+      const r = flPlayStep();
       if (r !== 'ok') R.playing = r === 'ask'; // giriş beklerken oynatma askıda
       renderFlRun();
       if (r === 'ok') flSchedule();
@@ -12893,6 +13188,7 @@
     st.className = 'fl-run-state' + (R.error ? ' err' : (R.done ? ' ok' : ''));
     if (R.error) st.textContent = '⚠ ' + R.error;
     else if (R.done) st.textContent = '✓ Bitti — ' + R.steps + ' adım çalıştı.';
+    else if (R.bpHit && R.bpHit === R.cur && !R.playing) st.innerHTML = '<span class="fl-bp-ico"></span>Kesme noktasında durdu: <b>' + esc(n ? (n.text.trim() || FL_KINDS[n.kind].name) : '—') + '</b> (Oynat ile devam)';
     else if (R.ask) st.innerHTML = 'Giriş bekleniyor: <b>' + esc(flTargetLabel(R.ask.names[R.ask.i])) + '</b>';
     else st.innerHTML = (R.steps ? R.steps + '. adımdan sonra sıradaki: ' : 'Başlamaya hazır: ') + '<b>' + esc(n ? (n.text.trim() || FL_KINDS[n.kind].name) : '—') + '</b>';
     el('flRunPlay').innerHTML = R.playing && !R.ask ? ICO_PAUSE + 'Duraklat' : ICO_PLAY + 'Oynat';
@@ -12913,9 +13209,271 @@
     out.innerHTML = R.out.length ? R.out.map(o => '<div' + (o.cls ? ' class="' + o.cls + '"' : '') + '>' + (esc(o.text) || '&nbsp;') + '</div>').join('') : '<span class="fl-none">Ekran boş.</span>';
     out.scrollTop = out.scrollHeight;
 
+    el('flRunBack').disabled = !(R.hist && R.hist.length) || R.pid !== flKey();
+    if (flTraceOn) renderFlTrace();
     flApplyRunMarks();
     drawFlEdges();
     if (n && !R.done) flJumpTo(n.id, false, true);
+  }
+
+  /* ---------- DEĞİŞKEN İZLEME TABLOSU ---------- */
+  let flTraceOn = false;
+  function setFlTraceOn(on) {
+    flTraceOn = on;
+    el('flRunTrace').setAttribute('aria-pressed', on ? 'true' : 'false');
+    el('flTrace').style.display = on ? '' : 'none';
+    el('flRunBody').style.display = on ? 'none' : '';
+    if (on) renderFlTrace();
+  }
+  /* Satırlar ve sütunlar (değişkenler ilk değer aldıkları sırayla). all: değişmeyen değerler de yazılır */
+  function flTraceMatrix(all) {
+    const R = flRun, rows = R && R.pid === flKey() && R.trace ? R.trace : [];
+    const cols = [], seen = new Set();
+    rows.forEach(r => Object.keys(r.vals).forEach(k => { if (!seen.has(k)) { seen.add(k); cols.push({ key: k, name: r.names[k] || k }); } }));
+    const st = rows.length ? flowStepNumbers(activeProject) : null, num = st && st.num;
+    const label = id => {
+      const n = findFlowNode(id), t = n ? (n.text.trim() || FL_KINDS[n.kind].name).replace(/\s+/g, ' ') : '?';
+      return (num && num[id] ? num[id] + '. ' : '') + (t.length > 40 ? t.slice(0, 39) + '…' : t);
+    };
+    const cur = {};
+    const body = rows.map(r => ({
+      k: r.k, step: label(r.id), cond: r.cond || '', out: r.out.join(' / '), err: r.err,
+      cells: cols.map(c => {
+        if (Object.prototype.hasOwnProperty.call(r.vals, c.key)) { cur[c.key] = r.vals[c.key]; return { v: r.vals[c.key], ch: true }; }
+        return { v: all && Object.prototype.hasOwnProperty.call(cur, c.key) ? cur[c.key] : '', ch: false };
+      })
+    }));
+    return { head: ['Sıra', 'Adım'].concat(cols.map(c => c.name), ['Koşul', 'Ekran']), body: body };
+  }
+  function flTraceTableHTML(M, rows) {
+    return '<table class="fl-trace-t"><thead><tr>' + M.head.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' +
+      rows.map(r => '<tr><td class="no">' + r.k + '</td><td class="step" title="' + escAttr(r.step) + '">' + esc(r.step) + '</td>' +
+        r.cells.map(c => '<td' + (c.ch ? ' class="ch"' : c.v ? ' class="old"' : '') + '>' + esc(c.v) + '</td>').join('') +
+        '<td' + (r.cond === 'Evet' ? ' class="yes"' : r.cond === 'Hayır' ? ' class="nope"' : '') + '>' + esc(r.cond) + '</td>' +
+        '<td' + (r.err ? ' class="err"' : '') + '>' + esc(r.err ? '⚠ ' + r.err : r.out) + '</td></tr>').join('') + '</tbody></table>';
+  }
+  function renderFlTrace() {
+    const wrap = el('flTraceWrap'), R = flRun;
+    const M = flTraceMatrix(el('flTraceAll').checked);
+    if (!M.body.length) {
+      el('flTraceInfo').textContent = '';
+      wrap.innerHTML = '<div class="fl-trace-empty">Oynat ya da Adım ile çalıştırınca her adımda değişen değerler, kararın sonucu ve ekrana yazılanlar burada satır satır yazılır.</div>';
+      return;
+    }
+    const show = M.body.slice(-300);
+    el('flTraceInfo').textContent = M.body.length + ' adım' + (M.body.length > show.length ? ' · son ' + show.length + ' adım gösteriliyor (tamamı için Kopyala / CSV)' : '') +
+      (R && R.traceCut ? ' · ' + FL_TRACE_MAX + '. adımdan sonrası tabloya yazılmadı' : '');
+    wrap.innerHTML = flTraceTableHTML(M, show);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+  /* Tablo hücresi dışa aktarılırken: = + - @ ile başlayan metinler Excel'de formül olarak çalışmasın */
+  const flCellSafe = v => { v = String(v).replace(/[\t\r\n]+/g, ' '); return /^[=+\-@]/.test(v) && !/^[-+]?\d+(?:[.,]\d+)?$/.test(v) ? "'" + v : v; };
+  function flTraceRows(all) {
+    const M = flTraceMatrix(all);
+    return [M.head].concat(M.body.map(r => [r.k, r.step].concat(r.cells.map(c => c.v), [r.cond, r.err ? '⚠ ' + r.err : r.out])));
+  }
+  async function flTraceCopy() {
+    const rows = flTraceRows(el('flTraceAll').checked);
+    if (rows.length < 2) { flToast('Tablo boş: önce şemayı çalıştır.'); return; }
+    const txt = rows.map(r => r.map(flCellSafe).join('\t')).join('\n');
+    let ok = false;
+    try { await navigator.clipboard.writeText(txt); ok = true; }
+    catch (err) {
+      const ta = document.createElement('textarea');
+      ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { ok = document.execCommand('copy'); } catch (_) {}
+      ta.remove();
+    }
+    flToast(ok ? 'İzleme tablosu kopyalandı: Excel ya da Word\'e yapıştırabilirsin.' : 'Kopyalanamadı; CSV indir\'i dene.');
+  }
+  function flTraceCsv() {
+    const rows = flTraceRows(el('flTraceAll').checked);
+    if (rows.length < 2) { flToast('Tablo boş: önce şemayı çalıştır.'); return; }
+    const q = v => { v = flCellSafe(v); return /[";\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    // Türkçe Excel noktalı virgülü ayraç sayar; BOM ile Türkçe harfler doğru açılır
+    download('\ufeff' + rows.map(r => r.map(q).join(';')).join('\r\n') + '\r\n', flFileName('izleme-tablosu') + '.csv', 'text/csv');
+  }
+
+  /* ---------- TEST SENARYOLARI ---------- */
+  const FL_TESTS_MAX = 30;
+  function flCleanTests(a) {
+    return (Array.isArray(a) ? a : []).filter(t => t && typeof t === 'object').slice(0, 30).map(t => ({
+      id: typeof t.id === 'string' && /^[\w-]{1,40}$/.test(t.id) ? t.id : uid(),
+      name: String(t.name == null ? '' : t.name).slice(0, 60),
+      inputs: String(t.inputs == null ? '' : t.inputs).slice(0, 2000),
+      expect: String(t.expect == null ? '' : t.expect).slice(0, 4000)
+    }));
+  }
+  const flTestRes = new Map(); // test id -> son sonuç (sadece bellekte)
+  let flTestSig = '';
+  const flLines = t => { const L = String(t).replace(/\r/g, '').split('\n').map(x => x.replace(/\s+$/, '')); while (L.length && !L[L.length - 1]) L.pop(); return L; };
+  // satır karşılaştırma: baştaki / sondaki ve art arda boşluklar, 3,5 ile 3.5 aynı sayılır
+  const flNormLine = x => (x == null ? null : String(x).trim().replace(/\s+/g, ' ').replace(/(\d),(\d)/g, '$1.$2'));
+  function flTestRun(t) {
+    const inputs = flLines(t.inputs).map(x => x.trim());
+    const r = flRunHeadless(inputs, 50000);
+    const exp = flLines(t.expect), got = r.out.map(x => x.replace(/\s+$/, ''));
+    while (got.length && !got[got.length - 1]) got.pop();
+    let msg = '';
+    if (r.status === 'error') msg = 'Çalışma hatası: ' + r.error;
+    else if (r.status === 'noinput') msg = 'Girdiler yetmedi: şema bir değer daha istiyor (' + r.ask + ').';
+    else if (r.status === 'limit') msg = 'Şema 50.000 adımda bitmedi (sonsuz döngü olabilir).';
+    const same = exp.length === got.length && exp.every((x, i) => flNormLine(x) === flNormLine(got[i]));
+    const extra = r.status === 'done' && r.used < inputs.length ? (inputs.length - r.used) + ' girdi kullanılmadı.' : '';
+    return { ok: !msg && same, msg: msg, extra: extra, exp: exp, got: got, steps: r.steps };
+  }
+  function flTestDiffHTML(r) {
+    let h = '<div class="fl-test-diff">';
+    if (r.msg) h += '<div class="msg">⚠ ' + esc(r.msg) + '</div>';
+    if (r.extra) h += '<div class="fl-none">' + esc(r.extra) + '</div>';
+    const n = Math.max(r.exp.length, r.got.length);
+    if (!r.ok && n) {
+      h += '<table><tr><th></th><th>Beklenen</th><th>Çıkan</th></tr>';
+      for (let i = 0; i < Math.min(n, 60); i++) {
+        const a = r.exp[i], b = r.got[i], bad = flNormLine(a) !== flNormLine(b);
+        h += '<tr' + (bad ? ' class="bad"' : '') + '><td class="no">' + (i + 1) + '</td><td>' + (a == null ? '<i>(yok)</i>' : esc(a)) + '</td><td>' + (b == null ? '<i>(yok)</i>' : esc(b)) + '</td></tr>';
+      }
+      if (n > 60) h += '<tr><td></td><td colspan="2">… ' + (n - 60) + ' satır daha</td></tr>';
+      h += '</table>';
+    } else if (r.ok) h += '<div class="fl-none">' + r.got.length + ' satır aynı · ' + r.steps + ' adım</div>';
+    return h + '</div>';
+  }
+  function flTestsOf(ch) { return ch && Array.isArray(ch.tests) ? ch.tests : []; }
+  function flTestSummary() {
+    const tests = flTestsOf(activeChart()), done = tests.filter(t => flTestRes.has(t.id)), ok = done.filter(t => flTestRes.get(t.id).ok).length;
+    const sum = el('flTestSum'), badge = el('flTestBadge');
+    if (!done.length) { sum.textContent = tests.length ? tests.length + ' test · henüz çalıştırılmadı' : ''; sum.className = 'fl-test-sum'; badge.textContent = ''; badge.className = 'fl-test-badge'; return; }
+    const all = ok === done.length && done.length === tests.length;
+    sum.textContent = ok + ' / ' + tests.length + ' test geçti' + (done.length < tests.length ? ' (' + (tests.length - done.length) + ' test çalıştırılmadı)' : '');
+    sum.className = 'fl-test-sum ' + (all ? 'ok' : 'bad');
+    badge.textContent = ok + '/' + tests.length;
+    badge.className = 'fl-test-badge ' + (all ? 'ok' : 'bad');
+  }
+  function renderFlTests() {
+    const tests = flTestsOf(activeChart()), list = el('flTestList');
+    list.innerHTML = tests.length ? tests.map((t, i) => {
+      const r = flTestRes.get(t.id);
+      return '<div class="fl-test' + (r ? (r.ok ? ' ok' : ' bad') : '') + '" data-test="' + escAttr(t.id) + '">' +
+        '<div class="fl-test-head"><input class="modal-tags-input" data-tname maxlength="60" placeholder="Test ' + (i + 1) + '" value="' + escAttr(t.name) + '" aria-label="Testin adı">' +
+        (r ? '<span class="fl-test-res ' + (r.ok ? 'ok">✓ Geçti' : 'bad">✗ Kaldı') + '</span>' : '') +
+        '<button class="er-btn" type="button" data-trun>Çalıştır</button><button class="er-btn icon" type="button" data-tdel title="Testi sil" aria-label="Testi sil">&times;</button></div>' +
+        '<div class="fl-test-grid"><label>Girdiler (her satıra bir değer)<textarea data-tin spellcheck="false" maxlength="2000">' + esc(t.inputs) + '</textarea></label>' +
+        '<label>Beklenen çıktı (ekrana yazılacak satırlar)<textarea data-tex spellcheck="false" maxlength="4000">' + esc(t.expect) + '</textarea></label></div>' +
+        (r ? flTestDiffHTML(r) : '') + '</div>';
+    }).join('') : '<div class="fl-none">Henüz test yok. “+ Yeni test” ile ekle ya da şemayı Çalıştır panelinde bir kez çalıştırıp “Son çalıştırmadan test oluştur”a bas.</div>';
+    el('flTestAdd').disabled = tests.length >= FL_TESTS_MAX;
+    flTestSummary();
+  }
+  let flTestSaveTimer = null;
+  function flTestSave(ch) {
+    clearTimeout(flTestSaveTimer);
+    flTestSaveTimer = setTimeout(() => { if (findChart(ch.id)) saveFlowChart(ch); }, 350);
+  }
+  function openFlTests() {
+    if (!activeChart()) { flToast('Önce bir akış şeması oluştur.'); return; }
+    renderFlTests();
+    el('flTestModal').classList.add('open');
+  }
+  function closeFlTests() {
+    el('flTestModal').classList.remove('open');
+    const ch = activeChart();
+    if (ch && flTestSaveTimer) { clearTimeout(flTestSaveTimer); flTestSaveTimer = null; saveFlowChart(ch); }
+  }
+  function flAddTest(t) {
+    const ch = activeChart();
+    if (!ch) return;
+    const tests = flTestsOf(ch);
+    if (tests.length >= FL_TESTS_MAX) { flToast('En fazla ' + FL_TESTS_MAX + ' test olabilir.'); return; }
+    ch.tests = tests.concat(flCleanTests([Object.assign({ id: uid(), name: '', inputs: '', expect: '' }, t)]));
+    saveFlowChart(ch);
+    renderFlTests();
+    const last = el('flTestList').querySelector('.fl-test:last-child [data-tin]');
+    if (last && !t) last.focus();
+  }
+  function flTestFromRun() {
+    const R = flRun;
+    if (!R || R.pid !== flKey() || !R.steps) { flToast('Önce şemayı Çalıştır panelinde çalıştır.'); return; }
+    if (!R.done) { flToast(R.error ? 'Son çalıştırma hatayla bitti; testi elle yaz ya da hatayı düzeltip yeniden çalıştır.' : 'Önce şemayı sonuna kadar çalıştır (Bitir adımına kadar).'); return; }
+    flAddTest({ name: 'Test ' + (flTestsOf(activeChart()).length + 1), inputs: (R.inputs || []).join('\n'),
+                expect: R.out.filter(o => o.cls !== 'in' && o.cls !== 'err').map(o => o.text).join('\n') });
+    flToast('Test oluşturuldu: son çalıştırmanın girdileri ve ekran çıktısı.');
+  }
+  function flRunTests(ids) {
+    const tests = flTestsOf(activeChart()).filter(t => !ids || ids.includes(t.id));
+    tests.forEach(t => flTestRes.set(t.id, flTestRun(t)));
+    renderFlTests();
+  }
+  /* Şema değişince eski test sonuçları geçersiz (rozet ve pencere yeniden hesaplanmalı) */
+  function flTestsStale() { if (flTestRes.size) { flTestRes.clear(); flTestSummary(); } }
+
+  /* ---------- ÖDEV ÇIKTISI (yazdır / PDF) ---------- */
+  const FL_LANG_NAME = { csharp: 'C#', java: 'Java', c: 'C', cpp: 'C++', js: 'JavaScript', python: 'Python', pseudo: 'Sözde kod' };
+  function openFlHw() {
+    const ch = activeChart();
+    if (!ch || !projectFlowNodes(activeProject).length) { flToast('Şema boş: önce adımları ekle.'); return; }
+    el('flHwTitle').value = ch.name;
+    el('flHwName').value = localGet('pref:hwname') || '';
+    el('flHwClass').value = localGet('pref:hwclass') || '';
+    el('flHwLang').value = FL_LANG_NAME[flCodeLang] ? flCodeLang : 'python';
+    el('flHwMsg').textContent = ''; el('flHwMsg').className = 'er-msg';
+    el('flHwModal').classList.add('open');
+  }
+  function flHwPrint() {
+    const ch = activeChart(), cid = activeChartId(activeProject);
+    if (!ch) return;
+    const name = el('flHwName').value.trim().slice(0, 80), cls = el('flHwClass').value.trim().slice(0, 60);
+    const title = el('flHwTitle').value.trim().slice(0, 100) || ch.name;
+    localSet('pref:hwname', name); localSet('pref:hwclass', cls);
+    const on = k => el('flHwModal').querySelector('[data-hw="' + k + '"]').checked;
+    const pre = t => '<pre>' + esc(t) + '</pre>';
+    const d = new Date(), day = String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
+    let b = '<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>' + esc(title) + '</title><style>' + PRINT_FONTS +
+      'body{font-family:"Recursive WN",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#172036;max-width:780px;margin:1.5rem auto;padding:0 1.2rem;line-height:1.5;font-size:14px;}' +
+      'h1{font-size:1.5rem;margin:0 0 .3rem;}h2{font-size:1.05rem;margin:1.4rem 0 .45rem;border-bottom:1.5px solid #172036;padding-bottom:.15rem;break-after:avoid;}' +
+      '.who{display:flex;gap:1.5rem;flex-wrap:wrap;font-size:.9rem;color:#2E3A55;border:1px solid #C9D1E3;border-radius:8px;padding:.45rem .7rem;}.who b{color:#172036;}' +
+      'pre{font-family:"Recursive WN",ui-monospace,Menlo,Consolas,monospace;font-variation-settings:"MONO" 1;font-size:.78rem;white-space:pre-wrap;word-break:break-word;background:#F5F7FB;border:1px solid #E1E6F0;padding:.6rem .75rem;border-radius:6px;margin:0;}' +
+      '.chart{text-align:center;break-inside:avoid;}.chart svg{max-width:100%;height:auto;max-height:24cm;}' +
+      'table{border-collapse:collapse;width:100%;font-size:.75rem;}th,td{border:1px solid #C9D1E3;padding:.15rem .35rem;text-align:left;vertical-align:top;word-break:break-word;}th{background:#EEF1F7;}' +
+      'td.ch{font-weight:700;}td.ok,td.bad{white-space:nowrap;word-break:normal;width:1%;font-weight:700;}td.ok{color:#23804A;}td.bad{color:#C8322A;}th.res{white-space:nowrap;width:1%;}.note{color:#5A6680;font-size:.85rem;}' +
+      '@media print{body{margin:0 auto;}h2{page-break-after:avoid;}tr{page-break-inside:avoid;}}</style></head><body>';
+    b += '<h1>' + esc(title) + '</h1><div class="who"><span>Ad Soyad: <b>' + (esc(name) || '……………………') + '</b></span><span>Sınıf / No: <b>' + (esc(cls) || '…………') + '</b></span><span>Tarih: <b>' + day + '</b></span></div>';
+    if (on('chart')) b += '<h2>Akış şeması</h2><div class="chart">' + buildFlowSVG(activeProject, cid) + '</div>';
+    if (on('steps')) b += '<h2>Algoritma</h2>' + pre(flowToSteps(activeProject));
+    if (on('code')) { const lang = FL_LANG_NAME[el('flHwLang').value] ? el('flHwLang').value : 'python'; b += '<h2>Kod (' + FL_LANG_NAME[lang] + ')</h2>' + pre(flCodeGen(activeProject, cid, lang)); }
+    if (on('trace')) {
+      const M = flTraceMatrix(false);
+      b += '<h2>Değişken izleme tablosu</h2>';
+      if (!M.body.length) b += '<p class="note">Çalıştır panelinde şemayı çalıştırınca son çalıştırmanın izleme tablosu buraya gelir.</p>';
+      else {
+        if (flRun.inputs && flRun.inputs.length) b += '<p class="note">Girdiler: ' + esc(flRun.inputs.join(', ')) + '</p>';
+        const rows = M.body.slice(0, 400);
+        b += '<table><tr>' + M.head.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr>' + rows.map(r => '<tr><td>' + r.k + '</td><td>' + esc(r.step) + '</td>' +
+          r.cells.map(c => '<td' + (c.ch ? ' class="ch"' : '') + '>' + esc(c.v) + '</td>').join('') + '<td>' + esc(r.cond) + '</td><td>' + esc(r.err ? '⚠ ' + r.err : r.out) + '</td></tr>').join('') + '</table>';
+        if (M.body.length > rows.length) b += '<p class="note">… ' + (M.body.length - rows.length) + ' adım daha (ilk ' + rows.length + ' adım yazıldı).</p>';
+      }
+    }
+    if (on('tests')) {
+      const tests = flTestsOf(ch);
+      b += '<h2>Test sonuçları</h2>';
+      if (!tests.length) b += '<p class="note">Bu şemada test yok (Testler penceresinden eklenir).</p>';
+      else {
+        const res = tests.map(t => { const r = flTestRun(t); flTestRes.set(t.id, r); return [t, r]; });
+        const ok = res.filter(x => x[1].ok).length;
+        b += '<p class="note">' + ok + ' / ' + tests.length + ' test geçti.</p><table><tr><th>Test</th><th>Girdiler</th><th>Beklenen çıktı</th><th>Çıkan</th><th class="res">Sonuç</th></tr>' +
+          res.map(([t, r], i) => '<tr><td>' + esc(t.name || 'Test ' + (i + 1)) + '</td><td>' + esc(flLines(t.inputs).join(', ')) + '</td><td>' + esc(r.exp.join(' / ')) + '</td><td>' +
+            esc(r.msg || r.got.join(' / ')) + '</td><td class="' + (r.ok ? 'ok">✓ Geçti' : 'bad">✗ Kaldı') + '</td></tr>').join('') + '</table>';
+        flTestSummary();
+      }
+    }
+    b += '</body></html>';
+    const w = window.open('', '_blank');
+    if (!w) { el('flHwMsg').className = 'er-msg err'; el('flHwMsg').textContent = 'Yazdırma sayfası açılamadı: tarayıcıda açılır pencereye izin ver.'; return; }
+    w.document.write(b);
+    w.document.close();
+    w.focus();
+    el('flHwModal').classList.remove('open');
+    setTimeout(() => w.print(), 400);
   }
 
   /* ===================================================================
@@ -14620,6 +15178,8 @@
     else if (act === 'newchart') flNewChart();
     else if (act === 'code') openFlAlgo('code');
     else if (act === 'duplicate') flDuplicateChart();
+    else if (act === 'tests') openFlTests();
+    else if (act === 'homework') openFlHw();
   }
   el('flFileBtn').addEventListener('click', e => { e.stopPropagation(); el('flFileMenu').classList.toggle('open'); });
   document.addEventListener('click', e => { if (!e.target.closest('#flFileMenu, #flFileBtn')) el('flFileMenu').classList.remove('open'); });
@@ -14646,6 +15206,7 @@
     const g = e.target.closest('.fl-node');
     const n = g && findFlowNode(g.dataset.node);
     if (!n) return;
+    if (e.target.closest('[data-bp]')) { e.preventDefault(); e.stopPropagation(); flToggleBp(n.id); return; }
     const port = e.target.closest('.fl-port');
     if (port && n.kind !== 'end') { flStart(e, 'link', { id: n.id, side: port.dataset.port }); return; }
     const p = toFlSurface(e.clientX, e.clientY);
@@ -14696,6 +15257,8 @@
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       if (el('flNodeModal').classList.contains('open')) closeFlNodeModal();
+      else if (el('flTestModal').classList.contains('open')) closeFlTests();
+      else if (el('flHwModal').classList.contains('open')) el('flHwModal').classList.remove('open');
       else if (el('flHelpModal').classList.contains('open')) closeFlHelp();
       else if (el('trashModal').classList.contains('open')) el('trashModal').classList.remove('open');
       else if (el('installModal').classList.contains('open')) el('installModal').classList.remove('open');
@@ -14716,6 +15279,7 @@
       if (flSel.type === 'node') flDeleteNode(flSel.id); else flDeleteEdge(flSel.id);
     }
     else if (e.key === 'Enter' && flSel && flSel.type === 'node') { e.preventDefault(); openFlNodeModal(flSel.id); }
+    else if (e.key === 'F9' && flSel && flSel.type === 'node') { e.preventDefault(); flToggleBp(flSel.id); }
     else if (e.key === '?') { e.preventDefault(); openFlHelp(); }
   });
 
@@ -15144,6 +15708,58 @@
   el('flRunClose').addEventListener('click', flCloseRun);
   el('flAskBtn').addEventListener('click', () => flAnswer(el('flAskIn').value));
   el('flAskIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); flAnswer(el('flAskIn').value); } });
+  el('flRunBack').addEventListener('click', flStepBack);
+  el('flRunBp').addEventListener('click', () => {
+    if (flSel && flSel.type === 'node') flToggleBp(flSel.id);
+    else flToast('Önce şemada bir şekle dokunup seç, sonra Kesme noktası\'na bas (ya da F9).');
+  });
+  el('flRunTrace').addEventListener('click', () => setFlTraceOn(!flTraceOn));
+  el('flTraceAll').addEventListener('change', renderFlTrace);
+  el('flTraceCopy').addEventListener('click', flTraceCopy);
+  el('flTraceCsv').addEventListener('click', flTraceCsv);
+  el('flRunTests').addEventListener('click', openFlTests);
+  el('flTestClose').addEventListener('click', closeFlTests);
+  el('flTestModal').addEventListener('click', e => { if (e.target === el('flTestModal')) closeFlTests(); });
+  el('flTestAdd').addEventListener('click', () => flAddTest(null));
+  el('flTestFromRun').addEventListener('click', flTestFromRun);
+  el('flTestRunAll').addEventListener('click', () => {
+    if (!flTestsOf(activeChart()).length) { flToast('Önce bir test ekle.'); return; }
+    flRunTests(null);
+  });
+  el('flTestList').addEventListener('click', e => {
+    const card = e.target.closest('[data-test]'), ch = activeChart();
+    if (!card || !ch) return;
+    const id = card.dataset.test;
+    if (e.target.closest('[data-trun]')) flRunTests([id]);
+    else if (e.target.closest('[data-tdel]')) {
+      ch.tests = flTestsOf(ch).filter(t => t.id !== id);
+      flTestRes.delete(id);
+      saveFlowChart(ch);
+      renderFlTests();
+    }
+  });
+  el('flTestList').addEventListener('input', e => {
+    const card = e.target.closest('[data-test]'), ch = activeChart();
+    if (!card || !ch) return;
+    const t = flTestsOf(ch).find(x => x.id === card.dataset.test);
+    if (!t) return;
+    if (e.target.matches('[data-tname]')) t.name = e.target.value.slice(0, 60);
+    else if (e.target.matches('[data-tin]')) t.inputs = e.target.value.slice(0, 2000);
+    else if (e.target.matches('[data-tex]')) t.expect = e.target.value.slice(0, 4000);
+    else return;
+    if (!e.target.matches('[data-tname]') && flTestRes.has(t.id)) { // eski sonuç artık geçerli değil
+      flTestRes.delete(t.id);
+      card.classList.remove('ok', 'bad');
+      const res = card.querySelector('.fl-test-res'), diff = card.querySelector('.fl-test-diff');
+      if (res) res.remove();
+      if (diff) diff.remove();
+      flTestSummary();
+    }
+    flTestSave(ch);
+  });
+  el('flHwClose').addEventListener('click', () => el('flHwModal').classList.remove('open'));
+  el('flHwModal').addEventListener('click', e => { if (e.target === el('flHwModal')) el('flHwModal').classList.remove('open'); });
+  el('flHwPrint').addEventListener('click', flHwPrint);
 
   /* ===================================================================
      DIŞA / İÇE AKTARMA
