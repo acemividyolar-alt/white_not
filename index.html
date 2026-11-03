@@ -1188,6 +1188,13 @@
   .fl-badge { fill: var(--danger); }
   .fl-badge.warn { fill: var(--warn); }
   .fl-badge-t { fill: var(--paper); font: 700 11px var(--font-sans); text-anchor: middle; pointer-events: none; }
+  /* Adım numarası (şeklin sol üst köşesi) */
+  .fl-step { fill: var(--paper); stroke: var(--line-2); stroke-width: 1; }
+  .fl-step-t { fill: var(--muted); font: 700 10.5px var(--font-sans); text-anchor: middle; pointer-events: none; }
+  .fl-node.sel .fl-step { stroke: var(--accent); }
+  .fl-stepno.jump .fl-step { stroke-dasharray: 2.5 2; }
+  .fl-node.sel .fl-step-t { fill: var(--accent); }
+  .er-btn.tgl[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
   /* Bağlantı noktaları: üzerine gelince / seçiliyken görünür; buradan tutup başka şekle sürükle */
   .fl-port { fill: var(--paper); stroke: var(--accent); stroke-width: 2; opacity: 0; cursor: crosshair; transition: opacity 0.12s; }
   .fl-node:hover .fl-port, .fl-node.sel .fl-port { opacity: 1; }
@@ -1672,6 +1679,21 @@
     .export-btn .chev { display: none; }
   }
 
+  /* Bilgisayarda ☰: soldaki bölüm kayarak kapanır / açılır (tercih hatırlanır; ilk çizimde body.side-closed).
+     Kapalıyken "Her yerde ara" üst şeride gelir. Telefonda ☰ çekmeceyi açar (aşağıda). */
+  @media (min-width: 761px) {
+    .menu-btn { display: grid; margin-left: -0.45rem; }
+    .sidebar { transition: margin-left 0.22s ease, visibility 0s linear 0s; }
+    body.side-closed .sidebar { margin-left: -260px; visibility: hidden; transition: margin-left 0.22s ease, visibility 0s linear 0.22s; }
+    body.side-closed .gs-top { display: grid; }
+  }
+  @media (min-width: 761px) and (max-width: 900px) {
+    body.side-closed .sidebar { margin-left: -236px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar { transition: none !important; }
+  }
+
   /* ===================================================================
      TELEFON (760px altı)
      - Kenar çubuğu ☰ ile açılan çekmece olur.
@@ -1818,6 +1840,7 @@
       if (t === 'sepia' || t === 'black' || t === 'chalk') b.setAttribute('data-theme', t);
       document.getElementById('themeColor').setAttribute('content', { light: '#EDF1F7', sepia: '#EFE6D6', dark: '#0B1628', black: '#0B0C0E', chalk: '#13221B' }[t]);
       if (['board', 'schema', 'flow', 'calendar'].indexOf(v) >= 0) b.classList.add('view-' + v);
+      if (get('side') === 'closed') b.classList.add('side-closed'); // bilgisayarda soldaki bölüm kapalı
     } catch (e) {}
   })();
 </script>
@@ -1861,7 +1884,7 @@
       <!-- Üst şerit: proje adı (tıkla = yeniden adlandır), arama, tema, dışa / içe aktar -->
       <header class="topbar">
         <div class="topbar-left">
-          <button class="menu-btn" id="menuBtn" aria-label="Projeler"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11M2.5 8h11M2.5 12h11"/></svg></button> <!-- ☰ hamburger: sadece telefonda -->
+          <button class="menu-btn" id="menuBtn" type="button" aria-label="Projeler" aria-controls="sidebar"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11M2.5 8h11M2.5 12h11"/></svg></button> <!-- ☰ telefonda çekmeceyi açar, bilgisayarda soldaki bölümü gizler / gösterir -->
           <h2 id="projTitle" title="Yeniden adlandırmak için tıkla">&nbsp;</h2>          <!-- Aktif projenin adı buraya yazılır -->
           <script>try { var wnT = localStorage.getItem('wn:pref:title'); if (wnT) document.getElementById('projTitle').textContent = wnT; } catch (e) {}</script>
         </div>
@@ -2075,6 +2098,7 @@
             <span class="er-sep"></span>
             <button class="er-btn" id="flLayout" title="Şekilleri akışa göre otomatik diz">Yerleştir</button>
             <button class="er-btn" id="flFit" title="Tüm şemayı ekrana sığdır">Sığdır</button>
+            <button class="er-btn tgl" id="flNumBtn" type="button" aria-pressed="true" title="Şekillerin yanındaki adım numaralarını gizle / göster (Şemadan algoritmadaki Adım 1, Adım 2…)">Adım no</button>
             <span class="er-sep"></span>
             <button class="er-btn icon" id="flZoomOut" title="Uzaklaştır" aria-label="Uzaklaştır">&minus;</button>
             <span class="er-zoom" id="flZoomLabel" title="%100'e dön">100%</span>
@@ -2634,6 +2658,7 @@
           <select class="modal-select" id="flExample">
             <option value="">Örnek seç&hellip;</option>
           </select>
+          <label class="opt fl-autonum" title="Enter'a basınca alt satıra sıradaki “Adım N:” yazılır; araya satır ekleyip silince numaralar ve “Adım N'e git”ler kendiliğinden kayar"><input type="checkbox" id="flAutoNum" checked> Adım numaralarını kendiliğinden yaz</label>
         </div>
         <textarea class="modal-desc sql-in fl-text-in" id="flSource" spellcheck="false" style="min-height:220px"></textarea>
         <details class="fl-syntax">
@@ -2647,7 +2672,7 @@
             <tr><td><code>İken i &lt;= n</code></td><td>Koşullu döngü (koşul doğru oldukça tekrarla)</td></tr>
             <tr><td><code>İçin i = 1 .. n</code></td><td>Sayaçlı döngü (<code>i = 1'den 10'a kadar</code>, <code>adım 2</code> da olur)</td></tr>
             <tr><td><code>Tekrarla</code> &hellip; <code>i &gt; 10 olana kadar</code></td><td>Sonda kontrollü döngü · <code>5 kez tekrarla</code></td></tr>
-            <tr><td><code>Adım 4: Eğer x &gt; 0 ise Adım 6'ya git</code></td><td>Numaralı (git'li) algoritma biçimi</td></tr>
+            <tr><td><code>Adım 4: Eğer x &gt; 0 ise Adım 6'ya git</code></td><td>Numaralı (git'li) algoritma biçimi. “Adım numaralarını kendiliğinden yaz” açıksa Enter'a basınca sıradaki numara gelir; araya satır ekleyip silince numaralar ve “git”ler kayar (Shift+Enter: numarasız satır)</td></tr>
             <tr><td><code># not</code></td><td>Yorum satırı (şemaya girmez)</td></tr>
             <tr><td><code>print( )</code> <code>input( )</code> <code>for i in range( )</code></td><td>Python kodu: kendiliğinden Türkçe algoritmaya çevrilir (<b>Python'dan çevir</b> ile önce kontrol edebilirsin)</td></tr>
           </table>
@@ -8063,6 +8088,18 @@
     return d + ' L' + f(z.x) + ',' + f(z.y);
   }
 
+  /* Okun başından "dist" kadar ilerideki nokta (ok kısaysa ortası) — atlama ("Adım N'e git") numarasının yeri */
+  function flPointAlong(pts, dist) {
+    let total = 0;
+    for (let i = 1; i < pts.length; i++) total += Math.abs(pts[i].x - pts[i - 1].x) + Math.abs(pts[i].y - pts[i - 1].y);
+    let left = Math.min(dist, total / 2);
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i], l = Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+      if (left <= l) return { x: a.x + Math.sign(b.x - a.x) * left, y: a.y + Math.sign(b.y - a.y) * left };
+      left -= l;
+    }
+    return pts[0];
+  }
   /* Çizginin uzunluğa göre orta noktası (ayar kutusu buraya açılır) */
   function flMidPoint(pts) {
     let total = 0;
@@ -8090,6 +8127,9 @@
   let flZoom = 1;
   let flSel = null;       // seçili öğe: { type: 'node' | 'edge', id }
   let flIssueMap = {};    // şekil id -> o şekildeki hata/uyarılar (son çizimden)
+  let flStepNum = null;   // şekil id -> adım numarası ("Adım no" açıksa; son çizimden)
+  let flStepEdge = null;  // ok id -> "Adım N'e git" satırının numarası (atlama oku)
+  const flNumsOn = () => localGet('pref:flnum') !== '0';
   let flRoutes = {};      // ok id -> son hesaplanan yol
 
   const FL_DEFS =
@@ -8115,6 +8155,28 @@
     return s;
   }
 
+  /* Şeklin sol üst köşesindeki adım numarası ("Şemadan algoritma"daki Adım N ile aynı).
+     Karar şeklinde sol üst kenarın dışında durur (hata rozeti sağ üstte). paint: dışa aktarmada renkler. */
+  function flStepPos(n, g) {
+    return n.kind === 'decision' ? { x: -g.w / 4 - 10, y: -g.h / 4 - 9 } : { x: -g.w / 2 + 2, y: -g.h / 2 - 1 };
+  }
+  function flStepBadgeSVG(n, g, k, paint) { return flStepPill(flStepPos(n, g), k, 'Adım ' + k, paint, false); }
+  /* Numara hapı: p merkez. jump: atlama oku ("Adım N'e git") — kesik çizgili */
+  function flStepPill(p, k, tip, paint, jump) {
+    const t = String(k), w = Math.max(18, 8 + t.length * 6.9), h = 17, r = v => Math.round(v * 10) / 10;
+    return '<g class="fl-stepno' + (jump ? ' jump' : '') + '"><title>' + esc(tip) + '</title><rect class="fl-step" x="' + r(p.x - w / 2) + '" y="' + r(p.y - h / 2) + '" width="' + r(w) + '" height="' + h + '" rx="' + h / 2 + '"' +
+      (paint ? ' fill="' + paint.paper + '" stroke="' + paint.muted + '" stroke-width="1"' + (jump ? ' stroke-dasharray="2.5 2"' : '') : '') + '/>' +
+      '<text class="fl-step-t" x="' + r(p.x) + '" y="' + r(p.y + 3.8) + '"' +
+      (paint ? ' text-anchor="middle" font-family="' + FL_EXPORT_FONT + '" font-size="10.5" font-weight="bold" fill="' + paint.muted + '"' : '') + '>' + t + '</text></g>';
+  }
+  /* Atlama okları: "Adım N'e git" satırı bir şekil değil, şeklin çıkış okudur; numarası okun üstünde durur */
+  function flGotoEdges(st) {
+    const m = {};
+    Object.keys(st.needGoto).forEach(id => { const e = (st.outs[id] || [])[0]; if (e) m[e.id] = st.needGoto[id]; });
+    return m;
+  }
+  const flJumpTip = (k, B) => 'Adım ' + k + ': ' + ((B && (B.text.trim() || FL_KINDS[B.kind].name)) || '').replace(/\s+/g, ' ') + ' adımına git';
+
   /* Tek bir şeklin SVG'si (ekrandaki hali: bağlantı noktaları ve hata rozetiyle) */
   function flNodeSVG(n) {
     const g = flGeom(n);
@@ -8131,6 +8193,7 @@
       const bx = n.kind === 'decision' ? g.w / 4 + 8 : g.w / 2 - 9, by = n.kind === 'decision' ? -g.h / 4 - 8 : -g.h / 2 + 9;
       s += '<circle class="fl-badge' + (err ? '' : ' warn') + '" cx="' + bx + '" cy="' + by + '" r="8"/><text class="fl-badge-t" x="' + bx + '" y="' + (by + 4) + '">!</text>';
     }
+    if (flStepNum && flStepNum[n.id]) s += flStepBadgeSVG(n, g, flStepNum[n.id]);
     FL_SIDES.forEach(side => {
       const p = flPort(n, side);
       s += '<circle class="fl-port" data-port="' + side + '" cx="' + (p.x - n.x) + '" cy="' + (p.y - n.y) + '" r="6"><title>Buradan tutup başka şekle sürükle: ok çiz</title></circle>';
@@ -8148,6 +8211,10 @@
     const issues = lintFlow(activeProject);
     flIssueMap = {};
     issues.forEach(i => { if (i.nid) (flIssueMap[i.nid] = flIssueMap[i.nid] || []).push(i); });
+    const st = flNumsOn() ? flowStepNumbers(activeProject) : null;
+    flStepNum = st && st.num;
+    flStepEdge = st && flGotoEdges(st);
+    updateFlNumBtn();
 
     renderFlCharts();
     el('flNodes').innerHTML = nodes.map(flNodeSVG).join('');
@@ -8305,6 +8372,7 @@
         const lp = flLabelPos(r);
         labels += '<text class="fl-elabel ' + (e.label === 'Evet' ? 'yes' : 'no') + (sel ? ' sel' : '') + '" x="' + lp.x + '" y="' + lp.y + '" text-anchor="' + lp.a + '">' + e.label + '</text>';
       }
+      if (flStepEdge && flStepEdge[e.id]) labels += flStepPill(flPointAlong(r.pts, 22), flStepEdge[e.id], flJumpTip(flStepEdge[e.id], B), null, true);
       if (sel) selMid = flMidPoint(r.pts);
     });
     if (temp) paths += '<path class="fl-edge temp" d="' + flPathD(temp) + '" marker-end="url(#flArrowSel)"/>';
@@ -8771,10 +8839,12 @@
     nodes.forEach(n => { byId[n.id] = n; });
     let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
     const grow = (a, b, c, d) => { x1 = Math.min(x1, a); y1 = Math.min(y1, b); x2 = Math.max(x2, c); y2 = Math.max(y2, d); };
-    let body = '';
+    let body = '', jumps = '';
+    const st = flNumsOn() ? flowStepNumbers(pid, cid) : null, gotoE = st ? flGotoEdges(st) : {}; // "Adım no" açıksa resimde de
     projectFlowEdges(pid, cid).forEach(e => {
       const A = byId[e.from], B = byId[e.to], r = routes[e.id];
       if (!A || !B || !r) return;
+      if (gotoE[e.id]) { const jp = flPointAlong(r.pts, 22); jumps += flStepPill(jp, gotoE[e.id], flJumpTip(gotoE[e.id], B), P, true); grow(jp.x - 16, jp.y - 10, jp.x + 16, jp.y + 10); }
       r.pts.forEach(p => grow(p.x - 4, p.y - 4, p.x + 4, p.y + 4));
       body += '<path d="' + flPathD(r.pts) + '" fill="none" stroke="' + P.muted + '" stroke-width="1.8" stroke-linejoin="round" marker-end="url(#a)"/>';
       if (flBranches(A) && e.label) {
@@ -8784,12 +8854,15 @@
         grow(lp.x - 40, lp.y - 12, lp.x + 40, lp.y + 4);
       }
     });
+    const nums = st && st.num;
     nodes.forEach(n => {
-      const g = flGeom(n), b = flBox(n);
+      const g = flGeom(n), b = flBox(n), k = nums && nums[n.id];
       grow(b.l, b.t, b.r, b.b);
+      if (k) { const sp = flStepPos(n, g); grow(n.x + sp.x - 16, n.y + sp.y - 10, n.x + sp.x + 16, n.y + sp.y + 10); }
       body += '<g transform="translate(' + n.x + ',' + n.y + ')"><path d="' + flShapePath(n.kind, g.w, g.h) + '" fill="' + C('--fl-' + fill[n.kind] + '-bg') +
-              '" stroke="' + C('--fl-' + fill[n.kind] + '-bd') + '" stroke-width="1.6"/>' + flTextSVG(n, g, P) + '</g>';
+              '" stroke="' + C('--fl-' + fill[n.kind] + '-bd') + '" stroke-width="1.6"/>' + flTextSVG(n, g, P) + (k ? flStepBadgeSVG(n, g, k, P) : '') + '</g>';
     });
+    body += jumps; // atlama numaraları okların ve şekillerin üstünde
     const pad = 24;
     x1 -= pad; y1 -= pad; x2 += pad; y2 += pad;
     const W = Math.ceil(x2 - x1), H = Math.ceil(y2 - y1);
@@ -8889,9 +8962,13 @@
     nodes.forEach(n => { byId[n.id] = n; });
     const outs = {};
     edges.forEach(e => { (outs[e.from] = outs[e.from] || []).push(e); });
-    Object.values(outs).forEach(l => l.sort((a, b) => flLabelRank(a.label) - flLabelRank(b.label)));
+    // Kollar yazılış (oluşturulma) sırasıyla: yazılı algoritmadan çizilen şemada adım numaraları yazıldığı
+    // gibi kalır ("Eğer ... ise Adım 6'ya git" biçiminde Hayır kolu önce yazılmışsa önce o gelir).
+    // Elle çizilen kararda ilk eklenen kol Evet'tir. Oluşturulma zamanı yoksa Evet önce.
+    const born = id => +(byId[id] && byId[id].created) || 0;
+    Object.values(outs).forEach(l => l.sort((a, b) => born(a.to) - born(b.to) || flLabelRank(a.label) - flLabelRank(b.label)));
     // Ters sonradan-sıra (reverse postorder): birleşme noktası, oraya gelen tüm kollardan sonra gelir.
-    // Çocuklar ters tercih sırasıyla (Hayır, ..., Evet) gezilir ki sonuçta Evet kolu önce yazılsın.
+    // Çocuklar ters tercih sırasıyla gezilir ki sonuçta tercih edilen (önce yazılan) kol önce gelsin.
     const seen = new Set(), post = [];
     const roots = nodes.filter(n => n.kind === 'start').concat(nodes.filter(n => n.kind !== 'start').sort((a, b) => a.y - b.y || a.x - b.x));
     roots.forEach(r => {
@@ -8912,19 +8989,25 @@
     return { order: [].concat(...post).map(id => byId[id]), outs: outs };
   }
 
-  function flowToSteps(pid, cid) {
+  /* Adım numaraları: her şekil sırasıyla bir numara alır; sıradaki adım bir sonraki satır değilse araya giren
+     "Adım N'e git" satırı da bir numara alır. Şekillerin yanındaki numaralar da buradan gelir. */
+  function flowStepNumbers(pid, cid) {
     const { order, outs } = flowOrder(pid, cid);
-    if (!order.length) return '';
-    const next = n => (outs[n.id] || [])[0];
-    const branch = (n, l) => (outs[n.id] || []).find(e => e.label === l);
-    // 1. geçiş: numaraları ver (gerekiyorsa "git" satırı da bir numara alır)
     const num = {}, needGoto = {};
     let k = 1;
     order.forEach((n, i) => {
       num[n.id] = k++;
-      const e = !flBranches(n) && n.kind !== 'end' ? next(n) : null;
+      const e = !flBranches(n) && n.kind !== 'end' ? (outs[n.id] || [])[0] : null;
       if (e && (!order[i + 1] || order[i + 1].id !== e.to)) { needGoto[n.id] = k++; }
     });
+    return { order: order, outs: outs, num: num, needGoto: needGoto };
+  }
+
+  function flowToSteps(pid, cid) {
+    const { order, outs, num, needGoto } = flowStepNumbers(pid, cid);
+    if (!order.length) return '';
+    const next = n => (outs[n.id] || [])[0];
+    const branch = (n, l) => (outs[n.id] || []).find(e => e.label === l);
     const step = id => (id && num[id]) ? 'Adım ' + trDative(num[id]) : 'Adım ?';
     const oneLine = s => s.trim().replace(/\s*\n\s*/g, '; ');
     // 2. geçiş: satırları yaz
@@ -11938,6 +12021,17 @@
   el('flUndo').addEventListener('click', flUndo);
   el('flRedo').addEventListener('click', flRedo);
   el('flLayout').addEventListener('click', flAutoLayoutCmd);
+  // "Adım no": şekillerin yanındaki adım numaraları (bu cihazda hatırlanır)
+  function updateFlNumBtn() {
+    const on = flNumsOn(), b = el('flNumBtn');
+    b.setAttribute('aria-pressed', String(on));
+    b.title = (on ? 'Şekillerin yanındaki adım numaralarını gizle' : 'Şekillerin yanında adım numaralarını göster') + ' (Şemadan algoritmadaki Adım 1, Adım 2…)';
+  }
+  el('flNumBtn').addEventListener('click', () => {
+    localSet('pref:flnum', flNumsOn() ? '0' : null);
+    renderFlow();
+    flToast(flNumsOn() ? 'Adım numaraları gösteriliyor (Şemadan algoritmadaki numaralarla aynı).' : 'Adım numaraları gizlendi.', 2500);
+  });
   el('flFit').addEventListener('click', () => flFit());
   el('flZoomIn').addEventListener('click', () => setFlZoom(flZoom + 0.1));
   el('flZoomOut').addEventListener('click', () => setFlZoom(flZoom - 0.1));
@@ -12202,8 +12296,202 @@
     el('flParseBtn').textContent = m === 'new' ? 'Yeni akış şeması oluştur' : 'Akış şemasını oluştur';
   }
   document.querySelectorAll('input[name="flMode"]').forEach(r => r.addEventListener('change', updateFlModeUI));
+  /* ---------- "Adım N:" numaralarını kendiliğinden yazma (Algoritmadan şema kutusu) ----------
+     Kutunun üstündeki seçenek açıkken (varsayılan; bu cihazda hatırlanır):
+     - Boş kutuya yazmaya başlayınca satırın başına "Adım 1: " gelir (yapıştırınca gelmez).
+     - Numaralı satırda Enter: alt satıra sıradaki "Adım N: " yazılır ("Eğer … ise", "İken …" gibi blok açan
+       satırdan sonra bir içeride). Aşağıdaki adımlar ve onlara giden "Adım N'e git"ler birer kayar.
+       Numarasız tek bir ilk satırda Enter'a basılırsa o satır "Adım 1" olur (telefon klavyesinde de işler).
+     - Boş adımda Enter: girintiliyse bir dışarı çıkar, değilse numara kalkar (numaralı yazım biter).
+     - Numaranın hemen arkasında Geri silme numarayı kaldırır; aşağıdakiler bir geri kayar.
+     - Numaralı satır silinince ya da araya numaralı satırlar yapıştırılınca numaralar 1'den sıraya dizilir.
+     - Numaralı satırda Tab / Shift+Tab bütün satırı girintiler / geri alır. Shift+Enter: numarasız yeni satır.
+     Her değişiklik Ctrl+Z ile tek adımda geri alınır. */
+  const flAutoNumOn = () => localGet('pref:flautonum') !== '0';
+  const FL_STEP_RE = /^([ \t]*)(\p{L}+)([ \t]*)(\d{1,4})([ \t]*[:.)\-–])[ \t]?/u;
+  function flStepOf(line) {
+    const m = FL_STEP_RE.exec(line);
+    if (!m || !/^(?:adim|step)$/.test(flFold(m[2]))) return null;
+    return { ind: m[1], word: m[2], gap: m[3], n: +m[4], sep: m[5].trim(), len: m[0].length, at: m[1].length + m[2].length + m[3].length, nl: m[4].length };
+  }
+  const flStepCount = text => String(text).split('\n').filter(flStepOf).length;
+  /* "Adım N'e git", "6. adıma" gibi anmaları tabloya göre değiştirir (tırnak içine dokunmaz; ek uyumu korunur) */
+  const FL_REF_RE = /("[^"\n]*"|“[^”\n]*”)|(^|[^\p{L}\p{N}_])(\p{L}+)([ \t]*)(\d{1,4})(['’]\p{L}+)?|(^|[^\p{L}\p{N}_.])(\d{1,4})([ \t]*\.?[ \t]*)((?:numaral[ıi][ \t]+)?ad[ıi]m)/gu;
+  function flMapStepRefs(line, map, from) {
+    if (!map.size) return line;
+    return line.slice(0, from) + line.slice(from).replace(FL_REF_RE, (m, q, b1, w, gap, d, suf, b2, d2, mid, w2) => {
+      if (q) return m;
+      if (w !== undefined) {
+        if (!/^(?:adim|step)$/.test(flFold(w)) || !map.has(+d)) return m;
+        const k = map.get(+d);
+        let sf = suf || '';
+        if (sf && /^['’](?:e|a|ye|ya)$/i.test(sf)) sf = sf[0] + trDative(k).split("'")[1]; // 5'e → 6'ya
+        return b1 + w + gap + k + sf;
+      }
+      if (d2 !== undefined && map.has(+d2)) return b2 + map.get(+d2) + mid + w2;
+      return m;
+    });
+  }
+  function flStepRelabel(line, k) { const L = flStepOf(line); return L ? line.slice(0, L.at) + k + line.slice(L.at + L.nl) : line; }
+  /* "at" satırından sonraki numaralı satırları kaydırır: d = +1 → k ve sonrası (araya k eklendi), d = -1 → k'den büyükler */
+  function flStepShift(lines, at, k, d) {
+    const hit = n => (d > 0 ? n >= k : n > k), first = new Map(), map = new Map();
+    lines.forEach((ln, i) => { if (d > 0 && i === at) return; const L = flStepOf(ln); if (L && !first.has(L.n)) first.set(L.n, i); });
+    first.forEach((i, n) => { if (i > at && hit(n)) map.set(n, n + d); });
+    return lines.map((ln, i) => {
+      const L = flStepOf(ln);
+      if (!L) return flMapStepRefs(ln, map, 0);
+      const t = i > at && hit(L.n) ? flStepRelabel(ln, L.n + d) : ln;
+      return flMapStepRefs(t, map, flStepOf(t).len);
+    });
+  }
+  /* Numaralı satırları 1'den sıraya dizer (satır silinince / yapıştırılınca); değişiklik yoksa null */
+  function flStepRenumber(lines) {
+    const want = new Map(), map = new Map();
+    let j = 0, changed = false;
+    lines.forEach((ln, i) => {
+      const L = flStepOf(ln);
+      if (!L) return;
+      j++;
+      want.set(i, j);
+      if (L.n !== j) changed = true;
+      if (!map.has(L.n)) map.set(L.n, j);
+    });
+    if (!changed) return null;
+    [...map.keys()].forEach(k => { if (map.get(k) === k) map.delete(k); });
+    return lines.map((ln, i) => {
+      if (!want.has(i)) return flMapStepRefs(ln, map, 0);
+      const t = flStepRelabel(ln, want.get(i));
+      return flMapStepRefs(t, map, flStepOf(t).len);
+    });
+  }
+  const flLinePos = (lines, li, col) => { let p = 0; for (let i = 0; i < li; i++) p += lines[i].length + 1; return p + col; };
+  const flAt = (lines, li, col) => ({ text: lines.join('\n'), caret: flLinePos(lines, li, col) });
+  /* Satır bir blok açıyor mu? (Eğer … ise · Değilse · İken · İçin · Tekrarla · N kez tekrarla) */
+  function flOpensBlock(body) {
+    const t = String(body).trim();
+    if (!t) return false;
+    const c = flClassify(t);
+    if (c.type === 'if') return c.thenStep == null && c.thenText == null;
+    if (c.type === 'else') return c.elseIf != null ? flOpensBlock('Eğer ' + c.elseIf) : !c.inline;
+    return c.type === 'while' || c.type === 'for' || c.type === 'count' || c.type === 'repeat';
+  }
+  /* Enter. v: metin, s: imleç. Döner: { text, caret } ya da null (olağan Enter) */
+  function flStepEnter(v, s) {
+    const ls = v.lastIndexOf('\n', s - 1) + 1, lines = v.split('\n'), li = v.slice(0, ls).split('\n').length - 1;
+    let line = lines[li], L = flStepOf(line), col = s - ls;
+    if (!L) {
+      // numarasız tek ilk satırın sonunda Enter: o satır "Adım 1" olur
+      if (col < line.length || !line.trim() || /^\s*#/.test(line) || looksLikePython(line) || lines.some((x, i) => i !== li && x.trim())) return null;
+      const ind = line.match(/^[ \t]*/)[0];
+      line = ind + 'Adım 1: ' + line.slice(ind.length);
+      lines[li] = line; L = flStepOf(line); col = line.length;
+    }
+    if (col < L.len) return null;
+    if (!line.slice(L.len).trim()) {
+      if (L.ind.length) { // boş ve girintili adım: bir dışarı çık
+        lines[li] = L.ind.replace(/^(?: {1,4}|\t)/, '') + line.slice(L.ind.length);
+        return flAt(lines, li, lines[li].length);
+      }
+      lines[li] = '';     // boş adım: numara kalkar, aşağıdakiler bir geri kayar
+      const out = flStepShift(lines, li, L.n, -1);
+      return flAt(out, li, 0);
+    }
+    const head = col > L.len ? line.slice(0, col).replace(/[ \t]+$/, '') : line.slice(0, col), tail = line.slice(col).replace(/^[ \t]+/, '');
+    const k = L.n + 1, prefix = L.ind + (!tail && flOpensBlock(line.slice(L.len)) ? '    ' : '') + L.word + L.gap + k + L.sep + ' ';
+    lines[li] = head;
+    lines.splice(li + 1, 0, prefix + tail);
+    const out = flStepShift(lines, li + 1, k, 1);
+    return flAt(out, li + 1, prefix.length);
+  }
+  /* Numaranın hemen arkasında Geri silme: numara kalkar */
+  function flStepBackspace(v, s) {
+    const ls = v.lastIndexOf('\n', s - 1) + 1, lines = v.split('\n'), li = v.slice(0, ls).split('\n').length - 1, L = flStepOf(lines[li]);
+    if (!L || s - ls !== L.len) return null;
+    lines[li] = L.ind + lines[li].slice(L.len);
+    return flAt(flStepShift(lines, li, L.n, -1), li, L.ind.length);
+  }
+  /* Numaralı satırda Tab / Shift+Tab: bütün satır girintilenir (numara girintinin içinde kalır) */
+  function flStepIndent(v, s, s2, back) {
+    if (v.slice(s, s2).includes('\n')) return null;
+    const ls = v.lastIndexOf('\n', s - 1) + 1, lines = v.split('\n'), li = v.slice(0, ls).split('\n').length - 1, line = lines[li];
+    if (!flStepOf(line)) return null;
+    if (!back) { lines[li] = '    ' + line; return flAt(lines, li, s - ls + 4); }
+    const m = line.match(/^(?: {1,4}|\t)/);
+    if (!m) return { text: v, caret: s };
+    lines[li] = line.slice(m[0].length);
+    return flAt(lines, li, Math.max(0, s - ls - m[0].length));
+  }
+  /* Kutudaki metni değiştirir; tarayıcının geri alma geçmişine tek adım olarak girer (Ctrl+Z) */
+  let flNumBusy = false, flNumBefore = null, flPlainEnter = false;
+  function flSetSrc(text, caret) {
+    const ta = el('flSource'), top = ta.scrollTop;
+    flNumBusy = true;
+    try {
+      ta.focus();
+      ta.setSelectionRange(0, ta.value.length);
+      let ok = false;
+      try { ok = document.execCommand('insertText', false, text); } catch (e) { ok = false; }
+      if (!ok || ta.value !== text) { ta.value = text; ta.dispatchEvent(new Event('input')); }
+      ta.setSelectionRange(caret, caret);
+      ta.scrollTop = top;
+      const cs = getComputedStyle(ta), lh = parseFloat(cs.lineHeight) || 20, pad = parseFloat(cs.paddingTop) || 0;
+      const y = pad + (text.slice(0, caret).split('\n').length - 1) * lh;   // imleç görünür kalsın
+      if (y < ta.scrollTop) ta.scrollTop = Math.max(0, y - pad);
+      else if (y + lh > ta.scrollTop + ta.clientHeight - pad) ta.scrollTop = y + lh - ta.clientHeight + 2 * pad;
+    } finally { flNumBusy = false; }
+  }
+  function flStepKey(e) {
+    if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { flPlainEnter = true; return false; }
+    if (!flAutoNumOn() || e.isComposing || e.keyCode === 229 || e.ctrlKey || e.metaKey || e.altKey) return false;
+    const ta = e.target, v = ta.value, s = ta.selectionStart, s2 = ta.selectionEnd;
+    let r = null;
+    if (e.key === 'Enter' && !e.shiftKey && s === s2) r = flStepEnter(v, s);
+    else if (e.key === 'Backspace' && !e.shiftKey && s === s2) r = flStepBackspace(v, s);
+    else if (e.key === 'Tab') r = flStepIndent(v, s, s2, e.shiftKey);
+    if (!r) return false;
+    e.preventDefault();
+    if (r.text !== v) flSetSrc(r.text, r.caret); else ta.setSelectionRange(r.caret, r.caret);
+    return true;
+  }
+  el('flSource').addEventListener('beforeinput', e => {
+    if (flNumBusy) return;
+    const ta = e.target;
+    flNumBefore = ta.value;
+    // boş kutuda ilk harf: önüne "Adım 1: " gelir
+    if (!flAutoNumOn() || e.inputType !== 'insertText' || !e.data || e.data.length !== 1 || /[\s#]/.test(e.data) || ta.value.trim()) return;
+    e.preventDefault();
+    flSetSrc('Adım 1: ' + e.data, 9);
+  });
+  el('flSource').addEventListener('input', e => {
+    const before = flNumBefore, plain = flPlainEnter;
+    flNumBefore = null; flPlainEnter = false;
+    if (flNumBusy || !e.isTrusted || !flAutoNumOn() || /^history/.test(e.inputType || '')) return;
+    const ta = e.target, v = ta.value, c = ta.selectionStart;
+    // Telefon klavyesinde Enter tuşu yakalanamayabilir: satır sonu eklendikten sonra aynı işlem yapılır
+    if ((e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph') && !plain && c > 0 && v[c - 1] === '\n') {
+      const r = flStepEnter(v.slice(0, c - 1) + v.slice(c), c - 1);
+      if (r) { flSetSrc(r.text, r.caret); return; }
+    }
+    if (before == null || flStepCount(before) === flStepCount(v)) return;
+    const lines = v.split('\n'), out = flStepRenumber(lines);
+    if (!out) return;
+    const li = v.slice(0, c).split('\n').length - 1, col = c - (v.lastIndexOf('\n', c - 1) + 1);
+    const a = flStepOf(lines[li]), b = flStepOf(out[li]);
+    flSetSrc(out.join('\n'), flLinePos(out, li, Math.max(0, col + (a && b && col > a.at ? b.nl - a.nl : 0))));
+  });
+  function updateFlAutoNumUI() {
+    const on = flAutoNumOn();
+    el('flAutoNum').checked = on;
+    el('flSource').placeholder = on ? 'Adım 1: Başla\nAdım 2: Oku a, b\nAdım 3: toplam = a + b\nAdım 4: Yaz "Toplam:", toplam\nAdım 5: Bitir'
+                                    : 'Başla\nOku a, b\ntoplam = a + b\nYaz "Toplam:", toplam\nBitir';
+  }
+  el('flAutoNum').addEventListener('change', e => { localSet('pref:flautonum', e.target.checked ? null : '0'); updateFlAutoNumUI(); });
+  updateFlAutoNumUI();
+
   el('flSource').addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); el('flParseBtn').click(); return; }
+    if (flStepKey(e)) return; // adım numaraları: Enter / Geri silme / Tab
     if (e.key !== 'Tab' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
     e.preventDefault();
     e.target.setRangeText('    ', e.target.selectionStart, e.target.selectionEnd, 'end'); // girinti = blok
@@ -12839,10 +13127,32 @@
   /* esc() + çift tırnak: value="..." gibi HTML niteliklerinin içine yazarken kullanılır. */
   function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
 
-  /* ---- MOBİL ÇEKMECE (sol panel) aç/kapa ---- */
-  function openDrawer(){ el('app').classList.add('drawer-open'); }
-  function closeDrawer(){ el('app').classList.remove('drawer-open'); }
-  el('menuBtn').addEventListener('click', openDrawer);   // ☰ butonu -> aç
+  /* ---- SOL PANEL: telefonda çekmece, bilgisayarda gizlenip açılan kenar çubuğu ----
+     ☰ telefonda çekmeceyi açar. Bilgisayarda soldaki bölümü kapatır / açar; tercih bu cihazda hatırlanır
+     (pref:side) ve sayfanın başındaki küçük betik onu ilk çizimden önce uygular, böylece açılışta kayma olmaz. */
+  const isPhoneWidth = () => matchMedia('(max-width: 760px)').matches;
+  let sideTimer = null;
+  function openDrawer(){ el('app').classList.add('drawer-open'); updateMenuBtn(); }
+  function closeDrawer(){ el('app').classList.remove('drawer-open'); updateMenuBtn(); }
+  function updateMenuBtn() {
+    const b = el('menuBtn'), phone = isPhoneWidth(), closed = document.body.classList.contains('side-closed');
+    const t = phone ? 'Projeler' : closed ? 'Soldaki bölümü göster' : 'Soldaki bölümü gizle';
+    b.title = t;
+    b.setAttribute('aria-label', t);
+    b.setAttribute('aria-expanded', String(phone ? el('app').classList.contains('drawer-open') : !closed));
+  }
+  function toggleSide() {
+    if (isPhoneWidth()) { openDrawer(); return; }
+    const closed = document.body.classList.toggle('side-closed');
+    localSet('pref:side', closed ? 'closed' : null);
+    updateMenuBtn();
+    // Şema ve akış tuvalleri yeni genişliğe göre yeniden ölçülsün (kayma bitince)
+    clearTimeout(sideTimer);
+    sideTimer = setTimeout(() => window.dispatchEvent(new Event('resize')), 260);
+  }
+  el('menuBtn').addEventListener('click', toggleSide);
+  try { matchMedia('(max-width: 760px)').addEventListener('change', updateMenuBtn); } catch (e) {}
+  updateMenuBtn();
   el('projTitle').addEventListener('click', () => renameProject(activeProject)); // başlığa tıkla -> yeniden adlandır
   el('overlay').addEventListener('click', closeDrawer);  // karartıya tıkla -> kapat
 

@@ -21,6 +21,11 @@ Liste, Pano, Şema, Akış ve Takvim arasında geçince hiçbir şey kaymaz (Win
 da). Çok geniş ekranlarda (1600 pikselden geniş içerik alanı) sayfa ortalanır. Sayfa açılırken de en son
 tema, görünüm ve proje baştan doğru çizilir; açılışta yazılar büyüyüp küçülmez.
 
+Proje adının solundaki **☰** düğmesi soldaki bölümü (projeler, arama, çöp kutusu) açar ve kapatır.
+Telefonda çekmece olarak açılır. Bilgisayarda bölüm kayarak gizlenir ve içerik bütün genişliği kullanır;
+kapalıyken "Her yerde ara" üst çubuktaki büyüteçte durur. Seçim o cihazda hatırlanır ve sayfa açılırken
+baştan öyle çizilir.
+
 ### Temalar
 
 Üst çubuktaki palet düğmesi tema menüsünü açar. Seçim o cihazda hatırlanır ve JSON yedeğine de yazılır.
@@ -114,6 +119,14 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
   - `Tekrarla` … `tahmin = gizli olana kadar`
   - Numaralı biçim: `Adım 4: Eğer x > 0 ise Adım 6'ya git` · `Adım 7: Adım 3'e git`
   - İngilizce anahtar kelimeler de olur (`IF / ELSE / WHILE / FOR / INPUT / PRINT`)
+- **Adım numaralarını kendiliğinden yaz** (kutunun üstünde, varsayılan açık; cihazda hatırlanır):
+  - Boş kutuya yazmaya başlayınca satırın başına `Adım 1: ` gelir; Enter'a basınca alt satıra sıradaki
+    `Adım N: ` yazılır. `Eğer … ise`, `İken`, `İçin`, `Değilse` gibi blok açan satırdan sonra bir içeride başlar.
+  - Araya adım eklenince ya da numaralı satır silinince aşağıdaki adımlar ve onlara giden `Adım N'e git`ler
+    kendiliğinden kayar (ekler de uyar: `Adım 5'e` → `Adım 6'ya`).
+  - Boş adımda Enter numaralı yazımı bitirir (girintiliyse bir dışarı çıkar); numaranın hemen arkasında
+    Geri silme numarayı kaldırır. Tab / Shift+Tab bütün satırı girintiler. Shift+Enter numarasız satır açar.
+  - Yapıştırılan metne (Python kodu dahil) numara eklenmez. Her değişiklik Ctrl+Z ile geri alınır.
 - **Python'dan şema:** kutuya Python kodu yapıştırınca önce Türkçe algoritmaya çevrilir, şema oradan çizilir
   (**Python'dan çevir** ile çeviriyi önce görüp düzeltebilirsin). Kod çalıştırılmaz, sadece okunur.
   - `input()` → `Oku` · `print()` → `Yaz` (f-string, `.format()`, `%` dahil) · `if/elif/else` · `while`
@@ -126,6 +139,11 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
     ya da şekle olduğu gibi yazılır; uyarılar satır numarasıyla gösterilir
 - **Şemadan algoritma:** şema "Adım 1: Başla …" biçiminde numaralı adımlara çevrilir
   (kopyala / .txt indir); bu metin tekrar şemaya çevrilebilir
+- **Adım no:** her şeklin sol üst köşesinde adım numarası durur; "Adım N'e git" satırları (geri dönen ya da
+  atlayan oklar) okun üstünde kesik çerçeveli numarayla gösterilir. Numaralar "Şemadan algoritma"daki
+  adımlarla aynıdır. Numaralı yazılmış bir algoritmadan çizilen şemada yazdığın numaralar korunur (kollar
+  yazılış sırasıyla numaralanır). Araç çubuğundaki **Adım no** ile gizlenip gösterilir; açıkken PNG / SVG
+  resminde de çıkar.
 - **Koda çevir:** şema **C#** (konsol uygulaması), **Python** ya da sözde koda çevrilir.
   Eğer / İken / İçin yapıları gerçek `if` / `while` / `for` olur; iç içe geçen "git"ler varsa
   durum makinesi yazılır. Veritabanı gibi açıklama adımları `// TODO` boş metotlar olarak çıkar.
@@ -324,6 +342,8 @@ kayıtların artık o depoya gider. Bağlantıyı tanımadığın birinden aldı
 | Delete | Akış | Seçili şekli / oku sil |
 | Enter / çift tık | Akış | Seçili şekli düzenle |
 | Ctrl+Enter | Algoritma kutusu | Akış şemasını oluştur |
+| Enter / Shift+Enter | Algoritma kutusu | Sıradaki "Adım N:" ile yeni satır / numarasız yeni satır |
+| Tab / Shift+Tab | Algoritma kutusu | Satırı girintile / geri al |
 | ? | Akış | Şekiller ne işe yarar? (yardım) |
 | Ctrl + tekerlek | Şema, Akış | Yakınlaştır / uzaklaştır |
 | Esc | Her yerde | Açık pencereyi kapat |
