@@ -1121,6 +1121,17 @@
   .con-ok { font-size: 0.78rem; color: var(--green); word-break: break-all; }
   .con-err { font-size: 0.8rem; color: var(--danger); white-space: pre-wrap; }
   .con-note { font-size: 0.8125rem; color: var(--muted); font-style: italic; }
+  .con-dialect-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+  .con-dialect-lbl { font-size: 0.8125rem; font-weight: 600; }
+  .con-dialect { width: auto; min-width: 11rem; }
+  .con-dialect-note { font-size: 0.75rem; color: var(--muted); flex: 1 1 16rem; }
+  .con-err code, .con-tr code { font-family: inherit; background: var(--paper-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 0.25rem; color: var(--ink); white-space: pre-wrap; word-break: break-word; }
+  .con-err > div { margin-top: 0.2rem; }
+  .con-err-raw { color: var(--muted); font-size: 0.75rem; }
+  .con-tr { margin-top: 0.3rem; font-size: 0.75rem; color: var(--muted); white-space: normal; }
+  .con-tr > span { font-weight: 600; }
+  .con-tr-notes { margin-top: 0.15rem; }
+  .con-rest .link-btn { font-style: normal; }
   .con-sample summary { cursor: pointer; font-size: 0.8125rem; color: var(--ink-2); }
   .con-sample .sql-out { margin-top: 0.4rem; max-height: 260px; overflow: auto; white-space: pre; font-size: 0.75rem; }
   .con-res-head { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.25rem; word-break: break-all; }
@@ -2064,7 +2075,7 @@
                 <button data-eract="clear" class="danger">Şemayı temizle&hellip;</button>
               </div>
             </div>
-            <button class="er-btn" id="erConsoleBtn" title="Şemayı gerçek SQLite'ta çalıştır, veri ekle, sorgu yaz">Konsol</button>
+            <button class="er-btn" id="erConsoleBtn" title="Şemayı gerçek SQLite'ta çalıştır, veri ekle, sorgu yaz (MySQL, PostgreSQL, SQL Server yazımı da olur)">Konsol</button>
             <button class="er-btn dark" id="erSqlBtn" title="Şemayı SQL komutları olarak göster">SQL</button>
           </div>
         </div>
@@ -2393,7 +2404,7 @@
 <div class="modal-overlay" id="consoleModal">
   <div class="modal wide">
     <div class="modal-head">
-      <div class="modal-heading">SQLite konsolu</div>
+      <div class="modal-heading">SQL konsolu</div>
       <button class="modal-close" id="conClose" aria-label="Kapat">&times;</button>
     </div>
     <div class="modal-body">
@@ -2406,6 +2417,16 @@
           <button class="modal-btn" id="conDownloadDb" title="Konsoldaki veritabanını verileriyle birlikte indir (.db)">.db indir</button>
           <button class="modal-btn" id="conDownload" title="Konsoldaki veritabanını verileriyle birlikte indir (.sqlite)">.sqlite indir</button>
         </div>
+      </div>
+      <div class="con-dialect-row">
+        <label class="con-dialect-lbl" for="conDialect">SQL türü</label>
+        <select class="modal-select con-dialect" id="conDialect" title="Hangi SQL yazımıyla yazacağını seç; SQLite dışındakiler çalıştırılmadan önce SQLite'a çevrilir">
+          <option value="sqlite">SQLite</option>
+          <option value="mysql">MySQL / MariaDB</option>
+          <option value="postgres">PostgreSQL</option>
+          <option value="mssql">SQL Server</option>
+        </select>
+        <span class="con-dialect-note" id="conDialectNote"></span>
       </div>
       <div class="con-stale" id="conStale" style="display:none"></div>
       <div class="con-tables" id="conTables"></div>
@@ -4962,7 +4983,7 @@
   /* Proje başına SQL ayarlarının varsayılanları */
   const SCHEMA_DEFAULTS = {
     dialect: 'sqlite', ifNotExists: true, dropFirst: false, fkIndexes: true,
-    transaction: true, strict: false, extraSql: '', consoleSql: ''
+    transaction: true, strict: false, extraSql: '', consoleSql: '', consoleDialect: ''
   };
 
   /* SQL'de özel anlamı olan kelimeler: bu adlar tırnak içine alınır */
@@ -6691,7 +6712,1234 @@
     } finally { if (db) db.close(); }
   }
 
-  /* ---------- SQLITE KONSOLU ---------- */
+  /* ===================================================================
+     SQL TÜRLERİ — konsolda MySQL, PostgreSQL ve SQL Server yazımı
+     Konsolun motoru SQLite'tır (sql.js). Seçilen türde yazılan her komut çalıştırılmadan önce SQLite'a
+     çevrilir: AUTO_INCREMENT / SERIAL / IDENTITY → AUTOINCREMENT, TOP / OFFSET … FETCH → LIMIT, ENGINE=…
+     gibi tablo seçenekleri atılır; N'…' · "…" (MySQL) · GO · :: · ILIKE · EXTRACT · INTERVAL … çevrilir.
+     SHOW TABLES, DESCRIBE, \dt, sp_help, INFORMATION_SCHEMA gibi komutlar tablo listesine dönüşür.
+     NOW(), GETDATE(), DATEDIFF(), LEN(), LEFT(), DATE_FORMAT() gibi fonksiyonlar veritabanına
+     JavaScript fonksiyonu olarak eklenir; SQLite türü seçiliyken bunlar gerçek SQLite gibi "no such function"
+     verir. Çevrilemeyen yazımlar (saklı yordam, DECLARE, sütun türü değiştirme …) Türkçe açıklamayla durur.
+     Güvenlik: hiçbir şey eval edilmez; çeviri sadece metin işler, sonuç yine SQLite'ın kendi denetiminden geçer.
+     =================================================================== */
+  const CON_DIALECTS = { sqlite: 'SQLite', mysql: 'MySQL', postgres: 'PostgreSQL', mssql: 'SQL Server' };
+  const SQL_BS = { n: '\n', t: '\t', r: '\r', '0': '', b: '\b', Z: '\x1a' };
+  const SQL_RE = { ws: /\s+/y, num: /0[xX][0-9a-fA-F]+|(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/y, id: /[\p{L}_][\p{L}\p{N}_$]*/uy,
+                   vr: /@@?[\p{L}_][\p{L}\p{N}_]*|:[\p{L}_][\p{L}\p{N}_]*|\$\d+|\?\d*/uy, dollar: /\$(?:[A-Za-z_]\w*)?\$/y };
+  const SQL_OPS = ['<=>', '->>', '!~*', '::', '||', '<=', '>=', '<>', '!=', '==', '->', ':=', '<<', '>>', '!~', '~*'];
+
+  /* Sözcüklere ayırır: { t: ws | cmt | str | blob | qid | id | num | var | op, raw, val } */
+  function sqlLex(src, d) {
+    src = String(src);
+    const out = [], n = src.length;
+    let i = 0;
+    const at = re => { re.lastIndex = i; const m = re.exec(src); return m ? m[0] : null; };
+    const push = (t, j, x) => { out.push(Object.assign({ t: t, raw: src.slice(i, j) }, x)); i = j; };
+    while (i < n) {
+      const c = src[i];
+      let w;
+      if ((w = at(SQL_RE.ws))) { push('ws', i + w.length); continue; }
+      if (src.startsWith('--', i) || (c === '#' && d === 'mysql')) { const j = src.indexOf('\n', i); push('cmt', j < 0 ? n : j); continue; }
+      if (src.startsWith('/*', i)) { const j = src.indexOf('*/', i + 2); push('cmt', j < 0 ? n : j + 2); continue; }
+      if (c === "'" || (/[NnEeXxBb]/.test(c) && src[i + 1] === "'" && !/[\p{L}\p{N}_]/u.test(src[i - 1] || ''))) {
+        const pfx = c === "'" ? '' : c.toUpperCase(), bs = d === 'mysql' || pfx === 'E';
+        let j = i + (pfx ? 2 : 1), val = '', ok = false;
+        while (j < n) {
+          const ch = src[j];
+          if (ch === "'") { if (src[j + 1] === "'") { val += "'"; j += 2; continue; } j++; ok = true; break; }
+          if (bs && ch === '\\' && j + 1 < n) { const e = src[j + 1]; val += e in SQL_BS ? SQL_BS[e] : (e === '%' || e === '_' ? '\\' + e : e); j += 2; continue; }
+          val += ch; j++;
+        }
+        push(pfx === 'X' || pfx === 'B' ? 'blob' : 'str', j, { val: val, pfx: pfx, ok: ok });
+        continue;
+      }
+      if (c === '$' && d === 'postgres' && (w = at(SQL_RE.dollar))) {
+        const j = src.indexOf(w, i + w.length);
+        push('str', j < 0 ? n : j + w.length, { val: src.slice(i + w.length, j < 0 ? n : j), pfx: '$', ok: j >= 0 });
+        continue;
+      }
+      if (c === '"' || c === '`' || c === '[') {
+        const cl = c === '[' ? ']' : c;
+        let j = i + 1, val = '', ok = false;
+        while (j < n) {
+          const ch = src[j];
+          if (ch === cl) { if (src[j + 1] === cl) { val += cl; j += 2; continue; } j++; ok = true; break; }
+          if (d === 'mysql' && c === '"' && ch === '\\' && j + 1 < n) { const e = src[j + 1]; val += e in SQL_BS ? SQL_BS[e] : e; j += 2; continue; }
+          val += ch; j++;
+        }
+        push(c === '"' && d === 'mysql' ? 'str' : 'qid', j, { val: val, pfx: '', ok: ok, q: c });
+        continue;
+      }
+      if (/\d/.test(c) || (c === '.' && /\d/.test(src[i + 1] || ''))) { if ((w = at(SQL_RE.num))) { push('num', i + w.length); continue; } }
+      if (c === '#' && d === 'mssql' && /[\p{L}_]/u.test(src[i + 1] || '')) { i++; w = at(SQL_RE.id); i--; push('id', i + 1 + w.length); continue; }
+      if ((w = at(SQL_RE.id))) { push('id', i + w.length); continue; }
+      if ('@:$?'.includes(c) && !src.startsWith('::', i) && !src.startsWith(':=', i) && (w = at(SQL_RE.vr))) { push('var', i + w.length); continue; }
+      const op = SQL_OPS.find(o => src.startsWith(o, i)) || c;
+      push('op', i + op.length);
+    }
+    return out;
+  }
+
+  /* Komutlara böler: ";" ile (tetikleyici / yordam gövdesindeki BEGIN … END içindekiler hariç) ve SQL Server'da tek başına "GO" satırıyla. */
+  function sqlSplit(toks, d) {
+    const list = [];
+    let cur = [], depth = 0, block = false, sig = 0, first = '';
+    const flush = () => { if (sig) list.push(cur); cur = []; depth = 0; block = false; sig = 0; first = ''; };
+    for (let k = 0; k < toks.length; k++) {
+      const t = toks[k];
+      if (t.t === 'op' && t.raw === ';' && depth === 0) { flush(); continue; }
+      if (d === 'postgres' && first === '\\' && t.t === 'ws' && t.raw.includes('\n')) { flush(); continue; }
+      if (!sig && t.t === 'op' && t.raw === '\\') first = '\\';
+      if (t.t === 'id') {
+        const u = t.raw.toUpperCase();
+        if (d === 'mssql' && u === 'GO' && sqlAlone(toks, k)) { flush(); continue; }
+        if (!sig) first = u;
+        else if (first === 'CREATE' && !block && /^(?:TRIGGER|PROCEDURE|PROC|FUNCTION)$/.test(u)) block = true;
+        if (block && (u === 'BEGIN' || u === 'CASE')) depth++;
+        else if (block && u === 'END' && depth > 0) depth--;
+      }
+      if (t.t !== 'ws' && t.t !== 'cmt') sig++;
+      cur.push(t);
+    }
+    flush();
+    return list;
+  }
+  function sqlAlone(toks, k) {
+    for (let j = k - 1; j >= 0; j--) { const t = toks[j]; if (t.t === 'ws') { if (t.raw.includes('\n')) break; continue; } if (t.t === 'cmt' && t.raw.startsWith('/*')) continue; return false; }
+    for (let j = k + 1; j < toks.length; j++) { const t = toks[j]; if (t.t === 'ws') { if (t.raw.includes('\n')) break; continue; } if (t.t === 'cmt' || t.t === 'num') continue; return false; }
+    return true;
+  }
+  const sqlStmtText = toks => toks.map(t => t.raw).join('').trim();
+  const sqlQi = s => '"' + String(s).replace(/"/g, '""') + '"';
+  const sqlQl = s => "'" + String(s).replace(/'/g, "''") + "'";
+
+  const SQL_UNITS = { year: 'year', yy: 'year', yyyy: 'year', years: 'year', quarter: 'quarter', qq: 'quarter', q: 'quarter', month: 'month', mm: 'month', m: 'month', months: 'month',
+    dayofyear: 'dayofyear', dy: 'dayofyear', y: 'dayofyear', day: 'day', dd: 'day', d: 'day', days: 'day', week: 'week', wk: 'week', ww: 'week', weeks: 'week',
+    weekday: 'weekday', dw: 'weekday', hour: 'hour', hh: 'hour', hours: 'hour', minute: 'minute', mi: 'minute', n: 'minute', minutes: 'minute',
+    second: 'second', ss: 'second', s: 'second', seconds: 'second', millisecond: 'millisecond', ms: 'millisecond', microsecond: 'microsecond', mcs: 'microsecond' };
+  const SQL_TYPE_WORDS = new Set(['precision', 'varying', 'with', 'without', 'time', 'zone', 'unsigned', 'signed']);
+  const SQL_COL_STOP = new Set(['NOT', 'NULL', 'PRIMARY', 'UNIQUE', 'CHECK', 'REFERENCES', 'CONSTRAINT', 'COLLATE', 'COMMENT', 'ON', 'GENERATED', 'AUTO_INCREMENT',
+    'AUTOINCREMENT', 'IDENTITY', 'DEFAULT', 'CHARACTER', 'CHARSET', 'CLUSTERED', 'NONCLUSTERED', 'AS', 'ROWGUIDCOL', 'SPARSE', 'VISIBLE', 'INVISIBLE', 'KEY', 'STORED', 'VIRTUAL', 'PERSISTED']);
+
+  /* Bir komutu (sözcükleriyle) seçilen türden SQLite'a çevirir. ctx: { dbs, tables, textCols, colTypes }
+     Döner: { sql, notes } · { skip: true, notes } (konsolda karşılığı olmayan, zararsız komut) · { err } */
+  function sqlToSqlite(toks, d, ctx) {
+    const S = [];
+    let pre = '';
+    for (const t of toks) {
+      if (t.t === 'ws') { pre += t.raw; continue; }
+      if (t.t === 'cmt') { pre += t.raw[0] === '#' ? '--' + t.raw.slice(1) : t.raw; continue; }
+      S.push(Object.assign({}, t, { pre: pre }));
+      pre = '';
+    }
+    const notes = [];
+    const note = m => { if (!notes.includes(m)) notes.push(m); };
+    const N = S.length;
+    const U = i => (S[i] && S[i].t === 'id' ? S[i].raw.toUpperCase() : '');
+    const op = (i, v) => !!S[i] && S[i].t === 'op' && S[i].raw === v;
+    const isName = i => !!S[i] && (S[i].t === 'id' || S[i].t === 'qid');
+    const nameOf = i => (S[i].t === 'qid' ? S[i].val : S[i].raw);
+    const closeOf = i => { let dp = 0; for (let j = i; j < N; j++) { if (op(j, '(')) dp++; else if (op(j, ')') && --dp === 0) return j; } return N - 1; };
+    const openOf = j => { let dp = 0; for (let i = j; i >= 0; i--) { if (op(i, ')')) dp++; else if (op(i, '(') && --dp === 0) return i; } return 0; };
+    const tokText = t => (t.rep !== undefined ? t.rep : t.t === 'str' ? (t.ok ? sqlQl(t.val) : t.raw) : t.raw);
+    const glue = (a, b) => (a && b && /[\p{L}\p{N}_'"`\]]$/u.test(a) && /^[\p{L}\p{N}_'"`[]/u.test(b) ? a + ' ' + b : a + b);
+    function render(a, b, keepFirstPre) {
+      let out = '';
+      for (let i = a; i < b; i++) {
+        const t = S[i];
+        if (t.before) out = glue(out, t.before);
+        if (!t.skip) out = glue(out, (i === a && !keepFirstPre ? '' : t.pre) + tokText(t));
+        if (t.after) out = glue(out, t.after);
+      }
+      return out;
+    }
+    const skipR = (a, b) => { for (let i = a; i <= b && i < N; i++) S[i].skip = true; };
+    const result = (extra) => ({ sql: render(0, N) + (extra || ''), notes: notes });
+    const skipMsg = m => ({ skip: true, notes: [m] });
+    const err = m => ({ err: m });
+    // değişmez parça: metin ya da ad (USE x, sp_help 't')
+    const word = i => (!S[i] ? '' : S[i].t === 'str' || S[i].t === 'qid' ? S[i].val : S[i].raw);
+    // virgülle ayrılmış en dıştaki parçalar: [a, b) aralıkları
+    function parts(a, b) {
+      const out = [];
+      let s = a, dp = 0;
+      for (let i = a; i < b; i++) {
+        if (op(i, '(')) dp++;
+        else if (op(i, ')')) dp--;
+        else if (op(i, ',') && dp === 0) { out.push([s, i]); s = i + 1; }
+      }
+      if (s < b) out.push([s, b]);
+      return out;
+    }
+    const findTop = (a, b, kw) => { let dp = 0; for (let i = a; i < b; i++) { if (op(i, '(')) dp++; else if (op(i, ')')) dp--; else if (dp === 0 && U(i) === kw) return i; } return -1; };
+    const W = []; for (let i = 0; i < Math.min(N, 6); i++) W.push(U(i));
+    const D = CON_DIALECTS[d];
+
+    /* ---- 1) Sistem görünümleri ve şema adları ---- */
+    const VIEWS = {
+      'information_schema.tables': "(SELECT 'konsol' AS table_catalog, 'main' AS table_schema, name AS table_name, CASE type WHEN 'view' THEN 'VIEW' ELSE 'BASE TABLE' END AS table_type FROM sqlite_master WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite!_%' ESCAPE '!')",
+      'information_schema.columns': "(SELECT 'main' AS table_schema, m.name AS table_name, p.name AS column_name, p.cid + 1 AS ordinal_position, p.dflt_value AS column_default, CASE p.\"notnull\" WHEN 1 THEN 'NO' ELSE 'YES' END AS is_nullable, p.type AS data_type, CASE WHEN p.pk > 0 THEN 'PRI' ELSE '' END AS column_key FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE m.type = 'table' AND m.name NOT LIKE 'sqlite!_%' ESCAPE '!')",
+      'information_schema.views': "(SELECT 'main' AS table_schema, name AS table_name, sql AS view_definition FROM sqlite_master WHERE type = 'view')",
+      'sys.tables': "(SELECT name, rowid AS object_id, 'U' AS type, 'USER_TABLE' AS type_desc FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite!_%' ESCAPE '!')",
+      'sys.views': "(SELECT name, rowid AS object_id, 'V' AS type, 'VIEW' AS type_desc FROM sqlite_master WHERE type = 'view')",
+      'sys.objects': "(SELECT name, rowid AS object_id, CASE type WHEN 'view' THEN 'V' ELSE 'U' END AS type FROM sqlite_master WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite!_%' ESCAPE '!')",
+      'sys.columns': "(SELECT m.rowid AS object_id, p.name AS name, p.cid + 1 AS column_id, p.type AS type_name, 1 - p.\"notnull\" AS is_nullable FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE m.type = 'table')",
+      'pg_tables': "(SELECT 'public' AS schemaname, name AS tablename FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite!_%' ESCAPE '!')",
+      'pg_views': "(SELECT 'public' AS schemaname, name AS viewname, sql AS definition FROM sqlite_master WHERE type = 'view')"
+    };
+    for (let i = 0; i < N; i++) {
+      if (!isName(i)) continue;
+      const a = nameOf(i).toLowerCase();
+      if (isName(i + 2) && op(i + 1, '.')) {
+        let k = i, pfx = a;
+        if (pfx === 'pg_catalog' && VIEWS[nameOf(i + 2).toLowerCase()]) { S[i].skip = S[i + 1].skip = true; continue; }
+        const two = pfx + '.' + nameOf(i + 2).toLowerCase();
+        if (VIEWS[two] && !op(i + 3, '.') && !op(i + 3, '(')) { S[k].rep = VIEWS[two]; S[k + 1].skip = S[k + 2].skip = true; note('Sistem tablosu (' + two + ') SQLite\'taki karşılığıyla sorgulandı.'); i += 2; continue; }
+        if (pfx === 'dbo' || pfx === 'public' || (ctx.dbs && ctx.dbs.has(pfx))) { S[i].skip = S[i + 1].skip = true; note('Şema / veritabanı ön adı (' + nameOf(i) + '.) atıldı: konsolda tek veritabanı var.'); continue; }
+      }
+      if (VIEWS[a] && a.startsWith('pg_') && !op(i + 1, '(') && !op(i - 1, '.')) { S[i].rep = VIEWS[a]; note('Sistem tablosu (' + a + ') SQLite\'taki karşılığıyla sorgulandı.'); }
+    }
+
+    /* ---- 2) Komut düzeyindeki kalıplar ---- */
+    const tableArg = i => (isName(i) ? nameOf(i) : S[i] && S[i].t === 'str' ? S[i].val : '');
+    const noTable = t => ctx.tables && !ctx.tables.has(String(t).toLowerCase());
+    const describe = t => {
+      if (noTable(t)) return err('"' + t + '" adında bir tablo yok.');
+      const q = sqlQl(t);
+      if (d === 'postgres') return { sql: 'SELECT name AS "Column", type AS "Type", CASE "notnull" WHEN 1 THEN \'not null\' ELSE \'\' END AS "Nullable", dflt_value AS "Default" FROM pragma_table_info(' + q + ')', notes: notes };
+      if (d === 'mssql') return { sql: 'SELECT name AS COLUMN_NAME, type AS TYPE_NAME, CASE "notnull" WHEN 1 THEN \'NO\' ELSE \'YES\' END AS IS_NULLABLE, dflt_value AS COLUMN_DEFAULT, CASE WHEN pk > 0 THEN \'PK\' ELSE \'\' END AS "KEY" FROM pragma_table_info(' + q + ')', notes: notes };
+      return { sql: 'SELECT name AS "Field", type AS "Type", CASE "notnull" WHEN 1 THEN \'NO\' ELSE \'YES\' END AS "Null", CASE WHEN pk > 0 THEN \'PRI\' ELSE \'\' END AS "Key", dflt_value AS "Default" FROM pragma_table_info(' + q + ')', notes: notes };
+    };
+    const tablesQ = (col, views) => ({ sql: 'SELECT name AS ' + sqlQi(col) + (views ? ", CASE type WHEN 'view' THEN 'VIEW' ELSE 'BASE TABLE' END AS \"Table_type\"" : '') +
+      " FROM sqlite_master WHERE type IN ('table'" + (views ? ", 'view'" : '') + ") AND name NOT LIKE 'sqlite!_%' ESCAPE '!' ORDER BY name", notes: notes });
+
+    if (op(0, '\\')) { // psql: \dt · \d tablo · \l · \c
+      const cmd = (S[1] ? S[1].raw : '').toLowerCase();
+      if (cmd === 'dt' || cmd === 'dt+') return tablesQ('Name');
+      if (cmd === 'd' || cmd === 'd+') return S[2] ? describe(tableArg(2)) : tablesQ('Name', true);
+      if (cmd === 'dv') return { sql: "SELECT name AS \"Name\" FROM sqlite_master WHERE type = 'view' ORDER BY name", notes: notes };
+      if (cmd === 'di') return { sql: "SELECT name AS \"Name\", tbl_name AS \"Table\" FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite!_%' ESCAPE '!' ORDER BY name", notes: notes };
+      if (cmd === 'l') return { sql: "SELECT 'konsol' AS \"Name\"", notes: notes };
+      return skipMsg('psql komutu "\\' + cmd + '" konsolda yok; atlandı. (\\dt, \\d tablo, \\dv, \\di, \\l olur.)');
+    }
+    if (W[0] === 'USE') { if (ctx.dbs && S[1]) ctx.dbs.add(word(1).toLowerCase()); return skipMsg('Konsolda tek veritabanı var; "USE ' + word(1) + '" atlandı.'); }
+    if ((W[0] === 'CREATE' || W[0] === 'DROP' || W[0] === 'ALTER') && (W[1] === 'DATABASE' || W[1] === 'SCHEMA')) {
+      let k = 2; while (['IF', 'NOT', 'EXISTS'].includes(U(k))) k++;
+      if (ctx.dbs && S[k]) ctx.dbs.add(word(k).toLowerCase());
+      return skipMsg('Konsolda tek veritabanı var; "' + W[0] + ' ' + W[1] + '" atlandı. Tablolar doğrudan bu veritabanına kurulur.');
+    }
+    if (W[0] === 'SHOW') {
+      const rest = W.slice(1).join(' ');
+      if (/^(?:FULL )?TABLES/.test(rest)) return tablesQ(d === 'mysql' ? 'Tables_in_konsol' : 'Tables', /^FULL/.test(rest));
+      if (/^(?:DATABASES|SCHEMAS)/.test(rest)) return { sql: "SELECT 'konsol' AS \"Database\"", notes: notes };
+      let k = /^(?:FULL )?(?:COLUMNS|FIELDS) (?:FROM|IN)/.test(rest) ? (W[1] === 'FULL' ? 4 : 3) : -1;
+      if (k > 0) return describe(tableArg(k));
+      if (/^CREATE (?:TABLE|VIEW)/.test(rest)) {
+        const t = tableArg(3);
+        if (noTable(t)) return err('"' + t + '" adında bir tablo yok.');
+        return { sql: 'SELECT name AS "Table", sql AS "Create Table" FROM sqlite_master WHERE name = ' + sqlQl(t) + ' COLLATE NOCASE', notes: notes };
+      }
+      if (/^(?:INDEX|INDEXES|KEYS) (?:FROM|IN)/.test(rest)) {
+        const t = tableArg(3);
+        return { sql: 'SELECT ' + sqlQl(t) + ' AS "Table", l.name AS "Key_name", CASE l."unique" WHEN 1 THEN 0 ELSE 1 END AS "Non_unique", i.name AS "Column_name" FROM pragma_index_list(' + sqlQl(t) + ') l JOIN pragma_index_info(l.name) i', notes: notes };
+      }
+      return skipMsg('"SHOW ' + rest.toLowerCase() + '" konsolda yok; atlandı. (SHOW TABLES, SHOW COLUMNS FROM tablo, SHOW CREATE TABLE tablo, SHOW INDEX FROM tablo olur.)');
+    }
+    if ((W[0] === 'DESCRIBE' || W[0] === 'DESC') && isName(1) && N <= 3) return describe(tableArg(1));
+    if (W[0] === 'EXPLAIN' && d === 'mysql' && isName(1) && N === 2 && !/^(?:SELECT|UPDATE|DELETE|INSERT|WITH|QUERY)$/.test(W[1])) return describe(tableArg(1));
+    { // SQL Server sistem yordamları
+      let k = (W[0] === 'EXEC' || W[0] === 'EXECUTE') ? 1 : 0;
+      const sp = U(k);
+      if (/^SP_/.test(sp)) {
+        const arg = S[k + 1] ? tableArg(k + 1) : '';
+        if (sp === 'SP_HELP' || sp === 'SP_COLUMNS') return arg ? describe(arg) : tablesQ('Name', true);
+        if (sp === 'SP_TABLES') return tablesQ('TABLE_NAME', true);
+        if (sp === 'SP_RENAME') {
+          const a = word(k + 1), b = word(k + 3), kind = (word(k + 5) || '').toUpperCase();
+          if (kind === 'COLUMN' && a.includes('.')) return { sql: 'ALTER TABLE ' + sqlQi(a.split('.')[0]) + ' RENAME COLUMN ' + sqlQi(a.split('.').pop()) + ' TO ' + sqlQi(b), notes: notes };
+          if (a && b) return { sql: 'ALTER TABLE ' + sqlQi(a) + ' RENAME TO ' + sqlQi(b), notes: notes };
+        }
+        return err('"' + S[k].raw + '" sistem yordamı konsolda yok. (sp_help tablo, sp_columns tablo, sp_tables, sp_rename olur.)');
+      }
+    }
+    if (W[0] === 'PRINT') return { sql: 'SELECT ' + render(1, N) + ' AS "mesaj"', notes: notes };
+    if (W[0] === 'SET') {
+      const rest = render(1, N).replace(/\s+/g, ' ').trim();
+      let m;
+      if ((m = rest.match(/^FOREIGN_KEY_CHECKS\s*=\s*([01])$/i))) return { sql: 'PRAGMA foreign_keys = ' + (m[1] === '1' ? 'ON' : 'OFF'), notes: ['SET FOREIGN_KEY_CHECKS → PRAGMA foreign_keys'] };
+      if (/^@/.test(rest) || S[1] && S[1].t === 'var') return err('Değişkenler (SET @x = …) konsolda yok. Değeri doğrudan sorguya yaz.');
+      return skipMsg('"SET ' + rest.slice(0, 40) + '" ayarı SQLite\'ta yok; atlandı.');
+    }
+    if (W[0] === 'DECLARE') return err('Değişken tanımlama (DECLARE) konsolda yok; SQLite\'ta değişken yoktur. Değeri doğrudan sorguya yaz.');
+    if ((W[0] === 'CREATE' && /^(?:PROCEDURE|PROC|FUNCTION)$/.test(W[1] === 'OR' ? W[3] : W[1])) || ((W[0] === 'CREATE' || W[0] === 'ALTER') && /^(?:PROCEDURE|PROC|FUNCTION)$/.test(W[1])))
+      return err('Saklı yordam ve kullanıcı fonksiyonu (CREATE PROCEDURE / FUNCTION) SQLite\'ta yok. Sorguyu doğrudan çalıştırabilir ya da VIEW kullanabilirsin.');
+    if (W[0] === 'CALL' || W[0] === 'EXEC' || W[0] === 'EXECUTE') return err('Saklı yordam çağırma (' + W[0] + ') SQLite\'ta yok.');
+    if (W[0] === 'IF') {
+      const k = findTop(1, N, 'DROP');
+      if (k > 0 && (U(k + 1) === 'TABLE' || U(k + 1) === 'VIEW') && isName(k + 2)) {
+        note('IF OBJECT_ID(…) … DROP → DROP … IF EXISTS');
+        return { sql: 'DROP ' + U(k + 1) + ' IF EXISTS ' + render(k + 2, N), notes: notes };
+      }
+      return err('IF … BEGIN … END gibi akış komutları SQLite\'ta yok; her komutu ayrı yaz. (CASE WHEN ile sorgu içinde koşul yazılabilir.)');
+    }
+    if (/^(?:WHILE|MERGE|GOTO|WAITFOR|RAISERROR|THROW|TRY|CURSOR|FETCH|OPEN|CLOSE|DEALLOCATE|LOOP|REPEAT)$/.test(W[0])) return err('"' + W[0] + '" komutu SQLite\'ta yok.');
+    if (/^(?:GRANT|REVOKE|DENY|FLUSH)$/.test(W[0]) || (/^(?:CREATE|DROP|ALTER)$/.test(W[0]) && /^(?:USER|ROLE|LOGIN)$/.test(W[1])))
+      return skipMsg('Kullanıcı ve yetki komutları (' + W[0] + ') konsolda yok: SQLite dosyasında kullanıcı yoktur. Atlandı.');
+    if ((W[0] === 'CREATE' || W[0] === 'DROP') && (W[1] === 'SEQUENCE' || W[1] === 'TYPE' || W[1] === 'EXTENSION' || W[1] === 'DOMAIN'))
+      return skipMsg('"' + W[0] + ' ' + W[1] + '" SQLite\'ta yok; atlandı.' + (W[1] === 'SEQUENCE' ? ' Otomatik artan kimlik için INTEGER PRIMARY KEY AUTOINCREMENT kullanılır.' : W[1] === 'TYPE' ? ' Bu türdeki sütunlar metin gibi davranır.' : ''));
+    if (W[0] === 'COMMENT' && W[1] === 'ON') return skipMsg('COMMENT ON SQLite\'ta yok; atlandı.');
+    if (/^(?:LOCK|UNLOCK)$/.test(W[0]) || (/^(?:OPTIMIZE|REPAIR|CHECK)$/.test(W[0]) && W[1] === 'TABLE')) return skipMsg('"' + W[0] + '" SQLite\'ta gerekmiyor; atlandı.');
+    if (W[0] === 'TRUNCATE') {
+      const k = W[1] === 'TABLE' ? 2 : 1;
+      note('TRUNCATE → DELETE FROM (otomatik artan sayaç sıfırlanmaz)');
+      return { sql: 'DELETE FROM ' + render(k, N), notes: notes };
+    }
+    if (W[0] === 'START' && W[1] === 'TRANSACTION') return { sql: 'BEGIN', notes: ['START TRANSACTION → BEGIN'] };
+    if (W[0] === 'BEGIN' && (W[1] === 'TRAN' || W[1] === 'TRANSACTION' || W[1] === 'WORK') && N <= 3) return { sql: 'BEGIN', notes: notes };
+    if ((W[0] === 'COMMIT' || W[0] === 'ROLLBACK') && W[1] !== 'TO' && N <= 3) return { sql: W[0], notes: notes };
+    if (W[0] === 'SAVE' && (W[1] === 'TRAN' || W[1] === 'TRANSACTION') && S[2]) return { sql: 'SAVEPOINT ' + render(2, N), notes: notes };
+    if (W[0] === 'RENAME' && W[1] === 'TABLE' && U(3) === 'TO') return { sql: 'ALTER TABLE ' + render(2, 3) + ' RENAME TO ' + render(4, N), notes: notes };
+    if (W[0] === 'DROP' && W[1] === 'INDEX') {
+      const on = findTop(2, N, 'ON');
+      if (on > 0) { skipR(on, N - 1); note('DROP INDEX … ON tablo → DROP INDEX (SQLite\'ta indeks adı veritabanında tektir)'); }
+      for (let i = 2; i < N; i++) if (isName(i) && op(i + 1, '.') && isName(i + 2)) { S[i].skip = S[i + 1].skip = true; }
+    }
+    if (W[0] === 'CREATE' && (W[1] === 'FULLTEXT' || W[1] === 'SPATIAL')) return skipMsg(W[1] + ' indeksi SQLite\'ta yok; atlandı.');
+
+    /* ---- 3) İfade kalıpları (her komutta) ---- */
+    const strFns = new Set(['UPPER', 'LOWER', 'UCASE', 'LCASE', 'LEFT', 'RIGHT', 'SUBSTRING', 'SUBSTR', 'MID', 'LTRIM', 'RTRIM', 'TRIM', 'REPLACE', 'CONCAT', 'CONCAT_WS',
+      'REVERSE', 'REPLICATE', 'SPACE', 'FORMAT', 'STR', 'CHAR', 'NCHAR', 'QUOTENAME', 'STUFF', 'LPAD', 'RPAD', 'UPPER', 'STRING_AGG', 'GROUP_CONCAT']);
+    const textType = t => /CHAR|TEXT|CLOB|STRING|NCHAR|NVARCHAR|VARCHAR/i.test(t || '');
+    function stringy(i, dir) { // i: işlenenin ilk (dir=1) ya da son (dir=-1) sözcüğü
+      const t = S[i];
+      if (!t) return false;
+      if (t.t === 'str') return true;
+      if (dir < 0 && op(i, ')')) {
+        const o = openOf(i), f = U(o - 1);
+        if (strFns.has(f)) return true;
+        if ((f === 'CAST' || f === 'TRY_CAST') && textType(render(findTop(o + 1, i, 'AS') + 1, i))) return true;
+        if ((f === 'CONVERT' || f === 'TRY_CONVERT') && textType(S[o + 1] && S[o + 1].raw)) return true;
+        return false;
+      }
+      if (dir > 0 && t.t === 'id' && op(i + 1, '(')) return strFns.has(U(i));
+      if (isName(i)) {
+        let k = i;
+        if (dir > 0) { while (op(k + 1, '.') && isName(k + 2)) k += 2; } // a.b → b
+        return !!(ctx.textCols && ctx.textCols.has(nameOf(k).toLowerCase()));
+      }
+      return false;
+    }
+    // sağdan sola: iç içe kalıplarda önce içteki çevrilsin
+    for (let i = N - 1; i >= 0; i--) {
+      const t = S[i], u = U(i), call = t.t === 'id' && op(i + 1, '(');
+      if (t.skip) continue;
+      if (!call) {
+        // tarih / saat anahtar kelimeleri: yerel saat
+        if (/^(?:CURRENT_TIMESTAMP|LOCALTIMESTAMP|SYSDATE|CURRENT_DATE|CURRENT_TIME|LOCALTIME)$/.test(u) && !op(i - 1, '.')) {
+          const f = u === 'CURRENT_DATE' ? 'date' : (u === 'CURRENT_TIME' || u === 'LOCALTIME') ? 'time' : 'datetime';
+          t.rep = '(' + f + "('now', 'localtime'))";
+          note(u + ' → ' + f + "('now', 'localtime') (SQLite'ta " + u + ' UTC saatidir)');
+          continue;
+        }
+        if (/^(?:CURRENT_USER|SESSION_USER|SYSTEM_USER)$/.test(u)) { t.rep = "'konsol'"; continue; }
+        if (t.t === 'var' && /^@@/.test(t.raw)) {
+          const v = t.raw.slice(2).toUpperCase();
+          const M = { IDENTITY: 'last_insert_rowid()', VERSION: 'sqlite_version()', ROWCOUNT: 'changes()', SERVERNAME: "'konsol'", ERROR: '0', TRANCOUNT: '0' };
+          if (M[v]) { t.rep = M[v]; continue; }
+        }
+        // date '2026-01-01' (türlü değişmez)
+        if (/^(?:DATE|TIMESTAMP|TIME|DATETIME)$/.test(u) && S[i + 1] && S[i + 1].t === 'str') { t.skip = true; continue; }
+        if (u === 'ILIKE') { t.rep = 'LIKE'; note('ILIKE → LIKE (SQLite\'ta LIKE büyük / küçük harf ayırmaz; Türkçe harfler hariç)'); continue; }
+        if (t.t === 'op' && (t.raw === '~' || t.raw === '~*' || t.raw === '!~' || t.raw === '!~*') && d === 'postgres') {
+          t.rep = (t.raw[0] === '!' ? 'NOT ' : '') + 'REGEXP';
+          if (t.raw.endsWith('*') && S[i + 1] && S[i + 1].t === 'str') S[i + 1].val = '(?i)' + S[i + 1].val;
+          continue;
+        }
+        if (t.t === 'op' && t.raw === '<=>') { t.rep = 'IS'; continue; }
+        if (d === 'mysql' && u === 'DIV' && i > 0) { t.rep = '/'; note('DIV → / (tam sayılarda SQLite zaten tam böler)'); continue; }
+        if (d === 'mysql' && u === 'MOD' && i > 0) { t.rep = '%'; continue; }
+        if (u === 'RLIKE') { t.rep = 'REGEXP'; continue; }
+        // T-SQL: metinleri + ile birleştirme → ||
+        if (d === 'mssql' && t.t === 'op' && t.raw === '+' && i > 0 && (stringy(i - 1, -1) || stringy(i + 1, 1))) { t.rep = '||'; note('Metin birleştirme: + → ||'); continue; }
+        // PostgreSQL: x::tür → CAST(x AS tür)
+        if (t.t === 'op' && t.raw === '::') {
+          let a = i - 1;
+          if (op(a, ')')) { a = openOf(a); if (S[a - 1] && S[a - 1].t === 'id') a--; }
+          else while (op(a - 1, '.') && isName(a - 2)) a -= 2;
+          let b = i + 1;
+          if (!isName(b)) continue;
+          while (S[b + 1] && S[b + 1].t === 'id' && SQL_TYPE_WORDS.has(S[b + 1].raw.toLowerCase())) b++;
+          if (op(b + 1, '(')) b = closeOf(b + 1);
+          if (S[b + 1] && S[b + 1].t === 'qid' && S[b + 1].val === '') b++; // int[]
+          const ty = render(i + 1, b + 1).trim(), tl = ty.toLowerCase();
+          const f = /^date$/.test(tl) ? 'date' : /^timestamp|^datetime/.test(tl) ? 'datetime' : /^time\b/.test(tl) ? 'time' : null;
+          if (/^regclass|^regtype|^oid/.test(tl)) { skipR(i, b); continue; }
+          S[a].before = (S[a].before || '') + (f ? f + '(' : 'CAST(');
+          t.rep = f ? '' : ' AS ';
+          if (f) skipR(i + 1, b); else for (let k = i + 1; k <= b; k++) if (S[k].t === 'qid' && S[k].val === '') S[k].skip = true;
+          S[b].after = ')' + (S[b].after || '');
+          note('x::tür → CAST(x AS tür)');
+          continue;
+        }
+        // OFFSET n ROWS FETCH NEXT m ROWS ONLY · FETCH FIRST m ROWS ONLY → LIMIT
+        if (u === 'OFFSET' && i > 0) {
+          let k = i + 1, e = -1;
+          for (let j = k; j < N && j < k + 12; j++) if (/^ROWS?$/.test(U(j))) { e = j; break; }
+          if (e < 0) continue;
+          const nTxt = render(k, e);
+          let lim = '-1', end = e;
+          if (U(e + 1) === 'FETCH' && /^(?:NEXT|FIRST)$/.test(U(e + 2))) {
+            let f = e + 3, g = f;
+            while (g < N && !/^ROWS?$/.test(U(g))) g++;
+            lim = g > f ? render(f, g) : '1';
+            end = U(g + 1) === 'ONLY' ? g + 1 : g;
+          }
+          skipR(i, end);
+          S[i].skip = false; S[i].rep = 'LIMIT ' + lim + ' OFFSET ' + nTxt;
+          note('OFFSET … FETCH → LIMIT … OFFSET');
+          continue;
+        }
+        if (u === 'FETCH' && /^(?:NEXT|FIRST)$/.test(U(i + 1)) && i > 0 && !/^ROWS?$/.test(U(i - 1))) {
+          let f = i + 2, g = f;
+          while (g < N && !/^ROWS?$/.test(U(g))) g++;
+          if (g >= N) continue;
+          const lim = g > f ? render(f, g) : '1';
+          skipR(i, U(g + 1) === 'ONLY' ? g + 1 : g);
+          S[i].skip = false; S[i].rep = 'LIMIT ' + lim;
+          note('FETCH FIRST … ROWS ONLY → LIMIT');
+          continue;
+        }
+        if (u === 'LIMIT' && U(i + 1) === 'ALL') { S[i].skip = S[i + 1].skip = true; continue; }
+        // tablo ipuçları: WITH (NOLOCK)
+        if (op(i, '(') && /^(?:NOLOCK|READUNCOMMITTED|ROWLOCK|UPDLOCK|HOLDLOCK|TABLOCK|TABLOCKX|NOWAIT|READPAST|XLOCK|PAGLOCK)$/.test(U(i + 1)) && d === 'mssql') {
+          const c = closeOf(i);
+          skipR(i, c);
+          if (U(i - 1) === 'WITH') S[i - 1].skip = true;
+          note('Tablo ipuçları (WITH (NOLOCK)) atıldı.');
+          continue;
+        }
+        // (MAX) → tür uzunluğu yok
+        if (op(i, '(') && U(i + 1) === 'MAX' && op(i + 2, ')') && /CHAR|BINARY/.test(U(i - 1))) { skipR(i, i + 2); continue; }
+        // + INTERVAL n birim · - INTERVAL '3 days'
+        if (u === 'INTERVAL' && (op(i - 1, '+') || op(i - 1, '-')) && i > 1) {
+          const iv = interval(i);
+          if (!iv) continue;
+          let a = i - 2;
+          if (op(a, ')')) { a = openOf(a); if (S[a - 1] && S[a - 1].t === 'id') a--; }
+          else while (op(a - 1, '.') && isName(a - 2)) a -= 2;
+          const neg = op(i - 1, '-');
+          S[a].before = (S[a].before || '') + 'dateadd(' + sqlQl(iv.unit) + ', ' + (neg ? '-(' + iv.n + ')' : iv.n) + ', ';
+          skipR(i - 1, iv.end);
+          S[iv.end].after = ')' + (S[iv.end].after || '');
+          note('tarih ± INTERVAL → dateadd( ) (konsolun tarih fonksiyonu)');
+          continue;
+        }
+        continue;
+      }
+      // ---- fonksiyon çağrıları ----
+      const o = i + 1, c = closeOf(o);
+      // tarih fonksiyonlarındaki birim adı: DATEADD(day, …) → DATEADD('day', …)
+      if (/^(?:DATEADD|DATEDIFF|DATEDIFF_BIG|DATEPART|DATENAME|DATETRUNC|TIMESTAMPDIFF|TIMESTAMPADD)$/.test(u) && S[o + 1] && S[o + 1].t === 'id' && op(o + 2, ',') && SQL_UNITS[S[o + 1].raw.toLowerCase()])
+        S[o + 1].rep = sqlQl(SQL_UNITS[S[o + 1].raw.toLowerCase()]);
+      const REN = { LAST_INSERT_ID: 'last_insert_rowid', SCOPE_IDENTITY: 'last_insert_rowid', LASTVAL: 'last_insert_rowid', IDENT_CURRENT: 'last_insert_rowid', ROW_COUNT: 'changes',
+                    UCASE: 'upper', LCASE: 'lower', CHAR_LENGTH: 'length', CHARACTER_LENGTH: 'length', NVL: 'ifnull', CEILING: 'ceil', POW: 'power', LN: 'log',
+                    REPEAT: 'replicate', INITCAP: 'proper', ASCII: 'unicode', CHR: 'char', GREATEST: 'max', LEAST: 'min', TRY_CAST: 'CAST', TRY_CONVERT: 'CONVERT', ADDDATE: 'DATE_ADD', SUBDATE: 'DATE_SUB' };
+      if (REN[u]) { t.rep = REN[u]; if (REN[u] === 'last_insert_rowid') skipR(o + 1, c - 1); }
+      const fu = REN[u] ? REN[u].toUpperCase() : u;
+      if (fu === 'RANDOM' && d === 'postgres') { t.rep = 'rand'; continue; }
+      if (fu === 'IF' && d === 'mysql' && i > 0) { t.rep = 'iif'; continue; }
+      // SQLite'ın kendi fonksiyonlarıyla yazılabilenler (CHECK ve indekslerde de çalışsın diye)
+      {
+        const P = parts(o + 1, c), A = P.map(([x, y]) => render(x, y).trim());
+        const lit = k => (P[k] && P[k][1] - P[k][0] === 1 && S[P[k][0]].t === 'str' ? S[P[k][0]].val : null);
+        const sf = (f, x) => 'CAST(strftime(' + sqlQl(f) + ', ' + x + ') AS INTEGER)';
+        const unitOf = k => { const v = lit(k); return v != null ? SQL_UNITS[v.toLowerCase()] || v.toLowerCase() : null; };
+        const PART = { year: '%Y', month: '%m', day: '%d', hour: '%H', minute: '%M', second: '%S', dayofyear: '%j' };
+        const NOW = "datetime('now', 'localtime')", TODAY = "date('now', 'localtime')";
+        const F = {
+          LEN: () => (A.length === 1 ? 'length(rtrim(' + A[0] + '))' : null),
+          LEFT: () => (A.length === 2 ? 'substr(' + A[0] + ', 1, ' + A[1] + ')' : null),
+          RIGHT: () => (A.length === 2 ? 'substr(' + A[0] + ', -(' + A[1] + '))' : null),
+          MID: () => (A.length >= 2 ? 'substr(' + A.join(', ') + ')' : null),
+          YEAR: () => (A.length === 1 ? sf('%Y', A[0]) : null), MONTH: () => (A.length === 1 ? sf('%m', A[0]) : null),
+          DAY: () => (A.length === 1 ? sf('%d', A[0]) : null), DAYOFMONTH: () => (A.length === 1 ? sf('%d', A[0]) : null),
+          HOUR: () => (A.length === 1 ? sf('%H', A[0]) : null), MINUTE: () => (A.length === 1 ? sf('%M', A[0]) : null), SECOND: () => (A.length === 1 ? sf('%S', A[0]) : null),
+          DAYOFYEAR: () => (A.length === 1 ? sf('%j', A[0]) : null), DAYOFWEEK: () => (A.length === 1 ? '(' + sf('%w', A[0]) + ' + 1)' : null),
+          WEEKDAY: () => (A.length === 1 ? '((' + sf('%w', A[0]) + ' + 6) % 7)' : null), QUARTER: () => (A.length === 1 ? '((' + sf('%m', A[0]) + ' + 2) / 3)' : null),
+          NOW: () => (A.length ? null : NOW), GETDATE: () => (A.length ? null : NOW), SYSDATETIME: () => (A.length ? null : NOW), CURRENT_TIMESTAMP: () => (A.length ? null : NOW),
+          LOCALTIMESTAMP: () => (A.length ? null : NOW), SYSDATE: () => (A.length ? null : NOW),
+          GETUTCDATE: () => "datetime('now')", UTC_TIMESTAMP: () => "datetime('now')", SYSUTCDATETIME: () => "datetime('now')", UTC_DATE: () => "date('now')",
+          CURDATE: () => (A.length ? null : TODAY), CURRENT_DATE: () => (A.length ? null : TODAY), CURTIME: () => (A.length ? null : "time('now', 'localtime')"), CURRENT_TIME: () => (A.length ? null : "time('now', 'localtime')"),
+          ISNULL: () => (A.length === 2 ? 'ifnull(' + A[0] + ', ' + A[1] + ')' : A.length === 1 ? '(' + A[0] + ' IS NULL)' : null),
+          MOD: () => (A.length === 2 ? '((' + A[0] + ') % (' + A[1] + '))' : null),
+          TRUNC: () => (A.length === 1 ? 'CAST(' + A[0] + ' AS INTEGER)' : null), TRUNCATE: () => (A.length === 2 && A[1] === '0' ? 'CAST(' + A[0] + ' AS INTEGER)' : null),
+          LOCATE: () => (A.length === 2 ? 'instr(' + A[1] + ', ' + A[0] + ')' : null), STRPOS: () => (A.length === 2 ? 'instr(' + A[0] + ', ' + A[1] + ')' : null),
+          SPACE: () => (A.length === 1 ? "printf('%*s', " + A[0] + ", '')" : null),
+          RAND: () => (A.length ? null : '(random() / 18446744073709551616.0 + 0.5)'),
+          LAST_DAY: () => (A.length === 1 ? 'date(' + A[0] + ", 'start of month', '+1 month', '-1 day')" : null),
+          EOMONTH: () => (A.length === 1 ? 'date(' + A[0] + ", 'start of month', '+1 month', '-1 day')" : null),
+          DATEFROMPARTS: () => (A.length === 3 ? "printf('%04d-%02d-%02d', " + A.join(', ') + ')' : null),
+          DATEDIFF: () => {
+            if (A.length === 2 && d !== 'mssql') return 'CAST(julianday(date(' + A[0] + ')) - julianday(date(' + A[1] + ')) AS INTEGER)';
+            if (A.length !== 3) return null;
+            const un = unitOf(0);
+            if (un === 'day') return 'CAST(julianday(date(' + A[2] + ')) - julianday(date(' + A[1] + ')) AS INTEGER)';
+            if (un === 'year') return '(' + sf('%Y', A[2]) + ' - ' + sf('%Y', A[1]) + ')';
+            if (un === 'month') return '((' + sf('%Y', A[2]) + ' - ' + sf('%Y', A[1]) + ') * 12 + ' + sf('%m', A[2]) + ' - ' + sf('%m', A[1]) + ')';
+            return null;
+          },
+          DATEPART: () => { if (A.length !== 2) return null; const un = unitOf(0); if (PART[un]) return sf(PART[un], A[1]); if (un === 'weekday') return '(' + sf('%w', A[1]) + ' + 1)'; if (un === 'quarter') return '((' + sf('%m', A[1]) + ' + 2) / 3)'; return null; },
+          DATE_PART: () => { if (A.length !== 2) return null; const un = unitOf(0); if (PART[un]) return sf(PART[un], A[1]); if (un === 'dow') return sf('%w', A[1]); if (un === 'doy') return sf('%j', A[1]); if (un === 'epoch') return 'unixepoch(' + A[1] + ')'; return null; },
+          DATE_TRUNC: () => { if (A.length !== 2) return null; const un = unitOf(0); return un === 'year' ? 'date(' + A[1] + ", 'start of year')" : un === 'month' ? 'date(' + A[1] + ", 'start of month')" : un === 'day' ? 'date(' + A[1] + ')' : null; },
+          DATE_FORMAT: () => { const f = lit(1); const cv = f == null ? null : sqlFmtToStrftime(f, 'mysql'); return A.length === 2 && cv ? 'strftime(' + sqlQl(cv) + ', ' + A[0] + ')' : null; },
+          TO_CHAR: () => { const f = lit(1); const cv = f == null ? null : sqlFmtToStrftime(f, 'pg'); return A.length === 2 && cv ? 'strftime(' + sqlQl(cv) + ', ' + A[0] + ')' : null; },
+          UNIX_TIMESTAMP: () => (A.length ? 'unixepoch(' + A[0] + ')' : 'unixepoch()'),
+          FROM_UNIXTIME: () => (A.length === 1 ? 'datetime(' + A[0] + ", 'unixepoch', 'localtime')" : null),
+          DATABASE: () => "'konsol'", DB_NAME: () => "'konsol'", SCHEMA: () => (A.length ? null : "'konsol'"), CURRENT_DATABASE: () => "'konsol'", CURRENT_SCHEMA: () => "'konsol'",
+          USER: () => (A.length ? null : "'konsol'"), CURRENT_USER: () => "'konsol'", SESSION_USER: () => "'konsol'", SYSTEM_USER: () => "'konsol'", SUSER_SNAME: () => "'konsol'",
+          VERSION: () => 'sqlite_version()'
+        };
+        if (F[fu] && d !== 'sqlite') {
+          const r = F[fu]();
+          if (r != null) { t.rep = r; skipR(o, c); continue; }
+        }
+      }
+      if (fu === 'EXTRACT') {
+        const fr = findTop(o + 1, c, 'FROM');
+        if (fr < 0) continue;
+        const unit = (S[o + 1] && (S[o + 1].t === 'str' ? S[o + 1].val : S[o + 1].raw) || '').toLowerCase();
+        const x = render(fr + 1, c);
+        const F = { year: '%Y', month: '%m', day: '%d', hour: '%H', minute: '%M', second: '%S', dow: '%w', doy: '%j', week: '%W' };
+        let rep;
+        if (unit === 'epoch') rep = 'unixepoch(' + x + ')';
+        else if (unit === 'quarter') rep = '((CAST(strftime(\'%m\', ' + x + ') AS INTEGER) + 2) / 3)';
+        else if (F[unit]) rep = 'CAST(strftime(' + sqlQl(F[unit]) + ', ' + x + ') AS INTEGER)';
+        else continue;
+        t.rep = rep; skipR(o, c);
+        note('EXTRACT(… FROM …) → strftime( )');
+        continue;
+      }
+      if (fu === 'POSITION') {
+        const k = findTop(o + 1, c, 'IN');
+        if (k < 0) continue;
+        t.rep = 'instr(' + render(k + 1, c) + ', ' + render(o + 1, k) + ')'; skipR(o, c);
+        continue;
+      }
+      if (fu === 'SUBSTRING' || fu === 'SUBSTR') {
+        const k = findTop(o + 1, c, 'FROM');
+        if (k < 0) continue;
+        const f = findTop(k + 1, c, 'FOR');
+        t.rep = 'substr(' + render(o + 1, k) + ', ' + render(k + 1, f < 0 ? c : f) + (f < 0 ? '' : ', ' + render(f + 1, c)) + ')'; skipR(o, c);
+        continue;
+      }
+      if (fu === 'TRIM') {
+        const k = findTop(o + 1, c, 'FROM');
+        if (k < 0) continue;
+        let a = o + 1, fn = 'trim';
+        if (/^(?:LEADING|TRAILING|BOTH)$/.test(U(a))) { fn = U(a) === 'LEADING' ? 'ltrim' : U(a) === 'TRAILING' ? 'rtrim' : 'trim'; a++; }
+        const chars = a < k ? render(a, k).trim() : '';
+        t.rep = fn + '(' + render(k + 1, c) + (chars ? ', ' + chars : '') + ')'; skipR(o, c);
+        continue;
+      }
+      if (fu === 'CAST') {
+        const k = findTop(o + 1, c, 'AS');
+        if (k < 0) continue;
+        const ty = render(k + 1, c).trim().toUpperCase();
+        if (/^DATE$/.test(ty)) { t.rep = 'date'; skipR(k, c - 1); }
+        else if (/^(?:DATETIME2?|SMALLDATETIME|TIMESTAMP(?:\s*\(\d+\))?(?: WITH(?:OUT)? TIME ZONE)?|DATETIMEOFFSET)$/.test(ty)) { t.rep = 'datetime'; skipR(k, c - 1); }
+        else if (/^TIME(?:\s*\(\d+\))?$/.test(ty)) { t.rep = 'time'; skipR(k, c - 1); }
+        else if (/^(?:SIGNED|UNSIGNED)(?: INT(?:EGER)?)?$/.test(ty)) { skipR(k + 1, c - 1); S[k].after = ' INTEGER'; }
+        continue;
+      }
+      if (fu === 'CONVERT') {
+        const P = parts(o + 1, c);
+        if (d === 'mysql' && findTop(o + 1, c, 'USING') > 0) { t.rep = ''; const k = findTop(o + 1, c, 'USING'); skipR(k, c - 1); continue; }
+        if (P.length < 2) continue;
+        const [tyR, xR] = d === 'mssql' ? [P[0], P[1]] : [P[1], P[0]];
+        const ty = render(tyR[0], tyR[1]).trim().toUpperCase(), x = render(xR[0], xR[1]);
+        const f = /^DATE$/.test(ty) ? 'date' : /^(?:DATETIME2?|SMALLDATETIME|TIMESTAMP)/.test(ty) ? 'datetime' : /^TIME/.test(ty) ? 'time' : null;
+        const STY = { 101: '%m/%d/%Y', 103: '%d/%m/%Y', 104: '%d.%m.%Y', 105: '%d-%m-%Y', 108: '%H:%M:%S', 110: '%m-%d-%Y', 111: '%Y/%m/%d', 112: '%Y%m%d', 120: '%Y-%m-%d %H:%M:%S', 121: '%Y-%m-%d %H:%M:%f', 23: '%Y-%m-%d', 126: '%Y-%m-%dT%H:%M:%S' };
+        const sty = d === 'mssql' && P[2] ? +render(P[2][0], P[2][1]).trim() : NaN;
+        if (STY[sty] && /CHAR|TEXT/.test(ty)) t.rep = 'strftime(' + sqlQl(STY[sty]) + ', ' + x + ')';
+        else t.rep = f ? f + '(' + x + ')' : 'CAST(' + x + ' AS ' + (/^(?:SIGNED|UNSIGNED)/.test(ty) ? 'INTEGER' : render(tyR[0], tyR[1]).trim()) + ')';
+        skipR(o, c);
+        note('CONVERT( ) → CAST( )');
+        continue;
+      }
+      if (fu === 'DATE_ADD' || fu === 'DATE_SUB') {
+        const P = parts(o + 1, c);
+        if (P.length !== 2) continue;
+        let iv = U(P[1][0]) === 'INTERVAL' ? interval(P[1][0]) : null;
+        const nTxt = iv ? iv.n : render(P[1][0], P[1][1]);
+        const unit = iv ? iv.unit : 'day';
+        t.rep = 'dateadd(' + sqlQl(unit) + ', ' + (fu === 'DATE_SUB' ? '-(' + nTxt + ')' : nTxt) + ', ' + render(P[0][0], P[0][1]) + ')';
+        skipR(o, c);
+        note(u + '( ) → dateadd( ) (konsolun tarih fonksiyonu)');
+        continue;
+      }
+      if (fu === 'GROUP_CONCAT') {
+        const sep = findTop(o + 1, c, 'SEPARATOR');
+        const ob = findTop(o + 1, c, 'ORDER');
+        if (sep < 0 && ob < 0) continue;
+        const distinct = U(o + 1) === 'DISTINCT';
+        const xEnd = [sep, ob].filter(x => x > 0).reduce((a, b) => Math.min(a, b), c);
+        let s = 'group_concat(' + render(o + 1, xEnd);
+        if (sep > 0 && !distinct) s += ', ' + render(sep + 1, ob > sep ? ob : c);
+        if (sep > 0 && distinct) note('GROUP_CONCAT(DISTINCT … SEPARATOR …): SQLite\'ta DISTINCT ile ayraç birlikte olmaz; virgül kullanıldı.');
+        if (ob > 0) s += ' ' + render(ob, sep > ob ? sep : c);
+        t.rep = s + ')'; skipR(o, c);
+        continue;
+      }
+      if (fu === 'STRING_AGG' && U(c + 1) === 'WITHIN' && U(c + 2) === 'GROUP' && op(c + 3, '(')) {
+        const c2 = closeOf(c + 3);
+        t.rep = 'string_agg(' + render(o + 1, c) + ' ' + render(c + 4, c2) + ')';
+        skipR(o, c2);
+        continue;
+      }
+    }
+    // tarih aralığı: INTERVAL 5 DAY · INTERVAL '3 days' → { n, unit, end }
+    function interval(i) {
+      const a = S[i + 1];
+      if (!a) return null;
+      if (a.t === 'str') {
+        const m = a.val.trim().match(/^([-+]?\d+(?:\.\d+)?)\s*([A-Za-z]+)$/);
+        if (!m || !SQL_UNITS[m[2].toLowerCase()]) return null;
+        return { n: m[1], unit: SQL_UNITS[m[2].toLowerCase()], end: i + 1 };
+      }
+      let k = i + 1;
+      while (k < N && !(S[k].t === 'id' && SQL_UNITS[S[k].raw.toLowerCase()] && k > i + 1)) k++;
+      if (k >= N) return null;
+      return { n: render(i + 1, k), unit: SQL_UNITS[S[k].raw.toLowerCase()], end: k };
+    }
+
+    /* ---- 4) TOP n → LIMIT n (SELECT) · UPDATE / DELETE TOP · LIMIT'li UPDATE / DELETE ---- */
+    for (let i = 0; i < N; i++) {
+      if (U(i) !== 'SELECT' || S[i].skip) continue;
+      let j = i + 1;
+      if (U(j) === 'ALL' || U(j) === 'DISTINCT') j++;
+      if (U(j) !== 'TOP') continue;
+      let n, e;
+      if (op(j + 1, '(')) { e = closeOf(j + 1); n = render(j + 2, e); }
+      else { e = j + 1; n = render(e, e + 1); }
+      if (U(e + 1) === 'PERCENT') return err('SELECT TOP … PERCENT SQLite\'ta yok; sayı ile yaz (TOP 10).');
+      if (U(e + 1) === 'WITH' && U(e + 2) === 'TIES') { e += 2; note('TOP … WITH TIES: eşitlikler SQLite\'ta alınmaz.'); }
+      skipR(j, e);
+      // bu SELECT'in sonu: aynı parantez düzeyindeki ")" ya da komutun sonu
+      let dp = 0, k = e + 1;
+      for (; k < N; k++) { if (op(k, '(')) dp++; else if (op(k, ')')) { if (dp === 0) break; dp--; } }
+      S[k - 1].after = (S[k - 1].after || '') + ' LIMIT ' + n;
+      note('SELECT TOP n → LIMIT n');
+    }
+    if ((W[0] === 'DELETE' || W[0] === 'UPDATE') && U(1) === 'TOP') {
+      let e = op(2, '(') ? closeOf(2) : 2;
+      const n = op(2, '(') ? render(3, e) : render(2, 3);
+      skipR(1, e);
+      let k = e + 1;
+      if (U(k) === 'FROM') k++;
+      const tb = render(k, k + 1);
+      const wh = findTop(k, N, 'WHERE');
+      note(W[0] + ' TOP (n) → rowid IN (… LIMIT n)');
+      const head = W[0] === 'DELETE' ? 'DELETE FROM ' + tb : render(0, wh < 0 ? N : wh).replace(/^\s*UPDATE\s+/i, 'UPDATE ');
+      return { sql: head + ' WHERE rowid IN (SELECT rowid FROM ' + tb + (wh < 0 ? '' : ' ' + render(wh, N)) + ' LIMIT ' + n + ')', notes: notes };
+    }
+    if ((W[0] === 'DELETE' || W[0] === 'UPDATE') && d === 'mysql') {
+      const lim = findTop(1, N, 'LIMIT');
+      if (lim > 0) {
+        const ob = findTop(1, lim, 'ORDER');
+        const wh = findTop(1, ob > 0 ? ob : lim, 'WHERE');
+        const tbI = W[0] === 'DELETE' ? (U(1) === 'FROM' ? 2 : 1) : 1;
+        const tb = render(tbI, tbI + 1);
+        const head = render(0, wh > 0 ? wh : (ob > 0 ? ob : lim));
+        note(W[0] + ' … LIMIT n → rowid IN (SELECT … LIMIT n)');
+        return { sql: head + ' WHERE rowid IN (SELECT rowid FROM ' + tb + (wh > 0 ? ' ' + render(wh, ob > 0 ? ob : lim) : '') + (ob > 0 ? ' ' + render(ob, lim) : '') + ' ' + render(lim, N) + ')', notes: notes };
+      }
+    }
+
+    /* ---- 5) INSERT kalıpları ---- */
+    if (W[0] === 'INSERT' || W[0] === 'REPLACE') {
+      if (d === 'mysql' && W[1] === 'IGNORE') { S[0].rep = 'INSERT OR IGNORE'; S[1].skip = true; note('INSERT IGNORE → INSERT OR IGNORE'); }
+      if (d === 'mssql' && W[1] !== 'INTO' && isName(1)) S[0].rep = 'INSERT INTO';
+      // INSERT INTO t SET a = 1, b = 2
+      const st = findTop(2, N, 'SET');
+      if (d === 'mysql' && st > 0 && findTop(2, st, 'VALUES') < 0 && findTop(2, st, 'SELECT') < 0 && findTop(2, N, 'DUPLICATE') < 0) {
+        const cols = [], vals = [];
+        for (const [a, b] of parts(st + 1, N)) { const eq = (() => { for (let k = a; k < b; k++) if (op(k, '=')) return k; return -1; })(); if (eq < 0) return err('INSERT … SET yazımı anlaşılamadı.'); cols.push(render(a, eq).trim()); vals.push(render(eq + 1, b).trim()); }
+        note('INSERT … SET a = 1 → INSERT … (a) VALUES (1)');
+        return { sql: render(0, st) + ' (' + cols.join(', ') + ') VALUES (' + vals.join(', ') + ')', notes: notes };
+      }
+      const dup = (() => { for (let k = 2; k < N - 2; k++) if (U(k) === 'ON' && U(k + 1) === 'DUPLICATE' && U(k + 2) === 'KEY' && U(k + 3) === 'UPDATE') return k; return -1; })();
+      if (dup > 0) {
+        S[dup].rep = 'ON CONFLICT DO UPDATE SET'; skipR(dup + 1, dup + 3);
+        for (let k = dup + 4; k < N; k++) if (U(k) === 'VALUES' && op(k + 1, '(') && isName(k + 2) && op(k + 3, ')')) { S[k].rep = 'excluded.' + render(k + 2, k + 3); skipR(k + 1, k + 3); }
+        note('ON DUPLICATE KEY UPDATE → ON CONFLICT DO UPDATE SET (VALUES(x) → excluded.x)');
+      }
+      // OUTPUT INSERTED.x → RETURNING x
+      const out = findTop(2, N, 'OUTPUT');
+      if (d === 'mssql' && out > 0) {
+        const vi = (() => { for (let k = out + 1; k < N; k++) if (/^(?:VALUES|SELECT|DEFAULT)$/.test(U(k))) return k; return N; })();
+        const cols = render(out + 1, vi).replace(/\b(?:INSERTED|DELETED)\./gi, '').trim();
+        skipR(out, vi - 1);
+        return { sql: render(0, N) + ' RETURNING ' + cols, notes: notes.concat(['OUTPUT INSERTED.x → RETURNING x']) };
+      }
+    }
+    if ((W[0] === 'DELETE' || W[0] === 'UPDATE') && d === 'mssql') {
+      const out = findTop(1, N, 'OUTPUT');
+      if (out > 0) {
+        let e = out + 1;
+        while (e < N && !/^(?:FROM|WHERE|SET)$/.test(U(e))) e++;
+        const cols = render(out + 1, e).replace(/\b(?:INSERTED|DELETED)\./gi, '').trim();
+        skipR(out, e - 1);
+        return { sql: render(0, N) + ' RETURNING ' + cols, notes: notes.concat(['OUTPUT … → RETURNING …']) };
+      }
+    }
+    // SELECT … INTO yeni_tablo FROM … → CREATE TABLE yeni_tablo AS SELECT …
+    if (W[0] === 'SELECT') {
+      const into = findTop(1, N, 'INTO'), from = findTop(1, N, 'FROM');
+      if (into > 0 && (from < 0 || into < from) && isName(into + 1)) {
+        const tb = render(into + 1, into + 2);
+        skipR(into, into + 1);
+        note('SELECT … INTO tablo → CREATE TABLE tablo AS SELECT …');
+        return { sql: 'CREATE TABLE ' + tb + ' AS ' + render(0, N), notes: notes };
+      }
+    }
+
+    /* ---- 6) VIEW: CREATE OR REPLACE / CREATE OR ALTER / ALTER VIEW → DROP + CREATE ---- */
+    if ((W[0] === 'CREATE' && W[1] === 'OR' && (W[2] === 'REPLACE' || W[2] === 'ALTER') && W[3] === 'VIEW') || (W[0] === 'ALTER' && W[1] === 'VIEW')) {
+      const k = W[0] === 'ALTER' ? 2 : 4;
+      const nm = render(k, k + 1);
+      if (W[0] === 'CREATE') skipR(1, 2);
+      S[0].rep = 'CREATE';
+      if (W[0] === 'ALTER') S[0].rep = 'CREATE';
+      note(W[0] === 'ALTER' ? 'ALTER VIEW → DROP VIEW + CREATE VIEW' : 'CREATE OR ' + W[2] + ' VIEW → DROP VIEW IF EXISTS + CREATE VIEW');
+      return { sql: 'DROP VIEW IF EXISTS ' + nm + ';\n' + render(0, N), notes: notes };
+    }
+    if (W[0] === 'CREATE' && W[1] === 'OR') return err('CREATE OR ' + W[2] + ' ' + W[3] + ' SQLite\'ta yok.');
+
+    /* ---- 7) CREATE INDEX: CLUSTERED / USING / INCLUDE / WITH (…) atılır ---- */
+    if (W[0] === 'CREATE' && (W[1] === 'INDEX' || W[1] === 'UNIQUE' || W[1] === 'CLUSTERED' || W[1] === 'NONCLUSTERED')) {
+      for (let i = 1; i < N; i++) {
+        const u = U(i);
+        if (u === 'CLUSTERED' || u === 'NONCLUSTERED') S[i].skip = true;
+        else if (u === 'USING') { S[i].skip = true; if (S[i + 1]) S[i + 1].skip = true; }
+        else if ((u === 'INCLUDE' || u === 'WITH') && op(i + 1, '(')) { skipR(i, closeOf(i + 1)); note(u + ' (…) SQLite indeksinde yok; atıldı.'); }
+        else if (u === 'ON' && i > 3 && (U(i + 1) === 'PRIMARY' || (S[i + 1] && S[i + 1].t === 'qid' && /^primary$/i.test(S[i + 1].val)))) skipR(i, i + 1);
+      }
+      // MySQL indeks uzunluğu: (ad(10)) → (ad)
+      const on = findTop(2, N, 'ON');
+      if (on > 0) for (let i = on; i < N; i++) if (isName(i) && op(i + 1, '(') && S[i + 2] && S[i + 2].t === 'num' && op(i + 3, ')') && !op(i - 1, '.') && i > on + 2) skipR(i + 1, i + 3);
+      return result();
+    }
+
+    /* ---- 8) CREATE TABLE ve ALTER TABLE ---- */
+    function colDef(a, b, info) {
+      // [a, b): "ad tür [değiştiriciler]" — SQLite sütun tanımı metni döner
+      const name = render(a, a + 1, true);
+      let k = a + 1, typeA = k, auto = false, ty = '', enumVals = null, extra = [];
+      // tür
+      if (U(k) === 'AS' && op(k + 1, '(')) { // SQL Server hesaplanan sütun: ad AS (ifade) [PERSISTED]
+        const c = closeOf(k + 1);
+        const pers = U(c + 1) === 'PERSISTED';
+        if (pers) S[c + 1].skip = true;
+        return name + ' GENERATED ALWAYS AS ' + render(k + 1, c + 1, true).trim() + (pers ? ' STORED' : '') + render(c + (pers ? 2 : 1), b, true);
+      }
+      while (k < b && S[k].t === 'id' && !SQL_COL_STOP.has(U(k))) k++;
+      if (k === typeA && S[k] && S[k].t === 'qid') k++;
+      let tyEnd = k;
+      if (op(k, '(') && k > typeA) {
+        const c = closeOf(k);
+        if (/^(?:ENUM|SET)$/.test(U(k - 1))) {
+          enumVals = render(k + 1, c);
+          if (U(k - 1) === 'SET') { note('SET( ) türü SQLite\'ta yok; TEXT oldu.'); enumVals = null; }
+          ty = 'TEXT';
+          tyEnd = c + 1;
+        } else if (U(k + 1) === 'MAX') { tyEnd = c + 1; ty = render(typeA, k, true); }
+        else tyEnd = c + 1;
+      }
+      // tür sözcüklerinin arkasındaki UNSIGNED / ZEROFILL
+      while (tyEnd < b && /^(?:UNSIGNED|SIGNED|ZEROFILL)$/.test(U(tyEnd))) { S[tyEnd].skip = true; tyEnd++; }
+      if (S[tyEnd] && S[tyEnd].t === 'qid' && S[tyEnd].val === '') { S[tyEnd].skip = true; tyEnd++; ty = 'TEXT'; note('Dizi türü (tür[]) SQLite\'ta yok; TEXT oldu.'); }
+      if (!ty) ty = render(typeA, tyEnd, true);
+      for (let i = typeA; i < tyEnd; i++) if (/^(?:UNSIGNED|SIGNED|ZEROFILL)$/.test(U(i))) S[i].skip = true;
+      if (!enumVals && U(typeA)) {
+        const tu = U(typeA);
+        if (/^(?:SERIAL|BIGSERIAL|SMALLSERIAL|SERIAL4|SERIAL8|SERIAL2)$/.test(tu)) { auto = true; ty = 'INTEGER'; }
+        ty = ty.replace(/\b(?:UNSIGNED|SIGNED|ZEROFILL)\b/gi, '').replace(/\s+/g, ' ');
+      }
+      // değiştiriciler
+      const mods = [];
+      let i = tyEnd, pk = false;
+      while (i < b) {
+        const u = U(i);
+        if (u === 'AUTO_INCREMENT' || u === 'AUTOINCREMENT') { auto = true; i++; continue; }
+        if (u === 'IDENTITY') { auto = true; i = op(i + 1, '(') ? closeOf(i + 1) + 1 : i + 1; continue; }
+        if (u === 'GENERATED' && findTop(i, Math.min(b, i + 5), 'IDENTITY') > 0) { auto = true; let j = findTop(i, b, 'IDENTITY') + 1; if (op(j, '(')) j = closeOf(j) + 1; i = j; continue; }
+        if (u === 'DEFAULT' && U(i + 1) === 'NEXTVAL') { auto = true; i = closeOf(i + 2) + 1; continue; }
+        if (u === 'PRIMARY' && U(i + 1) === 'KEY') { pk = true; let j = i + 2; while (/^(?:CLUSTERED|NONCLUSTERED|ASC|DESC)$/.test(U(j))) j++; mods.push(' PRIMARY KEY'); i = j; continue; }
+        if (u === 'CLUSTERED' || u === 'NONCLUSTERED' || u === 'ROWGUIDCOL' || u === 'SPARSE' || u === 'FILESTREAM' || u === 'VISIBLE' || u === 'INVISIBLE') { i++; continue; }
+        if (u === 'NOT' && U(i + 1) === 'FOR' && U(i + 2) === 'REPLICATION') { i += 3; continue; }
+        if ((u === 'CHARACTER' && U(i + 1) === 'SET') || u === 'CHARSET') { i += u === 'CHARSET' ? 2 : 3; continue; }
+        if (u === 'COLLATE') {
+          const cn = (S[i + 1] ? word(i + 1) : '').toLowerCase();
+          if (/^(?:binary|nocase|rtrim)$/.test(cn)) mods.push(' COLLATE ' + cn.toUpperCase());
+          else if (/_ci(?:_|$)|_ci_as|_ci_ai|case_insensitive/.test(cn)) { mods.push(' COLLATE NOCASE'); note('COLLATE ' + cn + ' → COLLATE NOCASE'); }
+          else note('COLLATE ' + cn + ' SQLite\'ta yok; atıldı.');
+          i += 2; continue;
+        }
+        if (u === 'COMMENT' && S[i + 1] && S[i + 1].t === 'str') { i += 2; continue; }
+        if (u === 'ON' && U(i + 1) === 'UPDATE') { note('ON UPDATE CURRENT_TIMESTAMP SQLite\'ta yok (tetikleyiciyle yapılır); atıldı.'); i += 3; if (op(i, '(')) i = closeOf(i) + 1; continue; }
+        if (u === 'DEFAULT') {
+          // varsayılan ifadenin sonu: bir sonraki değiştirici
+          let j = i + 1, dp = 0;
+          for (; j < b; j++) { if (op(j, '(')) dp++; else if (op(j, ')')) dp--; else if (dp === 0 && j > i + 1 && SQL_COL_STOP.has(U(j))) break; }
+          let ex = render(i + 1, j, false).trim();
+          const simple = j === i + 2 && /^(?:str|num|blob)$/.test(S[i + 1].t) || /^(?:NULL|TRUE|FALSE)$/i.test(ex) || /^\(.*\)$/s.test(ex) || /^[-+]\s*\d/.test(ex) && j <= i + 3;
+          mods.push(' DEFAULT ' + (simple ? ex : '(' + ex + ')'));
+          i = j; continue;
+        }
+        // CHECK (…) · REFERENCES … · UNIQUE · NOT NULL · NULL · GENERATED ALWAYS AS (…) …
+        let j = i + 1;
+        if (op(j, '(')) j = closeOf(j) + 1;
+        if (u === 'REFERENCES') { j = i + 2; if (op(j, '.')) j += 2; if (op(j, '(')) j = closeOf(j) + 1; while (j < b && /^(?:ON|DELETE|UPDATE|CASCADE|SET|NULL|DEFAULT|RESTRICT|NO|ACTION|MATCH|FULL|SIMPLE|PARTIAL|DEFERRABLE|INITIALLY|DEFERRED|IMMEDIATE)$/.test(U(j))) j++; }
+        mods.push(render(i, j, true));
+        i = j;
+      }
+      if (auto) {
+        const otherPk = info && info.pkCols && !(info.pkCols.length === 1 && info.pkCols[0] === nameOf(a).toLowerCase()) && info.pkCols.length;
+        if (otherPk) { note(nameOf(a) + ': otomatik artış birleşik / başka birincil anahtarla SQLite\'ta olmaz; atıldı.'); return name + ' ' + ty + mods.join(''); }
+        if (info) info.autoCol = nameOf(a).toLowerCase();
+        note((/SERIAL/i.test(render(typeA, tyEnd, true)) ? 'SERIAL' : d === 'mssql' ? 'IDENTITY' : d === 'postgres' ? 'GENERATED … AS IDENTITY' : 'AUTO_INCREMENT') + ' → INTEGER PRIMARY KEY AUTOINCREMENT');
+        return name + ' INTEGER PRIMARY KEY AUTOINCREMENT' + mods.filter(m => !/^\s*PRIMARY KEY$/.test(m) && !/^\s*UNIQUE$/i.test(m)).join('');
+      }
+      return name + (ty ? ' ' + ty : '') + mods.join('') + (enumVals ? ' CHECK (' + name.trim() + ' IN (' + enumVals + '))' : '');
+    }
+    function tableItem(a, b, info, after, tname) {
+      const u = U(a);
+      let k = a, cname = '';
+      if (u === 'CONSTRAINT') { cname = render(a + 1, a + 2, true); k = a + 2; }
+      const v = U(k);
+      if ((v === 'KEY' || v === 'INDEX') && !(U(k - 1) === 'PRIMARY' || U(k - 1) === 'UNIQUE')) {
+        let j = k + 1, nm = '';
+        if (isName(j) && !op(j, '(')) { nm = nameOf(j); j++; }
+        if (U(j) === 'USING') j += 2;
+        if (!op(j, '(')) return null;
+        const c = closeOf(j);
+        for (let x = j + 1; x < c; x++) if (isName(x) && op(x + 1, '(') && S[x + 2] && S[x + 2].t === 'num') skipR(x + 1, x + 3);
+        const cols = render(j + 1, c);
+        after.push('CREATE INDEX IF NOT EXISTS ' + sqlQi(nm || ('ix_' + tname + '_' + cols.replace(/[^\p{L}\p{N}_]+/gu, '_'))) + ' ON ' + sqlQi(tname) + ' (' + cols + ')');
+        note('Tablo içindeki KEY / INDEX → ayrı CREATE INDEX');
+        return '';
+      }
+      if (v === 'FULLTEXT' || v === 'SPATIAL') { note(v + ' indeksi SQLite\'ta yok; atıldı.'); return ''; }
+      if (v === 'UNIQUE') {
+        let j = k + 1;
+        if (U(j) === 'KEY' || U(j) === 'INDEX') j++;
+        if (U(j) === 'CLUSTERED' || U(j) === 'NONCLUSTERED') j++;
+        if (isName(j) && !op(j, '(')) { if (!cname) cname = render(j, j + 1, true); j++; }
+        if (U(j) === 'USING') j += 2;
+        if (!op(j, '(')) return null;
+        const c = closeOf(j);
+        for (let x = j + 1; x < c; x++) if (isName(x) && op(x + 1, '(') && S[x + 2] && S[x + 2].t === 'num') skipR(x + 1, x + 3);
+        return (cname ? ' CONSTRAINT ' + cname.trim() : '') + ' UNIQUE (' + render(j + 1, c) + ')';
+      }
+      if (v === 'PRIMARY' && U(k + 1) === 'KEY') {
+        let j = k + 2;
+        while (/^(?:CLUSTERED|NONCLUSTERED)$/.test(U(j))) j++;
+        if (!op(j, '(')) return null;
+        const c = closeOf(j);
+        const cols = parts(j + 1, c).map(([x, y]) => nameOf(x).toLowerCase());
+        if (info.autoCol && cols.length === 1 && cols[0] === info.autoCol) return '';
+        let tail = c + 1;
+        if (U(tail) === 'USING') tail += 2;
+        return (cname ? ' CONSTRAINT ' + cname.trim() : '') + ' PRIMARY KEY (' + render(j + 1, c).replace(/\s+(?:ASC|DESC)\b/gi, m => m) + ')' + render(tail, b, true);
+      }
+      if (v === 'FOREIGN' && U(k + 1) === 'KEY') {
+        let j = k + 2;
+        if (isName(j) && !op(j, '(')) S[j].skip = true; // MySQL: FOREIGN KEY ad (sütun)
+        return (cname ? ' CONSTRAINT ' + cname.trim() : '') + ' ' + render(k, b, true).trim();
+      }
+      if (v === 'CHECK') return (cname ? ' CONSTRAINT ' + cname.trim() : '') + ' ' + render(k, b, true).trim();
+      return null; // sütun
+    }
+    if (W[0] === 'CREATE' && (W[1] === 'TABLE' || ((W[1] === 'TEMP' || W[1] === 'TEMPORARY' || W[1] === 'GLOBAL' || W[1] === 'LOCAL' || W[1] === 'UNLOGGED') && (W[2] === 'TABLE' || W[3] === 'TABLE')))) {
+      const tk = W[1] === 'TABLE' ? 1 : W[2] === 'TABLE' ? 2 : 3;
+      const temp = tk > 1 && /TEMP/.test(W[1] + W[2]);
+      let k = tk + 1;
+      const ine = U(k) === 'IF' && U(k + 1) === 'NOT' && U(k + 2) === 'EXISTS';
+      if (ine) k += 3;
+      while (S[k] && S[k].skip) k++;
+      const nameI = k;
+      if (!isName(nameI)) return result();
+      const tname = nameOf(nameI);
+      if (U(nameI + 1) === 'LIKE' && isName(nameI + 2)) { note('CREATE TABLE … LIKE → AS SELECT (kısıtlar kopyalanmaz)'); return { sql: 'CREATE ' + (temp ? 'TEMP ' : '') + 'TABLE ' + (ine ? 'IF NOT EXISTS ' : '') + render(nameI, nameI + 1) + ' AS SELECT * FROM ' + render(nameI + 2, N) + ' WHERE 0', notes: notes }; }
+      if (!op(nameI + 1, '(')) return result(); // CREATE TABLE … AS SELECT
+      const open = nameI + 1, close = closeOf(open);
+      const items = parts(open + 1, close);
+      // birincil anahtar sütunları (tablo kısıtından)
+      const info = { pkCols: null, autoCol: null };
+      for (const [a, b] of items) {
+        let x = U(a) === 'CONSTRAINT' ? a + 2 : a;
+        if (U(x) === 'PRIMARY' && U(x + 1) === 'KEY') {
+          let j = x + 2; while (/^(?:CLUSTERED|NONCLUSTERED)$/.test(U(j))) j++;
+          if (op(j, '(')) info.pkCols = parts(j + 1, closeOf(j)).map(([p]) => nameOf(p).toLowerCase());
+        }
+      }
+      const after = [], out = [];
+      for (const [a, b] of items) {
+        let s = tableItem(a, b, info, after, tname);
+        if (s === null) s = colDef(a, b, info);
+        if (s !== '') out.push((S[a].pre || ' ') + s.replace(/^\s+/, ''));
+      }
+      // tablo seçenekleri: ENGINE=… DEFAULT CHARSET=… ON [PRIMARY] WITH (…) → atılır (WITHOUT ROWID / STRICT kalır)
+      let opts = '';
+      if (close + 1 < N) {
+        const keep = [];
+        for (let i = close + 1; i < N; i++) {
+          if (U(i) === 'WITHOUT' && U(i + 1) === 'ROWID') { keep.push('WITHOUT ROWID'); i++; continue; }
+          if (U(i) === 'STRICT') { keep.push('STRICT'); continue; }
+        }
+        if (render(close + 1, N).trim() && keep.length < render(close + 1, N).trim().split(/\s*,\s*|\s+/).length) note('Tablo seçenekleri (' + render(close + 1, N).trim().slice(0, 60) + ') SQLite\'ta yok; atıldı.');
+        opts = keep.length ? ' ' + keep.join(', ') : '';
+      }
+      const sql = 'CREATE ' + (temp ? 'TEMP ' : '') + 'TABLE ' + (ine ? 'IF NOT EXISTS ' : '') + render(nameI, nameI + 1) + ' (' + out.join(',') + (S[close].pre || '') + ')' + opts +
+        after.map(x => ';\n' + x).join('');
+      return { sql: sql, notes: notes };
+    }
+    if (W[0] === 'ALTER' && W[1] === 'TABLE') {
+      let k = 2;
+      if (U(k) === 'IF' && U(k + 1) === 'EXISTS') k += 2;
+      if (U(k) === 'ONLY') k++;
+      while (S[k] && S[k].skip) k++;
+      const tI = k, tname = isName(tI) ? nameOf(tI) : '';
+      const head = 'ALTER TABLE ' + render(tI, tI + 1);
+      const acts = parts(tI + 1, N), outS = [];
+      let lastAct = '';
+      for (const [a, b] of acts) {
+        let x = a;
+        let u = U(x);
+        if (lastAct === 'ADD' && !/^(?:ADD|DROP|RENAME|MODIFY|CHANGE|ALTER|AUTO_INCREMENT|ENGINE|CONVERT|DEFAULT|CHARACTER|COLLATE|COMMENT)$/.test(u)) { u = 'ADD'; x = a - 1; }
+        lastAct = u;
+        if (u === 'ADD') {
+          x++;
+          if (U(x) === 'COLUMN') x++;
+          if (U(x) === 'IF' && U(x + 1) === 'NOT' && U(x + 2) === 'EXISTS') x += 3;
+          let y = U(x) === 'CONSTRAINT' ? x + 2 : x;
+          const v = U(y);
+          if (v === 'UNIQUE' || v === 'INDEX' || v === 'KEY') {
+            let j = y + 1, nm = U(x) === 'CONSTRAINT' ? nameOf(x + 1) : '';
+            if (U(j) === 'KEY' || U(j) === 'INDEX') j++;
+            if (isName(j) && !op(j, '(')) { nm = nameOf(j); j++; }
+            if (!op(j, '(')) return err('ALTER TABLE … ADD ' + v + ' yazımı anlaşılamadı.');
+            const c = closeOf(j);
+            outS.push('CREATE ' + (v === 'UNIQUE' ? 'UNIQUE ' : '') + 'INDEX ' + sqlQi(nm || ('ix_' + tname + '_' + render(j + 1, c).replace(/[^\p{L}\p{N}_]+/gu, '_'))) + ' ON ' + sqlQi(tname) + ' (' + render(j + 1, c) + ')');
+            note('ADD ' + v + ' → CREATE ' + (v === 'UNIQUE' ? 'UNIQUE ' : '') + 'INDEX');
+            continue;
+          }
+          if (v === 'PRIMARY' || v === 'FOREIGN' || v === 'CHECK')
+            return err('SQLite\'ta var olan tabloya sonradan ' + (v === 'PRIMARY' ? 'PRIMARY KEY' : v === 'FOREIGN' ? 'FOREIGN KEY' : 'CHECK') + ' eklenemez; tablo bu kısıtla yeniden oluşturulmalı. ' +
+              'Şema\'da alanı ya da ilişkiyi ekleyip "Şemadan yeniden kur" diyebilirsin.');
+          // sütun ekleme: AFTER x / FIRST atılır
+          let e = b;
+          for (let j = x; j < b; j++) if ((U(j) === 'AFTER' && isName(j + 1)) || U(j) === 'FIRST') { e = j; note('AFTER / FIRST: SQLite yeni sütunu her zaman sona ekler.'); break; }
+          if (U(x) === 'COLUMN') x++;
+          const cd = colDef(x, e, null);
+          if (/AUTOINCREMENT/.test(cd)) return err('Var olan tabloya otomatik artan sütun eklenemez (SQLite).');
+          outS.push(head + ' ADD COLUMN ' + cd.trim());
+          continue;
+        }
+        if (u === 'DROP') {
+          let y = x + 1;
+          if (U(y) === 'COLUMN') y++;
+          if (U(y) === 'IF' && U(y + 1) === 'EXISTS') y += 2;
+          const v = U(y);
+          if (v === 'INDEX' || v === 'KEY') { outS.push('DROP INDEX ' + render(y + 1, b)); continue; }
+          if (v === 'CONSTRAINT' || v === 'PRIMARY' || v === 'FOREIGN' || v === 'CHECK')
+            return err('SQLite\'ta tablodan kısıt (constraint) silinemez; tablo yeniden oluşturulmalı. Şema\'da değiştirip "Şemadan yeniden kur" diyebilirsin.');
+          outS.push(head + ' DROP COLUMN ' + render(y, b));
+          continue;
+        }
+        if (u === 'RENAME') { outS.push(head + ' ' + render(a, b)); continue; }
+        if (u === 'MODIFY' || u === 'CHANGE' || u === 'ALTER')
+          return err('SQLite\'ta sütunun türü ya da kuralı sonradan değiştirilemez (' + u + ' COLUMN yok). Şema\'da alanı değiştirip "Şemadan yeniden kur" diyebilir ' +
+            'ya da yeni bir sütun ekleyip (ADD COLUMN) verileri UPDATE ile taşıyabilirsin.' + (u === 'CHANGE' ? ' Sadece adını değiştirmek için: RENAME COLUMN eski TO yeni.' : ''));
+        if (/^(?:AUTO_INCREMENT|ENGINE|CONVERT|DEFAULT|CHARACTER|COLLATE|COMMENT)$/.test(u)) { note('ALTER TABLE … ' + u + ' SQLite\'ta yok; atlandı.'); continue; }
+        outS.push(head + ' ' + render(a, b));
+      }
+      if (!outS.length) return skipMsg(notes.join(' ') || 'Değişecek bir şey yok; atlandı.');
+      return { sql: outS.join(';\n'), notes: notes };
+    }
+    return result();
+  }
+
+  /* MySQL (%d.%m.%Y) / PostgreSQL (DD.MM.YYYY) tarih biçimi → SQLite strftime biçimi; karşılığı olmayan işaret varsa null */
+  function sqlFmtToStrftime(f, style) {
+    let out = '', i = 0;
+    if (style === 'mysql') {
+      const M = { Y: '%Y', m: '%m', d: '%d', H: '%H', i: '%M', s: '%S', S: '%S', j: '%j', w: '%w', T: '%H:%M:%S', f: '%f', '%': '%%' };
+      for (; i < f.length; i++) {
+        if (f[i] !== '%') { out += f[i] === '%' ? '%%' : f[i]; continue; }
+        const k = f[++i];
+        if (!(k in M)) return null;
+        out += M[k];
+      }
+      return out;
+    }
+    const P = [['YYYY', '%Y'], ['HH24', '%H'], ['DDD', '%j'], ['MM', '%m'], ['DD', '%d'], ['MI', '%M'], ['SS', '%S']];
+    while (i < f.length) {
+      const hit = P.find(([k]) => f.startsWith(k, i));
+      if (hit) { out += hit[1]; i += hit[0].length; continue; }
+      if (/[A-Za-z]/.test(f[i])) return null;
+      out += f[i] === '%' ? '%%' : f[i]; i++;
+    }
+    return out;
+  }
+
+  /* ---------- Konsola eklenen fonksiyonlar (MySQL / PostgreSQL / SQL Server uyumu) ---------- */
+  const CD_MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const CD_DAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const cdPad = (n, w) => String(Math.trunc(Math.abs(n))).padStart(w || 2, '0');
+  function cdParse(v) { // → { t: saf saat (UTC ms), time: saat var mı }
+    if (v == null) return null;
+    if (typeof v === 'number') return isFinite(v) ? { t: Math.round((v - 2440587.5) * 86400000), time: true } : null; // jülyen gün (SQLite)
+    const s = String(v).trim();
+    let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?)?\s*(?:Z|[+-]\d{2}:?\d{2})?$/);
+    if (m) return { t: Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0), m[7] ? +(m[7] + '00').slice(0, 3) : 0), time: m[4] != null };
+    if ((m = s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/))) return { t: Date.UTC(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0)), time: m[4] != null };
+    if ((m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/))) return { t: Date.UTC(1900, 0, 1, +m[1], +m[2], +(m[3] || 0)), time: true };
+    return null;
+  }
+  function cdFmt(t, time) {
+    const d = new Date(t);
+    const s = d.getUTCFullYear() + '-' + cdPad(d.getUTCMonth() + 1) + '-' + cdPad(d.getUTCDate());
+    return time ? s + ' ' + cdPad(d.getUTCHours()) + ':' + cdPad(d.getUTCMinutes()) + ':' + cdPad(d.getUTCSeconds()) : s;
+  }
+  function cdNow() { const d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); }
+  function cdAdd(t, unit, n) {
+    const d = new Date(t);
+    if (unit === 'year' || unit === 'quarter' || unit === 'month') {
+      const mo = d.getUTCMonth() + Math.trunc(n) * (unit === 'year' ? 12 : unit === 'quarter' ? 3 : 1);
+      const y = d.getUTCFullYear() + Math.floor(mo / 12), m = ((mo % 12) + 12) % 12;
+      const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+      return Date.UTC(y, m, Math.min(d.getUTCDate(), last), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds());
+    }
+    const ms = { week: 6048e5, day: 864e5, dayofyear: 864e5, weekday: 864e5, hour: 36e5, minute: 6e4, second: 1e3, millisecond: 1, microsecond: 1e-3 }[unit];
+    return ms ? t + n * ms : null;
+  }
+  function cdPart(t, unit) {
+    const d = new Date(t);
+    switch (unit) {
+      case 'year': return d.getUTCFullYear();
+      case 'quarter': return Math.floor(d.getUTCMonth() / 3) + 1;
+      case 'month': return d.getUTCMonth() + 1;
+      case 'day': return d.getUTCDate();
+      case 'dayofyear': return Math.round((Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - Date.UTC(d.getUTCFullYear(), 0, 1)) / 864e5) + 1;
+      case 'weekday': return d.getUTCDay() + 1; // SQL Server: 1 = Pazar
+      case 'week': { const j = Date.UTC(d.getUTCFullYear(), 0, 1); return Math.floor((Math.round((t - j) / 864e5) + new Date(j).getUTCDay()) / 7) + 1; }
+      case 'hour': return d.getUTCHours();
+      case 'minute': return d.getUTCMinutes();
+      case 'second': return d.getUTCSeconds();
+      case 'millisecond': return d.getUTCMilliseconds();
+    }
+    return null;
+  }
+  function cdDiff(unit, a, b) { // SQL Server DATEDIFF: aradaki birim sınırı sayısı
+    const A = new Date(a), B = new Date(b);
+    const ym = x => x.getUTCFullYear() * 12 + x.getUTCMonth();
+    switch (unit) {
+      case 'year': return B.getUTCFullYear() - A.getUTCFullYear();
+      case 'quarter': return (B.getUTCFullYear() * 4 + Math.floor(B.getUTCMonth() / 3)) - (A.getUTCFullYear() * 4 + Math.floor(A.getUTCMonth() / 3));
+      case 'month': return ym(B) - ym(A);
+      case 'week': { const w = x => Math.floor((Math.floor(x / 864e5) + 4) / 7); return w(b) - w(a); } // hafta Pazar başlar
+      case 'day': case 'dayofyear': case 'weekday': return Math.floor(b / 864e5) - Math.floor(a / 864e5);
+      case 'hour': return Math.floor(b / 36e5) - Math.floor(a / 36e5);
+      case 'minute': return Math.floor(b / 6e4) - Math.floor(a / 6e4);
+      case 'second': return Math.floor(b / 1e3) - Math.floor(a / 1e3);
+      case 'millisecond': return b - a;
+    }
+    return null;
+  }
+  function cdFormat(t, fmt, style) { // style: 'mysql' (%Y-%m-%d) ya da 'pg' (YYYY-MM-DD)
+    const d = new Date(t), Y = d.getUTCFullYear(), M = d.getUTCMonth(), D = d.getUTCDate(), h = d.getUTCHours(), mi = d.getUTCMinutes(), s = d.getUTCSeconds(), wd = d.getUTCDay();
+    const h12 = h % 12 || 12;
+    if (style === 'mysql') {
+      const F = { Y: Y, y: cdPad(Y % 100), m: cdPad(M + 1), c: M + 1, d: cdPad(D), e: D, H: cdPad(h), k: h, h: cdPad(h12), I: cdPad(h12), l: h12, i: cdPad(mi), s: cdPad(s), S: cdPad(s),
+        p: h < 12 ? 'AM' : 'PM', M: CD_MON[M], b: CD_MON[M].slice(0, 3), W: CD_DAY[wd], a: CD_DAY[wd].slice(0, 3), j: cdPad(cdPart(t, 'dayofyear'), 3), w: wd,
+        T: cdPad(h) + ':' + cdPad(mi) + ':' + cdPad(s), r: cdPad(h12) + ':' + cdPad(mi) + ':' + cdPad(s) + ' ' + (h < 12 ? 'AM' : 'PM'), f: '000000', '%': '%' };
+      return String(fmt).replace(/%(.)/g, (m, k) => (k in F ? String(F[k]) : k));
+    }
+    const P = [['YYYY', Y], ['YY', cdPad(Y % 100)], ['MONTH', CD_MON[M].toUpperCase()], ['Month', CD_MON[M]], ['MON', CD_MON[M].slice(0, 3).toUpperCase()], ['Mon', CD_MON[M].slice(0, 3)],
+      ['MM', cdPad(M + 1)], ['DDD', cdPad(cdPart(t, 'dayofyear'), 3)], ['DD', cdPad(D)], ['DAY', CD_DAY[wd].toUpperCase()], ['Day', CD_DAY[wd]], ['DY', CD_DAY[wd].slice(0, 3).toUpperCase()],
+      ['Dy', CD_DAY[wd].slice(0, 3)], ['D', wd + 1], ['HH24', cdPad(h)], ['HH12', cdPad(h12)], ['HH', cdPad(h12)], ['MI', cdPad(mi)], ['SS', cdPad(s)], ['AM', h < 12 ? 'AM' : 'PM'], ['PM', h < 12 ? 'AM' : 'PM']];
+    let out = '', i = 0;
+    const f = String(fmt);
+    while (i < f.length) {
+      const hit = P.find(([k]) => f.startsWith(k, i));
+      if (hit) { out += hit[1]; i += hit[0].length; } else { out += f[i]; i++; }
+    }
+    return out;
+  }
+  function cdParseFmt(s, fmt, style) { // STR_TO_DATE / TO_DATE: biçime göre okur
+    const map = style === 'mysql' ? { '%Y': 'Y', '%y': 'y', '%m': 'm', '%c': 'm', '%d': 'd', '%e': 'd', '%H': 'H', '%k': 'H', '%i': 'i', '%s': 's', '%S': 's' }
+                                  : { YYYY: 'Y', YY: 'y', MM: 'm', DD: 'd', HH24: 'H', HH: 'H', MI: 'i', SS: 's' };
+    const keys = Object.keys(map).sort((a, b) => b.length - a.length);
+    let re = '', order = [], i = 0;
+    const f = String(fmt);
+    while (i < f.length) {
+      const k = keys.find(x => f.startsWith(x, i));
+      if (k) { re += map[k] === 'Y' ? '(\\d{4})' : '(\\d{1,2})'; order.push(map[k]); i += k.length; }
+      else { re += f[i].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); i++; }
+    }
+    const m = String(s).trim().match(new RegExp('^' + re + '$'));
+    if (!m) return null;
+    const v = { Y: 1900, m: 1, d: 1, H: 0, i: 0, s: 0 };
+    order.forEach((k, j) => { const x = +m[j + 1]; if (k === 'y') v.Y = 2000 + x; else v[k] = x; });
+    const time = order.some(k => 'His'.includes(k));
+    return cdFmt(Date.UTC(v.Y, v.m - 1, v.d, v.H, v.i, v.s), time);
+  }
+
+  /* Veritabanı bağlantısına uyum fonksiyonlarını ekler (çevirinin SQLite'ın kendi fonksiyonlarıyla yazamadıkları).
+     SQLite türünde sadece SQLite'ın matematik fonksiyonları (ceiling, pow, ln, mod, trunc, log2) ve regexp çalışır;
+     ötekiler gerçek SQLite gibi "no such function" der. Not: sql.js'te eklenen fonksiyonlar CHECK ve indeks
+     ifadelerinde kullanılamaz; bu yüzden çeviri mümkün olan her şeyi SQLite'ın kendi fonksiyonlarına çevirir. */
+  const conRegexCache = new Map();
+  function conRegisterFns(db, getDialect) {
+    const num = x => (x == null ? null : typeof x === 'number' ? x : isNaN(parseFloat(x)) ? 0 : parseFloat(x));
+    const str = x => (x == null ? null : x instanceof Uint8Array ? '' : String(x));
+    const dt = x => cdParse(x);
+    const unit = x => SQL_UNITS[String(x).toLowerCase()] || null;
+    const def = (names, fn, always) => names.split(' ').forEach(nm => {
+      const w = function () {
+        if (!always && getDialect() === 'sqlite') throw 'no such function: ' + nm.toUpperCase();
+        try { return fn.apply(null, Array.from(arguments)); }
+        catch (e) { throw typeof e === 'string' ? e : nm + '( ): ' + (e && e.message || e); }
+      };
+      Object.defineProperty(w, 'length', { value: -1 }); // sql.js değer sayısını buradan alır: -1 = istenen sayıda
+      try { db.create_function(nm, w); } catch (e) { /* eklenemezse geç */ }
+    });
+    // --- matematik (SQLite 3.35+ ile aynı; her türde) ---
+    def('ceiling', x => (x == null ? null : Math.ceil(num(x))), true);
+    def('pow', (a, b) => (a == null || b == null ? null : Math.pow(num(a), num(b))), true);
+    def('ln', x => (x == null || num(x) <= 0 ? null : Math.log(num(x))), true);
+    def('mod', (a, b) => (a == null || b == null || num(b) === 0 ? null : num(a) % num(b)), true);
+    def('trunc', (x, dg) => { if (x == null) return null; const p = Math.pow(10, dg == null ? 0 : Math.trunc(num(dg))); return Math.trunc(num(x) * p) / p; }, true);
+    def('log2', x => (x == null || num(x) <= 0 ? null : Math.log2(num(x))), true);
+    def('regexp', (p, v) => {
+      if (p == null || v == null) return null;
+      let src = String(p), fl = 'u';
+      if (src.startsWith('(?i)')) { src = src.slice(4); fl = 'iu'; }
+      const key = fl + '/' + src;
+      let re = conRegexCache.get(key);
+      if (!re) { try { re = new RegExp(src, fl); } catch (e) { throw 'geçersiz düzenli ifade (REGEXP): ' + e.message; } if (conRegexCache.size > 200) conRegexCache.clear(); conRegexCache.set(key, re); }
+      return re.test(String(v)) ? 1 : 0;
+    }, true);
+    // --- tarih ve saat (çevirinin SQLite'a yazamadıkları) ---
+    def('dateadd', (u, n, x) => {
+      const p = dt(x), un = unit(u);
+      if (!p || !un || n == null) return null;
+      const t = cdAdd(p.t, un, num(n));
+      return t == null ? null : cdFmt(t, p.time || !['year', 'quarter', 'month', 'week', 'day', 'dayofyear', 'weekday'].includes(un));
+    });
+    def('datediff datediff_big', (a, b, c) => {
+      if (c === undefined) { const A = dt(a), B = dt(b); return A && B ? Math.floor(A.t / 864e5) - Math.floor(B.t / 864e5) : null; } // MySQL: gün farkı
+      const un = unit(a), A = dt(b), B = dt(c);
+      return un && A && B ? cdDiff(un, A.t, B.t) : null;
+    });
+    def('timestampdiff', (u, a, b) => { // MySQL: tam birim sayısı
+      const un = unit(u), A = dt(a), B = dt(b);
+      if (!un || !A || !B) return null;
+      if (un === 'year' || un === 'quarter' || un === 'month') {
+        let m = cdDiff('month', A.t, B.t);
+        const adj = cdAdd(A.t, 'month', m);
+        if (m > 0 && adj > B.t) m--; else if (m < 0 && adj < B.t) m++;
+        return un === 'month' ? m : Math.trunc(m / (un === 'year' ? 12 : 3));
+      }
+      const ms = { week: 6048e5, day: 864e5, hour: 36e5, minute: 6e4, second: 1e3, millisecond: 1, microsecond: 1e-3 }[un];
+      return ms ? Math.trunc((B.t - A.t) / ms) : null;
+    });
+    def('timestampadd', (u, n, x) => { const p = dt(x), un = unit(u); if (!p || !un) return null; const t = cdAdd(p.t, un, num(n)); return t == null ? null : cdFmt(t, true); });
+    def('datepart date_part', (u, x) => { const p = dt(x), lu = String(u).toLowerCase(), un = unit(u); if (!p) return null; if (lu === 'dow') return new Date(p.t).getUTCDay(); return un ? cdPart(p.t, un) : null; });
+    def('datename', (u, x) => { const p = dt(x), un = unit(u); if (!p || !un) return null; const dd = new Date(p.t); return un === 'month' ? CD_MON[dd.getUTCMonth()] : un === 'weekday' ? CD_DAY[dd.getUTCDay()] : String(cdPart(p.t, un)); });
+    def('date_trunc datetrunc', (u, x) => {
+      const p = dt(x), un = unit(u);
+      if (!p || !un) return null;
+      const dd = new Date(p.t), Y = dd.getUTCFullYear(), M = dd.getUTCMonth();
+      const t = un === 'year' ? Date.UTC(Y, 0, 1) : un === 'quarter' ? Date.UTC(Y, M - M % 3, 1) : un === 'month' ? Date.UTC(Y, M, 1) : un === 'week' ? Date.UTC(Y, M, dd.getUTCDate() - (dd.getUTCDay() + 6) % 7)
+        : un === 'day' ? Date.UTC(Y, M, dd.getUTCDate()) : un === 'hour' ? Math.floor(p.t / 36e5) * 36e5 : un === 'minute' ? Math.floor(p.t / 6e4) * 6e4 : Math.floor(p.t / 1e3) * 1e3;
+      return cdFmt(t, true);
+    });
+    def('week', x => { const p = dt(x); return p ? cdPart(p.t, 'week') - 1 : null; });
+    def('dayname', x => { const p = dt(x); return p ? CD_DAY[new Date(p.t).getUTCDay()] : null; });
+    def('monthname', x => { const p = dt(x); return p ? CD_MON[new Date(p.t).getUTCMonth()] : null; });
+    def('eomonth', (x, n) => { const p = dt(x); if (!p) return null; const dd = new Date(cdAdd(p.t, 'month', n == null ? 0 : num(n))); return cdFmt(Date.UTC(dd.getUTCFullYear(), dd.getUTCMonth() + 1, 0), false); });
+    def('date_format', (x, f) => { const p = dt(x); return p && f != null ? cdFormat(p.t, f, 'mysql') : null; });
+    def('to_char', (x, f) => { const p = dt(x); if (p && f != null) return cdFormat(p.t, f, 'pg'); return x == null ? null : String(x); });
+    def('str_to_date', (x, f) => (x == null || f == null ? null : cdParseFmt(x, f, 'mysql')));
+    def('to_date', (x, f) => { if (x == null) return null; if (f == null) { const p = dt(x); return p ? cdFmt(p.t, false) : null; } const r = cdParseFmt(x, f, 'pg'); return r ? r.slice(0, 10) : null; });
+    def('to_timestamp', (x, f) => { if (x == null) return null; if (f == null) { if (typeof x === 'number') { const dd = new Date(x * 1000); return cdFmt(Date.UTC(dd.getFullYear(), dd.getMonth(), dd.getDate(), dd.getHours(), dd.getMinutes(), dd.getSeconds()), true); } const p = dt(x); return p ? cdFmt(p.t, true) : null; } return cdParseFmt(x, f, 'pg'); });
+    def('from_unixtime', (n, f) => { if (n == null) return null; const dd = new Date(num(n) * 1000); const t = Date.UTC(dd.getFullYear(), dd.getMonth(), dd.getDate(), dd.getHours(), dd.getMinutes(), dd.getSeconds()); return f == null ? cdFmt(t, true) : cdFormat(t, f, 'mysql'); });
+    // --- metin ---
+    def('locate', (sub, x, from) => { if (sub == null || x == null) return null; const c = str(x), k = c.indexOf(str(sub), from == null ? 0 : Math.max(0, num(from) - 1)); return k < 0 ? 0 : Array.from(c.slice(0, k)).length + 1; });
+    def('split_part', (x, dl, n) => { if (x == null || dl == null || n == null) return null; const p = str(x).split(str(dl)); const k = num(n); return (k > 0 ? p[k - 1] : p[p.length + k]) || ''; });
+    const pad = left => (x, n, pp) => {
+      if (x == null || n == null) return null;
+      const c = Array.from(str(x)), k = Math.min(num(n), 1e6), fill = Array.from(pp == null ? ' ' : str(pp));
+      if (c.length >= k) return c.slice(0, k).join('');
+      if (!fill.length) return null;
+      const add = [];
+      while (add.length < k - c.length) add.push(fill[add.length % fill.length]);
+      return left ? add.join('') + c.join('') : c.join('') + add.join('');
+    };
+    def('lpad', pad(true));
+    def('rpad', pad(false));
+    def('choose', function (i) { const a = Array.from(arguments); const k = num(i); return k >= 1 && k < a.length ? a[k] : null; });
+    def('newid', () => cryptoUuid().toUpperCase());
+    def('uuid gen_random_uuid uuid_generate_v4', () => cryptoUuid());
+    def('rand', seed => (seed == null ? Math.random() : Math.abs(Math.sin(num(seed)) * 10000) % 1));
+    def('regexp_like', (v, p, f) => (v == null || p == null ? null : (new RegExp(String(p), (String(f || '').includes('i') ? 'i' : '') + 'u').test(String(v)) ? 1 : 0)));
+    def('regexp_replace', (v, p, r, f) => (v == null || p == null ? null : String(v).replace(new RegExp(String(p), (String(f || '').includes('i') ? 'i' : '') + (getDialect() !== 'postgres' || String(f || '').includes('g') ? 'g' : '') + 'u'), r == null ? '' : String(r))));
+    def('truncate', (x, dg) => { if (x == null) return null; const p = Math.pow(10, dg == null ? 0 : Math.trunc(num(dg))); return Math.trunc(num(x) * p) / p; });
+  }
+  function cryptoUuid() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+    const b = new Uint8Array(16); (typeof crypto !== 'undefined' ? crypto : require('crypto').webcrypto).getRandomValues(b);
+    b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+    const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+    return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+  }
+
+  /* SQLite hata iletisini Türkçe açıklar. */
+  function sqlErrTr(msg, d) {
+    const m0 = String(msg || '').replace(/^Error:\s*/, '');
+    let m;
+    if ((m = m0.match(/^UNIQUE constraint failed: (.+)$/))) return 'Bu değer zaten var: ' + m[1] + ' tekrar edemez (UNIQUE ya da birincil anahtar). Aynı satırı ikinci kez ekliyor olabilirsin.';
+    if ((m = m0.match(/^NOT NULL constraint failed: (.+)$/))) return m[1] + ' boş bırakılamaz (NOT NULL): bu sütuna da bir değer yaz.';
+    if (/^FOREIGN KEY constraint failed$/.test(m0)) return 'Yabancı anahtar hatası: bağlı olduğu tabloda karşılığı olmayan bir kimlik yazıldı ya da silinmek istenen satıra başka satırlar bağlı.';
+    if ((m = m0.match(/^CHECK constraint failed: (.+)$/))) return 'Kural (CHECK) sağlanmadı: ' + m[1];
+    if ((m = m0.match(/^near "(.+?)": syntax error$/))) return 'Yazım hatası: "' + m[1] + '" yazan yerde.' + (d === 'sqlite' ? ' SQLite\'ta olmayan bir yazım olabilir; MySQL / SQL Server / PostgreSQL yazıyorsan yukarıdan SQL türünü seç.' : '');
+    if (/^incomplete input$/.test(m0)) return 'Komut yarım kalmış: kapanmamış bir parantez ya da tırnak olabilir.';
+    if ((m = m0.match(/^no such table: (.+)$/))) return '"' + m[1] + '" adında bir tablo yok.';
+    if ((m = m0.match(/^no such column: (.+)$/))) return '"' + m[1] + '" adında bir sütun yok.' + (/^[\p{L}\s]+$/u.test(m[1]) && /\s/.test(m[1]) ? '' : (d !== 'mysql' ? ' Metin yazıyorsan tek tırnak kullan: \'' + m[1] + '\'.' : ''));
+    if ((m = m0.match(/^no such function: (.+)$/))) return 'SQLite\'ta ' + m[1] + '( ) fonksiyonu yok.' + (d === 'sqlite' ? ' Başka bir SQL türünün fonksiyonuysa yukarıdan o türü seç.' : '');
+    if ((m = m0.match(/^table (.+) already exists$/))) return '"' + m[1] + '" tablosu zaten var. (Yoksa oluşturmak için: CREATE TABLE IF NOT EXISTS …)';
+    if ((m = m0.match(/^index (.+) already exists$/))) return '"' + m[1] + '" indeksi zaten var.';
+    if ((m = m0.match(/^(\d+) values for (\d+) columns$/))) return m[2] + ' sütun yazılmış ama ' + m[1] + ' değer verilmiş; sayılar eşit olmalı.';
+    if ((m = m0.match(/^table (.+) has (\d+) columns but (\d+) values were supplied$/))) return '"' + m[1] + '" tablosunda ' + m[2] + ' sütun var ama ' + m[3] + ' değer verilmiş. Sütun adlarını yaz: INSERT INTO ' + m[1] + ' (a, b) VALUES (…)';
+    if ((m = m0.match(/^ambiguous column name: (.+)$/))) return '"' + m[1] + '" birden fazla tabloda var; tablo adıyla yaz (tablo.' + m[1] + ').';
+    if (/^cannot start a transaction within a transaction$/.test(m0)) return 'Zaten açık bir işlem (BEGIN) var; önce COMMIT ya da ROLLBACK yaz.';
+    if (/^cannot (?:commit|rollback) - no transaction is active$/.test(m0)) return 'Açık bir işlem (BEGIN) yok.';
+    if (/^datatype mismatch$/.test(m0)) return 'Tür uyuşmazlığı: ör. INTEGER PRIMARY KEY sütununa sayı olmayan bir değer yazıldı.';
+    if ((m = m0.match(/^misuse of aggregate(?: function)?:? (.*)$/))) return 'Toplama fonksiyonu (' + m[1].replace(/\(\)$/, '') + ') burada kullanılamaz: WHERE yerine HAVING yaz ya da GROUP BY ekle.';
+    if ((m = m0.match(/^no such collation sequence: (.+)$/))) return '"' + m[1] + '" karşılaştırma kuralı (COLLATE) SQLite\'ta yok; BINARY, NOCASE ya da RTRIM olur.';
+    if ((m = m0.match(/^duplicate column name: (.+)$/))) return '"' + m[1] + '" sütunu zaten var.';
+    if ((m = m0.match(/^view (.+) may not be modified|^cannot modify (.+) because it is a view$/))) return 'Görünümün (VIEW) satırları değiştirilemez; asıl tabloyu güncelle.';
+    if (/^too many terms in compound SELECT$/.test(m0)) return 'UNION ile birleştirilen SELECT sayısı çok fazla.';
+    if (/SELECTs to the left and right of UNION do not have the same number of result columns/.test(m0)) return 'UNION\'ın iki yanındaki SELECT\'lerin sütun sayısı aynı olmalı.';
+    if (/^no such savepoint/.test(m0)) return 'Böyle bir SAVEPOINT yok.';
+    if (/^Database closed$/.test(m0)) return 'Veritabanı kapandı; "Şemadan yeniden kur" ile yeniden kur.';
+    return '';
+  }
+
+  /* ---------- SQL KONSOLU ---------- */
 
   let erConsole = null; // { db, pid, source, builtSql }  (builtSql: şemadan kurulduysa kullanılan SQL)
 
@@ -6702,7 +7950,37 @@
   function setConsoleDb(db, source, builtSql) {
     closeConsoleDb();
     try { db.exec('PRAGMA foreign_keys = ON'); } catch (e) {}
-    erConsole = { db: db, pid: activeProject, source: source, builtSql: builtSql };
+    conRegisterFns(db, conDialect);
+    erConsole = { db: db, pid: activeProject, source: source, builtSql: builtSql, dbs: new Set() };
+  }
+  /* Konsolda seçili SQL türü (proje başına hatırlanır) */
+  function conDialect() { const v = (schemaSettings() || {}).consoleDialect; return v && Object.prototype.hasOwnProperty.call(CON_DIALECTS, v) ? v : 'sqlite'; }
+  const CON_DEFAULT = {
+    sqlite: "-- Buraya SQL yaz, Ctrl+Enter ile çalıştır.\n-- Örnek: INSERT INTO musteriler (ad) VALUES ('Ali');\nSELECT name, sql FROM sqlite_master WHERE type = 'table';",
+    mysql: "-- MySQL yazımı: komutlar çalıştırılmadan önce SQLite'a çevrilir. Ctrl+Enter ile çalıştır.\nSHOW TABLES;",
+    postgres: "-- PostgreSQL yazımı: komutlar çalıştırılmadan önce SQLite'a çevrilir. Ctrl+Enter ile çalıştır.\n\\dt",
+    mssql: "-- SQL Server yazımı: komutlar çalıştırılmadan önce SQLite'a çevrilir. Ctrl+Enter ile çalıştır.\nSELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES;"
+  };
+  function renderConDialect() {
+    const d = conDialect();
+    el('conDialect').value = d;
+    el('conDialectNote').textContent = d === 'sqlite' ? 'Gerçek SQLite motoru (sql.js), tarayıcında çalışır.'
+      : CON_DIALECTS[d] + ' yazımı: her komut çalıştırılmadan önce SQLite\'a çevrilir, çevrilen hâli sonucun altında görünür. Motor SQLite olduğu için her ayrıntı birebir aynı olmayabilir.';
+  }
+  /* Çeviri için şemanın o anki hâli: tablo adları ve metin sütunları */
+  function conCtx(db) {
+    const ctx = { dbs: erConsole.dbs || (erConsole.dbs = new Set()), tables: new Set(), textCols: new Set(), colTypes: new Map() };
+    try {
+      sqlRows(db, "SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite!_%' ESCAPE '!'").forEach(r => {
+        ctx.tables.add(String(r.name).toLowerCase());
+        sqlRows(db, 'SELECT name, type FROM pragma_table_info(?)', [r.name]).forEach(c => {
+          const k = String(c.name).toLowerCase();
+          if (/CHAR|TEXT|CLOB/i.test(c.type || '')) ctx.textCols.add(k);
+          if (!ctx.colTypes.has(k)) ctx.colTypes.set(k, c.type || '');
+        });
+      });
+    } catch (e) {}
+    return ctx;
   }
 
   /* Şemadan bellekte yeni bir veritabanı kurar. Hata olursa mesajını döndürür. */
@@ -6725,7 +8003,8 @@
   async function openConsole() {
     el('consoleModal').classList.add('open');
     const s = schemaSettings();
-    el('conSql').value = s.consoleSql || "-- Buraya SQL yaz, Ctrl+Enter ile çalıştır.\n-- Örnek: INSERT INTO musteriler (ad) VALUES ('Ali');\nSELECT name, sql FROM sqlite_master WHERE type = 'table';";
+    el('conSql').value = s.consoleSql || CON_DEFAULT[conDialect()];
+    renderConDialect();
     el('conOut').innerHTML = '';
     if (!erConsole || erConsole.pid !== activeProject) {
       conMsg('SQLite motoru yükleniyor…');
@@ -6764,43 +8043,76 @@
     return '<td title="' + escAttr(String(v)) + '">' + esc(String(v)) + '</td>';
   }
 
-  /* Konsoldaki SQL'i (ya da seçili kısmını) çalıştırır; her komutun sonucunu gösterir. */
-  function runConsole(sqlOverride) {
+  /* Konsoldaki SQL'i (ya da seçili kısmını) komut komut çalıştırır; her komutun sonucunu gösterir.
+     SQLite dışındaki türlerde her komut önce SQLite'a çevrilir. Bir komut hata verirse orada durulur:
+     hangi komutun neden durduğu Türkçe açıklanır, istenirse o komut atlanıp kalanlar çalıştırılır. */
+  let conLast = null; // { sql, next }
+  function conErrBlock(no, text, msg, raw, extra) {
+    return '<div class="con-err"><b>✕ ' + no + '. komutta hata:</b> <code>' + esc(text) + '</code><div>' + esc(msg || raw) + '</div>' +
+      (raw && msg ? '<div class="con-err-raw">SQLite: ' + esc(raw) + '</div>' : '') + (extra || '') + '</div>';
+  }
+  function runConsole(sqlOverride, from, append) {
     if (!erConsole) return;
     const ta = el('conSql');
     const sel = ta.value.slice(ta.selectionStart, ta.selectionEnd);
-    const sql = sqlOverride || (sel.trim() ? sel : ta.value);
-    const db = erConsole.db;
+    const sql = sqlOverride != null ? sqlOverride : (sel.trim() ? sel : ta.value);
+    const d = conDialect(), db = erConsole.db;
+    let stmts = [];
+    try { stmts = sqlSplit(sqlLex(sql, d), d); } catch (e) {}
     const blocks = [];
-    let n = 0;
+    let n = 0, ok = 0, stop = -1;
     const t0 = performance.now();
-    try {
-      for (const st of db.iterateStatements(sql)) {
-        n++;
-        const text = st.getSQL().trim();
-        const cols = st.getColumnNames();
-        if (cols.length) {
-          const rows = [];
-          let total = 0;
-          while (st.step()) { total++; if (rows.length < 500) rows.push(st.get()); }
-          blocks.push(
-            '<div><div class="con-res-head">' + esc(text.length > 140 ? text.slice(0, 140) + '…' : text) + ' — ' + total + ' satır' + (total > 500 ? ' (ilk 500 gösteriliyor)' : '') + '</div>' +
-            '<div class="con-table-wrap"><table class="con-table"><thead><tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>' +
-            (rows.length ? rows.map(r => '<tr>' + r.map(conCell).join('') + '</tr>').join('') : '<tr><td class="null" colspan="' + cols.length + '">(boş)</td></tr>') +
-            '</tbody></table></div></div>');
-        } else {
-          st.step();
-          const changed = /^\s*(INSERT|UPDATE|DELETE|REPLACE)\b/i.test(text) ? ' — ' + db.getRowsModified() + ' satır etkilendi' : '';
-          blocks.push('<div class="con-ok">✓ ' + esc(text.length > 160 ? text.slice(0, 160) + '…' : text) + changed + '</div>');
+    let ctx = d === 'sqlite' ? null : conCtx(db);
+    const dupHint = m => (/^UNIQUE constraint failed/.test(m) && /\bINSERT\s+INTO\b/i.test(schemaSettings().extraSql || '') && erConsole.builtSql
+      ? ' Konsol kurulurken şemanın "Ek SQL" kısmındaki veriler de eklenir; bu satırlar zaten oradan gelmiş olabilir. Tekrar eklemek gerekmiyorsa bu INSERT\'i sil ya da INSERT OR IGNORE yaz' + (d === 'mysql' ? ' (MySQL: INSERT IGNORE)' : '') + '.' : '');
+    for (let k = from || 0; k < stmts.length; k++) {
+      const orig = sqlStmtText(stmts[k]), text = orig.length > 160 ? orig.slice(0, 160) + '…' : orig;
+      n++;
+      let tr;
+      try { tr = d === 'sqlite' ? { sql: orig, notes: [] } : sqlToSqlite(stmts[k], d, ctx); }
+      catch (e) { tr = { err: 'Bu komut SQLite\'a çevrilemedi (' + e.message + ').' }; }
+      if (tr.skip) { ok++; blocks.push('<div class="con-note">↷ ' + esc(text) + ' — ' + esc(tr.notes.join(' ')) + '</div>'); continue; }
+      if (tr.err) { blocks.push(conErrBlock(k + 1, text, tr.err)); stop = k; break; }
+      const same = tr.sql.replace(/\s+/g, ' ').trim() === orig.replace(/\s+/g, ' ').trim();
+      const trLine = d !== 'sqlite' && (!same || tr.notes.length) ? '<div class="con-tr">' + (same ? '' : '<span>SQLite\'ta çalışan hâli:</span> <code>' + esc(tr.sql.length > 700 ? tr.sql.slice(0, 700) + '…' : tr.sql) + '</code>') +
+        (tr.notes.length ? '<div class="con-tr-notes">' + tr.notes.map(esc).join(' · ') + '</div>' : '') + '</div>' : '';
+      try {
+        let last = null, changed = 0, dml = false;
+        for (const st of db.iterateStatements(tr.sql)) {
+          const cols = st.getColumnNames(), q = st.getSQL();
+          if (cols.length) {
+            const rows = [];
+            let total = 0;
+            while (st.step()) { total++; if (rows.length < 500) rows.push(st.get()); }
+            last = { cols: cols, rows: rows, total: total };
+          } else {
+            st.step();
+            if (/^\s*(?:INSERT|UPDATE|DELETE|REPLACE)\b/i.test(q)) { dml = true; changed += db.getRowsModified(); }
+          }
         }
+        ok++;
+        if (last) {
+          blocks.push('<div><div class="con-res-head">' + esc(text) + ' — ' + last.total + ' satır' + (last.total > 500 ? ' (ilk 500 gösteriliyor)' : '') + '</div>' +
+            '<div class="con-table-wrap"><table class="con-table"><thead><tr>' + last.cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>' +
+            (last.rows.length ? last.rows.map(r => '<tr>' + r.map(conCell).join('') + '</tr>').join('') : '<tr><td class="null" colspan="' + last.cols.length + '">(boş)</td></tr>') +
+            '</tbody></table></div>' + trLine + '</div>');
+        } else blocks.push('<div class="con-ok">✓ ' + esc(text) + (dml ? ' — ' + changed + ' satır etkilendi' : '') + trLine + '</div>');
+        if (ctx && /^\s*(?:CREATE|ALTER|DROP)\b/i.test(tr.sql)) ctx = conCtx(db);
+      } catch (e) {
+        const raw = String(e && e.message || e);
+        blocks.push(conErrBlock(k + 1, text, (sqlErrTr(raw, d) || '') + dupHint(raw), raw, trLine));
+        stop = k;
+        break;
       }
-      if (!n) blocks.push('<div class="con-note">Çalıştırılacak komut yok.</div>');
-      conMsg(n ? n + ' komut çalıştı (' + Math.round(performance.now() - t0) + ' ms).' : '');
-    } catch (e) {
-      blocks.push('<div class="con-err">✕ ' + esc(e.message) + '</div>');
-      conMsg('');
     }
-    el('conOut').innerHTML = blocks.join('');
+    const rest = stop >= 0 ? stmts.length - stop - 1 : 0;
+    conLast = rest > 0 ? { sql: sql, next: stop + 1 } : null;
+    if (rest > 0) blocks.push('<div class="con-note con-rest">Kalan ' + rest + ' komut çalıştırılmadı. <button class="link-btn" type="button" id="conRest">Bu komutu atla, kalanları çalıştır</button></div>');
+    if (!n) blocks.push('<div class="con-note">Çalıştırılacak komut yok.</div>');
+    conMsg(n ? ok + ' / ' + n + ' komut çalıştı (' + Math.round(performance.now() - t0) + ' ms)' + (stop >= 0 ? ' · ' + (stop + 1) + '. komutta hata' : '') + '.' : '', stop >= 0 ? 'err' : 'info');
+    const out = el('conOut');
+    if (append) { const old = out.querySelector('.con-rest'); if (old) old.remove(); out.insertAdjacentHTML('beforeend', blocks.join('')); }
+    else out.innerHTML = blocks.join('');
     renderConsoleInfo();
   }
 
@@ -7587,13 +8899,25 @@
 
   el('conRun').addEventListener('click', () => runConsole());
   el('conSample').addEventListener('click', addSampleData);
-  el('conOut').addEventListener('click', e => { if (e.target.id === 'conSampleKeep') keepConsoleData(); });
+  el('conOut').addEventListener('click', e => {
+    if (e.target.id === 'conSampleKeep') keepConsoleData();
+    else if (e.target.id === 'conRest' && conLast) runConsole(conLast.sql, conLast.next, true);
+  });
   el('conKeep').addEventListener('click', keepConsoleData);
   el('conReset').addEventListener('click', resetConsole);
   el('conDownloadDb').addEventListener('click', () => downloadConsoleDb('.db'));
   el('conDownload').addEventListener('click', () => downloadConsoleDb('.sqlite'));
   el('conSql').addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runConsole(); }
+  });
+  // SQL türü: konsoldaki örnek metin de o türe göre değişir
+  el('conDialect').addEventListener('change', async () => {
+    const s = schemaSettings(), ta = el('conSql');
+    const wasDefault = !ta.value.trim() || Object.values(CON_DEFAULT).includes(ta.value);
+    s.consoleDialect = el('conDialect').value;
+    if (wasDefault) { ta.value = CON_DEFAULT[conDialect()]; s.consoleSql = ''; }
+    await saveSchemaSettings();
+    renderConDialect();
   });
   // Yazılan sorgular proje başına hatırlansın
   let conSaveTimer = null;
@@ -7604,7 +8928,9 @@
   // Tablo düğmesi: ilk 100 satırı göster
   el('conTables').addEventListener('click', e => {
     const b = e.target.closest('[data-contable]');
-    if (b) runConsole('SELECT * FROM ' + sqlId(b.dataset.contable, 'sqlite') + ' LIMIT 100;');
+    if (!b) return;
+    const d = conDialect(), t = b.dataset.contable;
+    runConsole(d === 'mssql' ? 'SELECT TOP 100 * FROM ' + sqlId(t, 'mssql') + ';' : 'SELECT * FROM ' + sqlId(t, d === 'mysql' ? 'mysql' : 'sqlite') + ' LIMIT 100;');
   });
 
   /* ===================================================================
@@ -16541,6 +17867,7 @@ service cloud.firestore {
     const o = { projectId: pid };
     for (const k in SCHEMA_DEFAULTS) if (typeof s[k] === typeof SCHEMA_DEFAULTS[k]) o[k] = s[k];
     if (!['sqlite', 'mysql', 'postgres', 'mssql'].includes(o.dialect)) delete o.dialect;
+    if (!['', 'sqlite', 'mysql', 'postgres', 'mssql'].includes(o.consoleDialect)) delete o.consoleDialect;
     return o;
   }
   /* Depodaki hali bu cihaza koyar: projenin buradaki kayıtları kaldırılır (çöp kutusuna gitmez),
