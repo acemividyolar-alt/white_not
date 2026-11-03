@@ -91,7 +91,17 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
 - **SQL çıktısı:** SQLite, MySQL, PostgreSQL, SQL Server
 - **Gerçek SQLite motoru** (tarayıcıda, [sql.js](https://sql.js.org)):
   - "SQLite'ta dene" ile şemayı doğrulama
-  - Konsol: veri ekle, sorgu yaz, sonuçları tablo olarak gör
+  - Konsol: veri ekle, sorgu yaz, sonuçları tablo olarak gör. Komutlar tek tek çalışır; biri hata verirse
+    hangi komutun neden durduğu Türkçe açıklanır (ör. "Bu değer zaten var", "boş bırakılamaz") ve
+    **Bu komutu atla, kalanları çalıştır** ile devam edilebilir
+  - **SQL türü seçimi (konsol):** SQLite, MySQL / MariaDB, PostgreSQL, SQL Server. SQLite dışındaki yazımlar
+    çalıştırılmadan önce SQLite'a çevrilir ve çevrilen hâli sonucun altında görünür: `AUTO_INCREMENT` /
+    `SERIAL` / `IDENTITY`, `ENUM`, `ENGINE=…`, `TOP n`, `OFFSET … FETCH`, `N'…'`, `GO`, `x::int`, `ILIKE`,
+    `EXTRACT`, `INTERVAL`, `NOW()` / `GETDATE()`, `DATEDIFF`, `DATEADD`, `LEN`, `LEFT`, `CONCAT`,
+    `DATE_FORMAT`, `CONVERT(…, 104)`, `INSERT IGNORE`, `ON DUPLICATE KEY UPDATE`, `OUTPUT INSERTED`,
+    `SELECT … INTO`; `SHOW TABLES`, `DESCRIBE`, `\dt`, `sp_help`, `INFORMATION_SCHEMA` gibi komutlar da
+    çalışır. SQLite'ta olmayanlar (`DECLARE`, saklı yordam, `ALTER COLUMN` …) Türkçe açıklamayla durur.
+    Motor yine SQLite olduğu için her ayrıntı birebir aynı olmayabilir
   - **Örnek veri ekle:** her tabloya 10 satır anlamlı Türkçe deneme verisi (ad, soyad, telefon,
     e-posta, il/ilçe, tarih, fiyat, geçerli TC kimlik numarası…). Sütun adına, türüne ve CHECK
     kısıtlarına göre üretilir; yabancı anahtarlar gerçek satırlara bağlanır, UNIQUE alanlar tekrar etmez.
