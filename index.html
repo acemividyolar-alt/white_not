@@ -1259,6 +1259,7 @@
   .fl-bp circle { fill: var(--danger); stroke: var(--paper); stroke-width: 2; cursor: pointer; }
   .fl-bp:hover circle { stroke: var(--danger); stroke-width: 3; }
   .fl-bp-ico { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--danger); margin-right: 0.4rem; flex-shrink: 0; }
+  .fl-run .lbl-short { display: none; }
   .fl-trace { display: flex; flex-direction: column; gap: 0.4rem; min-height: 0; }
   .fl-trace-bar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
   .fl-trace-info { flex: 1; min-width: 9rem; font-size: 0.8rem; color: var(--muted); }
@@ -1874,6 +1875,15 @@
     .fl-run { max-height: 45vh; }
     .fl-test-grid { grid-template-columns: 1fr; }
     .fl-trace-wrap { max-height: 11rem; }
+    /* telefonda çalıştırma çubuğu kısa yazılarla iki satıra sığsın */
+    .fl-run .lbl-long, .fl-trace-info { display: none; }
+    .fl-run .lbl-short { display: inline; }
+    #flRunBp { width: var(--ctl-h); padding: 0; justify-content: center; }
+    #flRunBp .fl-bp-ico { margin: 0; }
+    .fl-run-bar { gap: 0.3rem; }
+    .fl-run-bar .er-btn, .fl-trace-bar .er-btn { padding-left: 0.55rem; padding-right: 0.55rem; }
+    .fl-run-state { min-width: 100%; order: 9; }
+    .fl-trace-t td.step { max-width: 8.5rem; }
     .fl-leg-row { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 0.5rem; }
     .fl-leg-row > svg { width: 54px; }
 
@@ -2246,8 +2256,8 @@
               <option value="60">Hızlı</option>
               <option value="0">Anında</option>
             </select>
-            <button class="er-btn" id="flRunBp" title="Seçili şekle kesme noktası koy / kaldır (F9): Oynat o adıma gelince durur"><span class="fl-bp-ico" aria-hidden="true"></span>Kesme noktası</button>
-            <button class="er-btn tgl" id="flRunTrace" type="button" aria-pressed="false" title="Değişken izleme tablosu: her adımda değişkenlerin aldığı değerler">İzleme tablosu</button>
+            <button class="er-btn" id="flRunBp" aria-label="Kesme noktası" title="Seçili şekle kesme noktası koy / kaldır (F9): Oynat o adıma gelince durur"><span class="fl-bp-ico" aria-hidden="true"></span><span class="lbl-long">Kesme noktası</span></button>
+            <button class="er-btn tgl" id="flRunTrace" type="button" aria-pressed="false" title="Değişken izleme tablosu: her adımda değişkenlerin aldığı değerler"><span class="lbl-long">İzleme tablosu</span><span class="lbl-short">Tablo</span></button>
             <button class="er-btn" id="flRunTests" title="Test senaryoları: girdileri ve beklenen çıktıyı yaz, hepsini tek tıkla dene">Testler<span class="fl-test-badge" id="flTestBadge"></span></button>
             <span class="fl-run-state" id="flRunState"></span>
             <button class="er-btn icon" id="flRunClose" title="Paneli kapat" aria-label="Paneli kapat">&times;</button>
@@ -2264,7 +2274,7 @@
           <div class="fl-trace" id="flTrace" style="display:none">
             <div class="fl-trace-bar">
               <span class="fl-trace-info" id="flTraceInfo"></span>
-              <label class="opt"><input type="checkbox" id="flTraceAll"> Değişmeyen değerleri de yaz</label>
+              <label class="opt" title="Her satırda o anki bütün değerler yazılsın (değişenler yine vurgulu)"><input type="checkbox" id="flTraceAll"> <span class="lbl-long">Değişmeyen değerleri de yaz</span><span class="lbl-short">Hepsini yaz</span></label>
               <button class="er-btn" id="flTraceCopy" title="Tabloyu kopyala (Excel / Word'e yapıştırılabilir)">Kopyala</button>
               <button class="er-btn" id="flTraceCsv">CSV indir</button>
             </div>
@@ -13428,7 +13438,7 @@
       'pre{font-family:"Recursive WN",ui-monospace,Menlo,Consolas,monospace;font-variation-settings:"MONO" 1;font-size:.78rem;white-space:pre-wrap;word-break:break-word;background:#F5F7FB;border:1px solid #E1E6F0;padding:.6rem .75rem;border-radius:6px;margin:0;}' +
       '.chart{text-align:center;break-inside:avoid;}.chart svg{max-width:100%;height:auto;max-height:24cm;}' +
       'table{border-collapse:collapse;width:100%;font-size:.75rem;}th,td{border:1px solid #C9D1E3;padding:.15rem .35rem;text-align:left;vertical-align:top;word-break:break-word;}th{background:#EEF1F7;}' +
-      'td.ch{font-weight:700;}td.ok{color:#23804A;font-weight:700;}td.bad{color:#C8322A;font-weight:700;}.note{color:#5A6680;font-size:.85rem;}' +
+      'td.ch{font-weight:700;}td.ok,td.bad{white-space:nowrap;word-break:normal;width:1%;font-weight:700;}td.ok{color:#23804A;}td.bad{color:#C8322A;}th.res{white-space:nowrap;width:1%;}.note{color:#5A6680;font-size:.85rem;}' +
       '@media print{body{margin:0 auto;}h2{page-break-after:avoid;}tr{page-break-inside:avoid;}}</style></head><body>';
     b += '<h1>' + esc(title) + '</h1><div class="who"><span>Ad Soyad: <b>' + (esc(name) || '……………………') + '</b></span><span>Sınıf / No: <b>' + (esc(cls) || '…………') + '</b></span><span>Tarih: <b>' + day + '</b></span></div>';
     if (on('chart')) b += '<h2>Akış şeması</h2><div class="chart">' + buildFlowSVG(activeProject, cid) + '</div>';
@@ -13453,7 +13463,7 @@
       else {
         const res = tests.map(t => { const r = flTestRun(t); flTestRes.set(t.id, r); return [t, r]; });
         const ok = res.filter(x => x[1].ok).length;
-        b += '<p class="note">' + ok + ' / ' + tests.length + ' test geçti.</p><table><tr><th>Test</th><th>Girdiler</th><th>Beklenen çıktı</th><th>Çıkan</th><th>Sonuç</th></tr>' +
+        b += '<p class="note">' + ok + ' / ' + tests.length + ' test geçti.</p><table><tr><th>Test</th><th>Girdiler</th><th>Beklenen çıktı</th><th>Çıkan</th><th class="res">Sonuç</th></tr>' +
           res.map(([t, r], i) => '<tr><td>' + esc(t.name || 'Test ' + (i + 1)) + '</td><td>' + esc(flLines(t.inputs).join(', ')) + '</td><td>' + esc(r.exp.join(' / ')) + '</td><td>' +
             esc(r.msg || r.got.join(' / ')) + '</td><td class="' + (r.ok ? 'ok">✓ Geçti' : 'bad">✗ Kaldı') + '</td></tr>').join('') + '</table>';
         flTestSummary();

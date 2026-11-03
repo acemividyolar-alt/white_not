@@ -181,6 +181,23 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
   (`+ - * / mod div ^`, `= <> < > <= >=`, `ve veya değil`, `karekök() mutlak() yuvarla() tam() taban() tavan()
   us() rastgele(a, b) metin() sayı()`, dizi ve metin fonksiyonları). Değişken panelinde diziler `[1, 2, 3]`,
   metinler tırnak içinde gösterilir
+  - **‹ Geri:** son adımı geri alır; değişkenler, dizi elemanları, ekrana yazılanlar ve izleme tablosu
+    o adımdan önceki hâline döner (girişi geri alınca değer yeniden sorulur, başka bir değerle denenebilir)
+  - **Kesme noktası:** bir şekli seçip **F9**'a (ya da Kesme noktası düğmesine) basınca şeklin solunda kırmızı
+    nokta çıkar; **Oynat** o adıma her gelişte durur, tekrar Oynat ile devam eder. Noktaya tıklayınca kalkar.
+    Kesme noktaları bu cihazda şemaya göre hatırlanır (ekip arkadaşlarına gitmez)
+  - **İzleme tablosu:** her adımda değişen değişkenler (vurgulu), Karar / Döngü'nün Evet / Hayır sonucu ve
+    ekrana yazılanlar satır satır; "Değişmeyen değerleri de yaz" ile her satırda bütün değerler.
+    **Kopyala** (Excel / Word'e yapıştırılır) ve **CSV indir** (Türkçe Excel'de doğru açılır). `=`, `+`, `-`, `@`
+    ile başlayan metinler dışa aktarılırken formül olarak çalışmasın diye başına `'` eklenir
+  - **Testler:** girdiler (her satıra bir değer) ve beklenen çıktı yazılır; **Hepsini çalıştır** her testi şemayı
+    baştan çalıştırarak dener, farklı satırları yan yana gösterir ("Girdiler yetmedi", çalışma hatası, sonsuz
+    döngü de söylenir). **Son çalıştırmadan test oluştur** elle yapılan çalıştırmanın girdileri ve çıktısıyla
+    test yazar. Testler şemayla birlikte saklanır (yedek, ekip, GitHub; şema başına en fazla 30 test).
+    Şema değişince eski sonuçlar silinir; Testler düğmesindeki rozet geçen / toplam testi gösterir
+- **Ödev çıktısı** (Dosya menüsü): başlık, ad soyad, sınıf / no ile tek sayfa — akış şeması resmi, algoritma
+  adımları, seçilen dilde kod, son çalıştırmanın izleme tablosu ve test sonuçları. Tarayıcının yazdır
+  penceresinden **PDF olarak kaydet** ile PDF olur; ad ve sınıf bu cihazda hatırlanır
 - **? düğmesi:** "Şekiller ne işe yarar?" hatırlatması — her şeklin anlamı, kısa örneği ve
   tek tıkla ekleme (klavyede `?` tuşu da açar)
 - Hata kontrolü: Başla yok, kararın iki çıkışı yok, bağlanmamış adım, ulaşılamayan adım…
@@ -372,6 +389,7 @@ kayıtların artık o depoya gider. Bağlantıyı tanımadığın birinden aldı
 | Ctrl+Z / Ctrl+Y | Şema, Akış | Geri al / yinele |
 | Delete | Şema | Seçili ilişkiyi sil |
 | Delete | Akış | Seçili şekli / oku sil |
+| F9 | Akış | Seçili şekle kesme noktası koy / kaldır |
 | Enter / çift tık | Akış | Seçili şekli düzenle |
 | Ctrl+Enter | Algoritma kutusu | Akış şemasını oluştur |
 | Enter / Shift+Enter | Algoritma kutusu | Sıradaki "Adım N:" ile yeni satır / numarasız yeni satır |
