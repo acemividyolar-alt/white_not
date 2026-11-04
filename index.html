@@ -9861,9 +9861,14 @@
     if (!c) return;
     const name = prompt('Akış şemasının adı:', c.name);
     if (name === null || !name.trim() || name.trim() === c.name) return;
+    const old = flFold(c.name.trim());
     c.name = name.trim().slice(0, 60);
     await saveFlowChart(c);
-    renderFlCharts();
+    // bu şemayı alt program olarak çağıran şekiller yeni adı kullansın (çağrılar kopmasın)
+    const calls = flowNodes.filter(n => n.kind === 'sub' && n.projectId === c.projectId && flFold(flSubName(n.text)) === old);
+    for (const n of calls) { n.text = n.text.trim().replace(/^((?:alt\s*program[ıi]?|çağır|cagir|call)\s*:?\s*)?[\s\S]*$/i, (m, pre) => (pre || '') + c.name); await saveFlowNode(n); }
+    renderFlow();
+    if (calls.length) flToast('Ad değişti; bu şemayı çağıran ' + calls.length + ' alt program şekli de yeni adı kullanıyor.');
   }
   async function flDuplicateChart() {
     const c = activeChart();
@@ -9888,6 +9893,7 @@
     if (!c) return;
     const nodes = projectFlowNodes(activeProject), edges = projectFlowEdges(activeProject);
     if (flRun && flRun.pid === c.id) flCloseRun();
+    localSet('pref:flbp:' + c.id, ''); delete flBpCache[c.id];
     const p = projects.find(x => x.id === c.projectId);
     const pack = { chart: Object.assign({}, c), nodes: nodes.map(n => Object.assign({}, n)), edges: edges.map(e => Object.assign({}, e)) };
     await flDropChart(c, nodes, edges);
@@ -10497,7 +10503,7 @@
 
   /* ---- Yan yana: algoritma yazısı ↔ şema. Yazdıkça (biraz durunca) şema yeniden çizilir; şema başka
      yoldan değişince (şekil düzenleme, ekip arkadaşı) yazı da yenilenir. Yorum notları korunur. ---- */
-  let flSplitOn = false, flSplitSig = null, flSplitTimer = null, flSplitBusy = false;
+  let flSplitOn = false, flSplitSig = null, flSplitTimer = null, flSplitBusy = false, flSplitCid = null;
   function flSplitText() {
     const cid = activeChartId(activeProject);
     if (!cid || !flLogicNodes(activeProject).length) return '';
@@ -10512,16 +10518,25 @@
     el('flSplitBtn').setAttribute('aria-pressed', on ? 'true' : 'false');
     el('flSplit').style.display = on ? '' : 'none';
     el('flWrap').classList.toggle('fl-split-on', on);
-    if (on) { el('flSplitText').value = flSplitText(); flSplitSig = flFlowSig(); el('flSplitMsg').textContent = ''; el('flSplitMsg').className = 'fl-split-msg'; }
+    if (on) { el('flSplitText').value = flSplitText(); flSplitSig = flFlowSig(); flSplitCid = flKey(); el('flSplitMsg').textContent = ''; el('flSplitMsg').className = 'fl-split-msg'; }
     setTimeout(() => { updateFlSurfaceSize(); drawFlEdges(); flRenderMini(); }, 0);
   }
-  function flSplitSync() { // şema başka yoldan değişti: yazıyı yenile (yazarken dokunma)
-    if (!flSplitOn || flSplitBusy || document.activeElement === el('flSplitText')) return;
+  function flSplitSync() { // şema başka yoldan değişti: yazıyı yenile (yazarken dokunma; başka şemaya geçildiyse her zaman)
+    if (!flSplitOn || flSplitBusy) return;
+    const other = flSplitCid !== flKey();
+    if (!other && document.activeElement === el('flSplitText')) return;
     const sig = flFlowSig();
-    if (sig !== flSplitSig) { flSplitSig = sig; el('flSplitText').value = flSplitText(); }
+    if (other || sig !== flSplitSig) {
+      clearTimeout(flSplitTimer);
+      flSplitSig = sig; flSplitCid = flKey(); flSplitApply.last = null;
+      el('flSplitText').value = flSplitText();
+      if (other) { el('flSplitMsg').textContent = ''; el('flSplitMsg').className = 'fl-split-msg'; }
+    }
   }
   async function flSplitApply() {
     const ta = el('flSplitText'), msg = el('flSplitMsg');
+    if (!flSplitOn || flSplitBusy) return;
+    if (flSplitCid && flSplitCid !== flKey()) { flSplitSync(); return; } // yazı başka şemanın: bu şemaya uygulanmaz
     let src = ta.value;
     if (!src.trim()) { msg.className = 'fl-split-msg'; msg.textContent = 'Algoritmayı yaz: şema burada çizilir.'; return; }
     let warn = [];
@@ -10536,8 +10551,9 @@
     flSplitApply.last = key;
     flSplitBusy = true;
     try {
-      const cid = await ensureChart(activeProject), pid = activeProject;
-      const empty = !flLogicNodes(pid).length;
+      const pid = activeProject, cid = flSplitCid && findChart(flSplitCid) ? flSplitCid : await ensureChart(pid);
+      flSplitCid = cid;
+      const empty = !flowNodes.some(n => n.chartId === cid && n.kind !== 'note');
       flCheckpoint();
       const mine = x => x.projectId === pid && x.chartId === cid;
       const drop = flowNodes.filter(n => mine(n) && n.kind !== 'note'), dropIds = new Set(drop.map(n => n.id));
@@ -10552,11 +10568,11 @@
       flLayoutGraph(nodes, edges, 90, 50);
       for (const n of nodes) { flowNodes.push(n); await saveFlowNode(n); }
       for (const e of edges) { flowEdges.push(e); await saveFlowEdge(e); }
-      const ch = activeChart();
+      const ch = findChart(cid);
       if (ch) { ch.source = ta.value.slice(0, 200000); saveFlowChart(ch); }
       flSel = null; flMulti.clear();
       renderFlow();
-      flSplitSig = flFlowSig();
+      if (flKey() === cid) flSplitSig = flFlowSig();
       if (empty) flFit(0.7);
     } finally { flSplitBusy = false; }
   }
