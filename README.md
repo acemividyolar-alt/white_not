@@ -129,13 +129,13 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
   - **Yorum notu** (köşesi kıvrık kâğıt): açıklama yazısı; ok bağlanmaz, çalıştırılmaz, algoritmaya ve koda
     girmez, "Yerleştir" onu yerinden oynatmaz
 - **Çoklu seçim:** Shift (ya da Ctrl) + tıkla, Shift + boş yerde sürükle (seçim dikdörtgeni), Ctrl+A hepsi.
-  Telefonda **Seç** düğmesi: dokunulan şekiller seçime eklenir. Seçili şekiller birlikte taşınır; seçim
+  Telefonda araç çubuğundaki **çoklu seçim** düğmesi (kesik çizgili kutu): dokunulan şekiller seçime eklenir. Seçili şekiller birlikte taşınır; seçim
   çubuğunda **Kopyala · Yapıştır · Çoğalt · Sil · Hepsi**. Ctrl+C / Ctrl+X / Ctrl+V / Ctrl+D; kopyalanan
   şekiller aralarındaki oklarla birlikte başka şemaya ya da projeye de yapıştırılır (pano bu cihazda saklanır)
 - **Hizalama kılavuzu:** şekli sürüklerken başka bir şeklin hizasına gelince kesik çizgi çıkar ve oraya oturur
-- **Mini harita** (Harita düğmesi): şema ekrana sığmayınca sağ altta küçük bir özet; tıklayınca / sürükleyince
+- **Mini harita** (araç çubuğunda, köşesinde küçük kutu olan çerçeve simgesi): şema ekrana sığmayınca sağ altta küçük bir özet; tıklayınca / sürükleyince
   oraya gidilir
-- **Yan yana** görünüm: solda algoritma yazısı, sağda şema. Yazdıkça (biraz durunca) şema yeniden çizilir —
+- **Yan yana** görünüm (araç çubuğunda iki bölmeli simge): solda algoritma yazısı, sağda şema. Yazdıkça (biraz durunca) şema yeniden çizilir —
   Python yazılırsa çevrilir; şema başka yoldan değişince yazı da yenilenir. Yorum notları korunur
 - **Hızlı kurma:** bir şekli seç, soldaki şablondan yenisine tıkla — altına eklenir ve okla bağlanır
   (karar şeklinde ilk çıkış Evet, ikincisi Hayır olur ve sağa yerleşir)

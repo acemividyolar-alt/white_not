@@ -2221,9 +2221,9 @@
             <button class="er-btn" id="flLayout" title="Şekilleri akışa göre otomatik diz">Yerleştir</button>
             <button class="er-btn" id="flFit" title="Tüm şemayı ekrana sığdır">Sığdır</button>
             <button class="er-btn tgl" id="flNumBtn" type="button" aria-pressed="true" title="Şekillerin yanındaki adım numaralarını gizle / göster (Şemadan algoritmadaki Adım 1, Adım 2…)">Adım no</button>
-            <button class="er-btn tgl" id="flSplitBtn" type="button" aria-pressed="false" title="Yan yana: solda algoritma yazısı, sağda şema — yazdıkça şema kendiliğinden çizilir">Yan yana</button>
-            <button class="er-btn tgl" id="flMultiBtn" type="button" aria-pressed="false" title="Çoklu seçim: dokunduğun şekiller seçime eklenir (farede Shift + tıkla ya da Shift + sürükle)">Seç</button>
-            <button class="er-btn tgl" id="flMiniBtn" type="button" aria-pressed="true" title="Mini harita: büyük şemada nerede olduğunu gösterir; tıklayınca oraya gider">Harita</button>
+            <button class="er-btn tgl icon" id="flSplitBtn" type="button" aria-pressed="false" aria-label="Yan yana" title="Yan yana: solda algoritma yazısı, sağda şema — yazdıkça şema kendiliğinden çizilir"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M7 2.5v11M3.5 5.5h2M3.5 8h2M3.5 10.5h2"/></svg></button>
+            <button class="er-btn tgl icon" id="flMultiBtn" type="button" aria-pressed="false" aria-label="Çoklu seçim" title="Çoklu seçim: dokunduğun şekiller seçime eklenir (farede Shift + tıkla ya da Shift + sürükle)"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.5" y="1.5" width="9" height="9" rx="1" stroke-dasharray="2.2 1.8"/><path d="M8 8l6 2.2-2.6 1.1L10.3 14z" fill="currentColor"/></svg></button>
+            <button class="er-btn tgl icon" id="flMiniBtn" type="button" aria-pressed="true" aria-label="Mini harita" title="Mini harita: büyük şemada nerede olduğunu gösterir; tıklayınca oraya gider"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><rect x="8" y="8" width="5" height="4" rx="0.5" fill="currentColor" stroke="none"/></svg></button>
             <span class="er-sep"></span>
             <button class="er-btn icon" id="flZoomOut" title="Uzaklaştır" aria-label="Uzaklaştır">&minus;</button>
             <span class="er-zoom" id="flZoomLabel" title="%100'e dön">100%</span>
@@ -2759,7 +2759,7 @@
         <b>Okuma sırası:</b> Başla'dan başlanır, okları izleyerek ilerlenir, Bitir'de durulur.<br>
         <b>Kısa yollar:</b> şekle çift tık = düzenle · seçiliyken <code>Delete</code> = sil · <code>Ctrl+Z</code> = geri al ·
         şekil seçiliyken şablondan yenisine tıklarsan altına eklenip bağlanır · <code>F9</code> = kesme noktası.<br>
-        <b>Çoklu seçim:</b> <code>Shift</code> + tıkla ya da <code>Shift</code> + boş yerde sürükle (telefonda <b>Seç</b>) ·
+        <b>Çoklu seçim:</b> <code>Shift</code> + tıkla ya da <code>Shift</code> + boş yerde sürükle (telefonda araç çubuğundaki çoklu seçim düğmesi) ·
         <code>Ctrl+C</code> / <code>Ctrl+V</code> kopyala / yapıştır · <code>Ctrl+D</code> çoğalt · <code>Ctrl+A</code> hepsi.
       </div>
       <div class="modal-actions">
@@ -15600,7 +15600,16 @@
 
     else if (act === 'homework') openFlHw();
   }
-  el('flFileBtn').addEventListener('click', e => { e.stopPropagation(); el('flFileMenu').classList.toggle('open'); });
+  el('flFileBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    const m = el('flFileMenu');
+    m.classList.toggle('open');
+    m.style.left = ''; m.style.right = '';
+    if (m.classList.contains('open') && getComputedStyle(m).position === 'absolute') { // masaüstü: düğmenin altında
+      const r = m.getBoundingClientRect(), wrap = el('flWrap').getBoundingClientRect();
+      if (r.left < wrap.left) { m.style.left = '0'; m.style.right = 'auto'; }
+    }
+  });
   document.addEventListener('click', e => { if (!e.target.closest('#flFileMenu, #flFileBtn')) el('flFileMenu').classList.remove('open'); });
   el('flFileMenu').addEventListener('click', e => { const b = e.target.closest('[data-flact]'); if (b) flFileAction(b.dataset.flact); });
 
@@ -16149,6 +16158,7 @@
   el('flMiniBtn').setAttribute('aria-pressed', flMiniOn ? 'true' : 'false');
   el('flSplitBtn').addEventListener('click', () => setFlSplitOn(!flSplitOn));
   el('flCanvas').addEventListener('scroll', flRenderMiniSoon, { passive: true });
+  if (window.ResizeObserver) new ResizeObserver(() => { flRenderMiniSoon(); flRenderSelBar(); }).observe(el('flCanvas'));
   window.addEventListener('resize', flRenderMiniSoon);
   el('flMini').addEventListener('pointerdown', e => {
     e.preventDefault();
