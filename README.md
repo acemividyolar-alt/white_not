@@ -118,6 +118,25 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
 - **Bir projede birden çok akış şeması** (sekmeler): yeni şema, yeniden adlandır, çoğalt, sil
 - Standart şekiller: Başla/Bitir (oval), Giriş ve Çıkış (paralelkenar), İşlem (dikdörtgen),
   Karar (eşkenar dörtgen, Evet/Hayır çıkışlı), Döngü (altıgen, `i = 1 .. 10` gibi sayaçlı)
+- **Yeni şekiller:**
+  - **Alt program** (iki yanı çift çizgili dikdörtgen): projedeki başka bir akış şemasını (sekmeyi) adıyla
+    çalıştırır (`Hesapla`). Değişkenler ortaktır; alt program Bitir'e gelince buradan devam edilir. Yazıda
+    `Alt program Hesapla` ya da `Çağır Hesapla`. Alt programda Giriş (Oku) olamaz; en fazla 20 iç içe çağrı.
+    Koda çevirirken doldurulacak bir metot olarak çıkar
+  - **Bağlantı noktası** (daire): uzak iki yeri ok çizmeden bağlar. Devamı olmayan `A` noktasına gelince,
+    aynı harfli ve oku olan `A` noktasından devam edilir (yazıda `Bağlantı A`). Devamı olmayan ya da birden
+    çok çıkışlı aynı harf hata kontrolünde gösterilir
+  - **Yorum notu** (köşesi kıvrık kâğıt): açıklama yazısı; ok bağlanmaz, çalıştırılmaz, algoritmaya ve koda
+    girmez, "Yerleştir" onu yerinden oynatmaz
+- **Çoklu seçim:** Shift (ya da Ctrl) + tıkla, Shift + boş yerde sürükle (seçim dikdörtgeni), Ctrl+A hepsi.
+  Telefonda araç çubuğundaki **çoklu seçim** düğmesi (kesik çizgili kutu): dokunulan şekiller seçime eklenir. Seçili şekiller birlikte taşınır; seçim
+  çubuğunda **Kopyala · Yapıştır · Çoğalt · Sil · Hepsi**. Ctrl+C / Ctrl+X / Ctrl+V / Ctrl+D; kopyalanan
+  şekiller aralarındaki oklarla birlikte başka şemaya ya da projeye de yapıştırılır (pano bu cihazda saklanır)
+- **Hizalama kılavuzu:** şekli sürüklerken başka bir şeklin hizasına gelince kesik çizgi çıkar ve oraya oturur
+- **Mini harita** (araç çubuğunda, köşesinde küçük kutu olan çerçeve simgesi): şema ekrana sığmayınca sağ altta küçük bir özet; tıklayınca / sürükleyince
+  oraya gidilir
+- **Yan yana** görünüm (araç çubuğunda iki bölmeli simge): solda algoritma yazısı, sağda şema. Yazdıkça (biraz durunca) şema yeniden çizilir —
+  Python yazılırsa çevrilir; şema başka yoldan değişince yazı da yenilenir. Yorum notları korunur
 - **Hızlı kurma:** bir şekli seç, soldaki şablondan yenisine tıkla — altına eklenir ve okla bağlanır
   (karar şeklinde ilk çıkış Evet, ikincisi Hayır olur ve sağa yerleşir)
 - Şekli tutup taşı; kenarındaki noktadan tutup başka şekle bırakarak ok çiz; oka tıklayıp
@@ -390,6 +409,9 @@ kayıtların artık o depoya gider. Bağlantıyı tanımadığın birinden aldı
 | Delete | Şema | Seçili ilişkiyi sil |
 | Delete | Akış | Seçili şekli / oku sil |
 | F9 | Akış | Seçili şekle kesme noktası koy / kaldır |
+| Shift + tıkla / sürükle | Akış | Çoklu seçim |
+| Ctrl + C / X / V / D | Akış | Seçili şekilleri kopyala / kes / yapıştır / çoğalt |
+| Ctrl + A | Akış | Bütün şekilleri seç |
 | Enter / çift tık | Akış | Seçili şekli düzenle |
 | Ctrl+Enter | Algoritma kutusu | Akış şemasını oluştur |
 | Enter / Shift+Enter | Algoritma kutusu | Sıradaki "Adım N:" ile yeni satır / numarasız yeni satır |

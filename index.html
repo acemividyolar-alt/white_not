@@ -1172,6 +1172,9 @@
   .fl-ico.k-process { fill: var(--fl-proc-bg); stroke: var(--fl-proc-bd); }
   .fl-ico.k-decision { fill: var(--fl-dec-bg); stroke: var(--fl-dec-bd); }
   .fl-ico.k-loop { fill: var(--fl-loop-bg); stroke: var(--fl-loop-bd); }
+  .fl-ico.k-sub { fill: var(--fl-proc-bg); stroke: var(--fl-proc-bd); }
+  .fl-ico.k-conn { fill: var(--fl-term-bg); stroke: var(--fl-term-bd); }
+  .fl-ico.k-note { fill: var(--fl-dec-bg); stroke: var(--fl-dec-bd); stroke-dasharray: 3 2; }
 
   /* Çizim alanı: SVG'nin kendisi; yakınlaştırmada width/height büyür, viewBox sabit kalır */
   .fl-svg { display: block; touch-action: pan-x pan-y; }
@@ -1182,6 +1185,10 @@
   .fl-node.k-process .fl-shape { fill: var(--fl-proc-bg); stroke: var(--fl-proc-bd); }
   .fl-node.k-decision .fl-shape { fill: var(--fl-dec-bg); stroke: var(--fl-dec-bd); }
   .fl-node.k-loop .fl-shape { fill: var(--fl-loop-bg); stroke: var(--fl-loop-bd); }
+  .fl-node.k-sub .fl-shape { fill: var(--fl-proc-bg); stroke: var(--fl-proc-bd); }
+  .fl-node.k-conn .fl-shape { fill: var(--fl-term-bg); stroke: var(--fl-term-bd); }
+  .fl-node.k-note .fl-shape { fill: color-mix(in srgb, var(--fl-dec-bg) 70%, var(--paper)); stroke: var(--fl-dec-bd); stroke-dasharray: 4 3; }
+  .fl-node.k-note .fl-text { font-style: italic; }
   .fl-text { fill: var(--ink); font-family: var(--font-sans); font-size: 14px; pointer-events: none; }
   .fl-text.empty { fill: var(--muted); font-style: italic; }
   .fl-kind { fill: var(--muted); font-family: var(--font-sans); font-size: 9.5px; font-weight: 640; pointer-events: none; }
@@ -1256,6 +1263,36 @@
   .fl-out .err { color: var(--danger); }
 
   /* Kesme noktası (şeklin solunda kırmızı nokta), izleme tablosu, testler */
+  .fl-guide { stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 5 4; pointer-events: none; }
+  .fl-band { fill: color-mix(in srgb, var(--accent) 10%, transparent); stroke: var(--accent); stroke-width: 1; stroke-dasharray: 4 3; pointer-events: none; }
+  .fl-stage { position: relative; }
+  .fl-selbar {
+    position: absolute; z-index: 5; display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; max-width: calc(100% - 1rem);
+    background: var(--paper); border: 1px solid var(--accent); border-radius: var(--r-lg); padding: 0.3rem 0.4rem; box-shadow: var(--shadow-2);
+  }
+  .fl-selbar-n { font-size: 0.8rem; font-weight: 640; color: var(--accent); padding: 0 0.3rem; }
+  .fl-mini {
+    position: absolute; z-index: 4; background: color-mix(in srgb, var(--paper) 92%, transparent); border: 1px solid var(--line-2);
+    border-radius: var(--r); box-shadow: var(--shadow-1); cursor: crosshair; overflow: hidden; touch-action: none;
+  }
+  .fl-mini svg { width: 100%; height: 100%; display: block; }
+  .fl-mini rect { fill: var(--fl-proc-bd); opacity: 0.45; }
+  .fl-mini rect.k-start, .fl-mini rect.k-end, .fl-mini rect.k-conn { fill: var(--fl-term-bd); }
+  .fl-mini rect.k-decision, .fl-mini rect.k-note { fill: var(--fl-dec-bd); }
+  .fl-mini rect.k-input, .fl-mini rect.k-output { fill: var(--fl-io-bd); }
+  .fl-mini rect.k-loop { fill: var(--fl-loop-bd); }
+  .fl-mini .fl-mini-view { fill: color-mix(in srgb, var(--accent) 12%, transparent); stroke: var(--accent); stroke-width: 2; opacity: 1; vector-effect: non-scaling-stroke; }
+  .fl-split { display: flex; flex-direction: column; gap: 0.35rem; width: min(32%, 22rem); min-width: 14rem; flex-shrink: 0; min-height: 0; }
+  .fl-split-head { display: flex; gap: 0.5rem; align-items: baseline; font-size: 0.8rem; color: var(--muted); flex-wrap: wrap; }
+  .fl-split-head b { color: var(--ink); font-size: 0.875rem; }
+  .fl-split-text {
+    flex: 1; min-height: 8rem; resize: none; font-size: 0.82rem; line-height: 1.55; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--line-2); border-radius: var(--r-lg); padding: 0.55rem 0.65rem; outline: none; tab-size: 4; white-space: pre; overflow: auto;
+  }
+  .fl-split-text:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .fl-split-msg { font-size: 0.75rem; color: var(--muted); min-height: 1rem; }
+  .fl-split-msg.ok { color: var(--green); }
+  .fl-split-msg.warn { color: var(--danger); }
   .fl-bp circle { fill: var(--danger); stroke: var(--paper); stroke-width: 2; cursor: pointer; }
   .fl-bp:hover circle { stroke: var(--danger); stroke-width: 3; }
   .fl-bp-ico { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--danger); margin-right: 0.4rem; flex-shrink: 0; }
@@ -1715,7 +1752,7 @@
      =================================================================== */
   code, pre, kbd, .mono, .er-fname, .er-ftype, .er-badge, .er-ai, .er-card, .er-act, .elp-title, .tbl-in, .tbl-link-row,
   .sql-out, .sql-in, .con-table, .con-res-head, .con-ok, .con-err, .con-hint, .fl-out, .fl-vars, .fl-ask input,
-  .fl-algo-out, .fl-code-out, .fl-text-in, .fl-leg-ex, #flSource, .gs-esc, .fl-trace-t td, .fl-test-grid textarea, .fl-test-diff td {
+  .fl-algo-out, .fl-code-out, .fl-text-in, .fl-leg-ex, #flSource, .gs-esc, .fl-trace-t td, .fl-test-grid textarea, .fl-test-diff td, .fl-split-text {
     font-family: var(--font-mono); font-variation-settings: "MONO" 1;
   }
   .tbl-flag, .er-zoom { font-variant-numeric: tabular-nums; }
@@ -1875,6 +1912,13 @@
     .fl-run { max-height: 45vh; }
     .fl-test-grid { grid-template-columns: 1fr; }
     .fl-trace-wrap { max-height: 11rem; }
+    .fl-split { width: auto; min-width: 0; height: 34%; min-height: 9rem; flex-shrink: 0; }
+    /* seçim çubuğu telefonda tek satır, yana kayar */
+    .fl-selbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: calc(100% - 1rem); padding: 0.25rem 0.3rem; gap: 0.25rem; }
+    .fl-selbar::-webkit-scrollbar { display: none; }
+    .fl-selbar .er-btn { height: 34px; padding: 0 0.55rem; font-size: 0.8125rem; flex-shrink: 0; }
+    .fl-selbar-n { font-size: 0.75rem; white-space: nowrap; flex-shrink: 0; }
+    .fl-split-text { min-height: 0; }
     /* telefonda çalıştırma çubuğu kısa yazılarla iki satıra sığsın */
     .fl-run .lbl-long, .fl-trace-info { display: none; }
     .fl-run .lbl-short { display: inline; }
@@ -2177,6 +2221,9 @@
             <button class="er-btn" id="flLayout" title="Şekilleri akışa göre otomatik diz">Yerleştir</button>
             <button class="er-btn" id="flFit" title="Tüm şemayı ekrana sığdır">Sığdır</button>
             <button class="er-btn tgl" id="flNumBtn" type="button" aria-pressed="true" title="Şekillerin yanındaki adım numaralarını gizle / göster (Şemadan algoritmadaki Adım 1, Adım 2…)">Adım no</button>
+            <button class="er-btn tgl icon" id="flSplitBtn" type="button" aria-pressed="false" aria-label="Yan yana" title="Yan yana: solda algoritma yazısı, sağda şema — yazdıkça şema kendiliğinden çizilir"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M7 2.5v11M3.5 5.5h2M3.5 8h2M3.5 10.5h2"/></svg></button>
+            <button class="er-btn tgl icon" id="flMultiBtn" type="button" aria-pressed="false" aria-label="Çoklu seçim" title="Çoklu seçim: dokunduğun şekiller seçime eklenir (farede Shift + tıkla ya da Shift + sürükle)"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.5" y="1.5" width="9" height="9" rx="1" stroke-dasharray="2.2 1.8"/><path d="M8 8l6 2.2-2.6 1.1L10.3 14z" fill="currentColor"/></svg></button>
+            <button class="er-btn tgl icon" id="flMiniBtn" type="button" aria-pressed="true" aria-label="Mini harita" title="Mini harita: büyük şemada nerede olduğunu gösterir; tıklayınca oraya gider"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><rect x="8" y="8" width="5" height="4" rx="0.5" fill="currentColor" stroke="none"/></svg></button>
             <span class="er-sep"></span>
             <button class="er-btn icon" id="flZoomOut" title="Uzaklaştır" aria-label="Uzaklaştır">&minus;</button>
             <span class="er-zoom" id="flZoomLabel" title="%100'e dön">100%</span>
@@ -2218,7 +2265,24 @@
             <button class="fl-shape-btn" type="button" data-addkind="loop" title="Döngü — sayaçlı tekrar (i = 1 .. 10)"><span class="lbl">Döngü</span></button>
             <button class="fl-shape-btn" type="button" data-addkind="output" title="Çıkış — ekrana yaz (Yaz toplam)"><span class="lbl">Çıkış</span></button>
             <button class="fl-shape-btn" type="button" data-addkind="end" title="Bitir — algoritmanın sonu"><span class="lbl">Bitir</span></button>
+            <button class="fl-shape-btn" type="button" data-addkind="sub" title="Alt program — projedeki başka bir akış şemasını çalıştır"><span class="lbl">Alt program</span></button>
+            <button class="fl-shape-btn" type="button" data-addkind="conn" title="Bağlantı noktası — uzak iki yeri ok çizmeden bağla (A)"><span class="lbl">Bağlantı</span></button>
+            <button class="fl-shape-btn" type="button" data-addkind="note" title="Yorum notu — açıklama yazısı (akışa katılmaz)"><span class="lbl">Not</span></button>
           </div>
+        <div class="fl-split" id="flSplit" style="display:none">
+          <div class="fl-split-head"><b>Algoritma</b><span>yazdıkça şema çizilir · Python da olur</span></div>
+          <textarea class="fl-split-text" id="flSplitText" spellcheck="false" aria-label="Algoritma (yazdıkça şema çizilir)" placeholder="Başla&#10;Oku a, b&#10;Eğer a &gt; b ise&#10;    Yaz a&#10;Değilse&#10;    Yaz b&#10;Bitir"></textarea>
+          <div class="fl-split-msg" id="flSplitMsg"></div>
+        </div>
+        <div class="fl-mini" id="flMini" style="display:none" title="Mini harita: tıkla ya da sürükle, oraya git" aria-hidden="true"><svg id="flMiniSvg"></svg></div>
+        <div class="fl-selbar" id="flSelBar" style="display:none" role="toolbar" aria-label="Seçili şekiller">
+          <span class="fl-selbar-n" id="flSelCount"></span>
+          <button class="er-btn" type="button" data-sel="copy" title="Kopyala (Ctrl+C)">Kopyala</button>
+          <button class="er-btn" type="button" data-sel="paste" title="Yapıştır (Ctrl+V)">Yapıştır</button>
+          <button class="er-btn" type="button" data-sel="dup" title="Çoğalt (Ctrl+D)">Çoğalt</button>
+          <button class="er-btn" type="button" data-sel="del" title="Sil (Delete)">Sil</button>
+          <button class="er-btn" type="button" data-sel="all" title="Hepsini seç (Ctrl+A)">Hepsi</button>
+        </div>
         <div class="er-canvas" id="flCanvas">
           <div class="er-sizer" id="flSizer">
             <svg class="fl-svg" id="flSvg" xmlns="http://www.w3.org/2000/svg">
@@ -2694,7 +2758,9 @@
       <div class="fl-help fl-leg-tips">
         <b>Okuma sırası:</b> Başla'dan başlanır, okları izleyerek ilerlenir, Bitir'de durulur.<br>
         <b>Kısa yollar:</b> şekle çift tık = düzenle · seçiliyken <code>Delete</code> = sil · <code>Ctrl+Z</code> = geri al ·
-        şekil seçiliyken şablondan yenisine tıklarsan altına eklenip bağlanır.
+        şekil seçiliyken şablondan yenisine tıklarsan altına eklenip bağlanır · <code>F9</code> = kesme noktası.<br>
+        <b>Çoklu seçim:</b> <code>Shift</code> + tıkla ya da <code>Shift</code> + boş yerde sürükle (telefonda araç çubuğundaki çoklu seçim düğmesi) ·
+        <code>Ctrl+C</code> / <code>Ctrl+V</code> kopyala / yapıştır · <code>Ctrl+D</code> çoğalt · <code>Ctrl+A</code> hepsi.
       </div>
       <div class="modal-actions">
         <span></span>
@@ -9110,9 +9176,28 @@
     output:   { name: 'Çıkış',  def: 'Yaz x', ask: 'Çıkış — ekrana ne yazılsın?',
                 help: 'Ekrana yazar. <code>Yaz toplam</code> · <code>Yaz "Sonuç:", toplam</code> — tırnak içindeki yazı olduğu gibi, diğerleri değer olarak yazılır.' },
     end:      { name: 'Bitir',  def: 'Bitir', ask: null,
-                help: 'Algoritmanın bittiği yer. Birden fazla olabilir (ör. hata durumunda erken bitiş).' }
+                help: 'Algoritmanın bittiği yer. Birden fazla olabilir (ör. hata durumunda erken bitiş).' },
+    sub:      { name: 'Alt program', def: 'Hesapla', ask: 'Alt program — hangi akış şeması çalıştırılsın? (bu projedeki bir şemanın adı)',
+                help: 'Projedeki başka bir akış şemasını (sekmeyi) adıyla çalıştırır: <code>Hesapla</code>. Değişkenler ortaktır; alt program Bitir\'e gelince buradan devam edilir. Uzun algoritmayı parçalara bölmek için. Alt programda Giriş (Oku) olamaz.' },
+    conn:     { name: 'Bağlantı', def: 'A', ask: 'Bağlantı noktası — harfi ne olsun? (ör. A)',
+                help: 'Şemanın uzak iki yerini ok çizmeden bağlar: devamı olmayan <code>A</code> noktasına gelince, aynı harfli ve <b>oku olan</b> <code>A</code> noktasından devam edilir.' },
+    note:     { name: 'Not', def: 'Açıklama', ask: 'Yorum notu — ne yazılsın?',
+                help: 'Okuyana açıklama. Akışa katılmaz: ok bağlanmaz, çalıştırılmaz, algoritmaya ve koda girmez.' }
   };
-  const FL_KIND_ORDER = ['start', 'input', 'process', 'decision', 'loop', 'output', 'end'];
+  const FL_KIND_ORDER = ['start', 'input', 'process', 'decision', 'loop', 'output', 'end', 'sub', 'conn', 'note'];
+  /* Akışa katılan şekiller (yorum notları hariç) ve bağlantı noktalarının görünmeyen okları:
+     devamı olmayan "A" noktasından, aynı harfli ve oku olan tek "A" noktasına */
+  function flLogicNodes(pid, cid) { return projectFlowNodes(pid, cid).filter(n => n.kind !== 'note'); }
+  function flConnEdges(nodes, edges) {
+    const conns = nodes.filter(n => n.kind === 'conn');
+    if (!conns.length) return edges;
+    const hasOut = new Set(edges.map(e => e.from)), key = n => flFold(n.text.trim());
+    const entry = {};
+    conns.forEach(n => { if (hasOut.has(n.id) && key(n)) (entry[key(n)] = entry[key(n)] || []).push(n); });
+    const extra = [];
+    conns.forEach(n => { const t = entry[key(n)]; if (!hasOut.has(n.id) && t && t.length === 1 && t[0].id !== n.id) extra.push({ id: 'v' + n.id, from: n.id, to: t[0].id, label: '', virtual: true }); });
+    return extra.length ? edges.concat(extra) : edges;
+  }
   const FL_SIDES = ['top', 'right', 'bottom', 'left'];
   const FL_DIR = { top: [0, -1], right: [1, 0], bottom: [0, 1], left: [-1, 0] };
   const FL_FONT = '14px "Recursive WN", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
@@ -9120,6 +9205,7 @@
   const ICO_PLAY = '<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.3v9.4L12.6 8z" fill="currentColor"/></svg>';
   const ICO_PAUSE = '<svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 3h2.5v10H4.5zM9 3h2.5v10H9z" fill="currentColor"/></svg>';
   const FL_LINE_H = 18;   // satır yüksekliği (px)
+  const FL_SUB = 10;      // alt program şeklindeki çift çizgilerin kenara uzaklığı
   const FL_SLANT = 18;    // paralelkenarın eğikliği
   const FL_HEX = 16;      // altıgenin uç payı
   const FL_HINT = el('flHint').textContent;
@@ -9136,7 +9222,7 @@
     return flowEdges.filter(e => e.projectId === pid && e.chartId === cid).sort((a, b) => a.created - b.created);
   }
   function findFlowNode(id) { return flowNodes.find(n => n.id === id); }
-  function flOut(id) { return projectFlowEdges(activeProject).filter(e => e.from === id); }
+  function flOut(id) { return flowEdges.filter(e => e.from === id); } // şekil kimlikleri tek: alt program şemalarında da çalışır
   function flBranches(n) { return n.kind === 'decision' || n.kind === 'loop'; }
 
   /* Bozuk/eksik kayıtlarda çökmemek için düğüm ve okları tamamlar (yedekten gelen veriye karşı da). */
@@ -9359,7 +9445,7 @@
     let g = flGeomCache.get(key);
     if (g) return g;
     const shown = n.text.trim() || FL_KINDS[n.kind].name;
-    const maxW = { decision: 170, loop: 190, start: 160, end: 160 }[n.kind] || 220;
+    const maxW = { decision: 170, loop: 190, start: 160, end: 160, conn: 60, note: 200 }[n.kind] || 220;
     const lines = flWrap(shown, maxW);
     const tw = Math.max(20, ...lines.map(flTextWidth));
     const th = lines.length * FL_LINE_H;
@@ -9373,6 +9459,9 @@
       w = 2 * a; h = Math.max(72, 2 * a / 1.8);
     }
     else if (n.kind === 'loop') { h = Math.max(46, th + 20); w = Math.max(140, tw + 36 + 2 * FL_HEX); }
+    else if (n.kind === 'conn') { w = h = Math.max(42, Math.ceil(Math.max(tw, th) + 18)); }
+    else if (n.kind === 'sub') { h = Math.max(44, th + 20); w = Math.max(150, tw + 32 + 2 * FL_SUB); }
+    else if (n.kind === 'note') { h = Math.max(40, th + 18); w = Math.max(110, tw + 34); }
     else { h = Math.max(44, th + 20); w = Math.max(130, tw + 32); }
     g = { w: Math.round(w), h: Math.round(h), lines: lines, th: th, tag: tag, empty: !n.text.trim() };
     if (flGeomCache.size > 2000) flGeomCache.clear();
@@ -9399,6 +9488,15 @@
     if (kind === 'input' || kind === 'output') return 'M' + f(-x + s) + ',' + f(-y) + ' H' + f(x) + ' L' + f(x - s) + ',' + f(y) + ' H' + f(-x) + ' Z';
     if (kind === 'decision') return 'M0,' + f(-y) + ' L' + f(x) + ',0 L0,' + f(y) + ' L' + f(-x) + ',0 Z';
     if (kind === 'loop') return 'M' + f(-x + k) + ',' + f(-y) + ' H' + f(x - k) + ' L' + f(x) + ',0 L' + f(x - k) + ',' + f(y) + ' H' + f(-x + k) + ' L' + f(-x) + ',0 Z';
+    if (kind === 'conn') { const r = Math.min(x, y); return 'M' + f(-r) + ',0 A' + f(r) + ',' + f(r) + ' 0 1 1 ' + f(r) + ',0 A' + f(r) + ',' + f(r) + ' 0 1 1 ' + f(-r) + ',0 Z'; }
+    if (kind === 'sub') { // alt program: iki yanında çift çizgi
+      const d = Math.min(FL_SUB, w / 6);
+      return 'M' + f(-x) + ',' + f(-y) + ' H' + f(x) + ' V' + f(y) + ' H' + f(-x) + ' Z M' + f(-x + d) + ',' + f(-y) + ' V' + f(y) + ' M' + f(x - d) + ',' + f(-y) + ' V' + f(y);
+    }
+    if (kind === 'note') { // köşesi kıvrık kâğıt
+      const c = Math.min(12, h / 3);
+      return 'M' + f(-x) + ',' + f(-y) + ' H' + f(x - c) + ' L' + f(x) + ',' + f(-y + c) + ' V' + f(y) + ' H' + f(-x) + ' Z M' + f(x - c) + ',' + f(-y) + ' V' + f(-y + c) + ' H' + f(x);
+    }
     return 'M' + f(-x) + ',' + f(-y) + ' H' + f(x) + ' V' + f(y) + ' H' + f(-x) + ' Z';
   }
 
@@ -9666,7 +9764,7 @@
     const g = flGeom(n);
     const iss = flIssueMap[n.id] || [];
     const err = iss.some(i => i.lvl === 'err');
-    const sel = flSel && flSel.type === 'node' && flSel.id === n.id;
+    const sel = (flSel && flSel.type === 'node' && flSel.id === n.id) || flMulti.has(n.id);
     const tip = FL_KINDS[n.kind].name + (n.text.trim() ? ': ' + n.text : '') +
       (iss.length ? '\n' + iss.map(i => (i.lvl === 'err' ? 'HATA: ' : 'Uyarı: ') + i.msg).join('\n') : '') +
       '\nTaşımak için sürükle · düzenlemek için çift tıkla';
@@ -9679,7 +9777,7 @@
     }
     if (flStepNum && flStepNum[n.id]) s += flStepBadgeSVG(n, g, flStepNum[n.id]);
     if (flBps().has(n.id)) s += '<g class="fl-bp" data-bp="1"><title>Kesme noktası: Oynat bu adıma gelince durur (kaldırmak için tıkla ya da F9)</title><circle cx="' + (-g.w / 2 - 12) + '" cy="0" r="6.5"/></g>';
-    FL_SIDES.forEach(side => {
+    if (n.kind !== 'note') FL_SIDES.forEach(side => {
       const p = flPort(n, side);
       s += '<circle class="fl-port" data-port="' + side + '" cx="' + (p.x - n.x) + '" cy="' + (p.y - n.y) + '" r="6"><title>Buradan tutup başka şekle sürükle: ok çiz</title></circle>';
     });
@@ -9707,6 +9805,7 @@
     if (sig !== flTestSig) { flTestSig = sig; flTestsStale(); }
     flTestSummary();
     el('flNodes').innerHTML = nodes.map(flNodeSVG).join('');
+    setTimeout(() => { flRenderMini(); flSplitSync(); flRenderSelBar(); }, 0);
     el('flEmpty').style.display = nodes.length ? 'none' : '';
     el('flZoomLabel').textContent = Math.round(flZoom * 100) + '%';
     updateFlSurfaceSize();
@@ -9903,8 +10002,46 @@
   }
 
   /* Seçimi değiştirir (şekilleri yeniden çizmeden; çift tıklama bozulmasın diye) */
+  /* Çoklu seçim: flMulti seçili şekillerin kümesi (birden fazlaysa); flSel son dokunulan */
+  const flMulti = new Set();
+  let flMultiMode = false; // dokunmatik için: "Çoklu seç" açıkken dokununca seçime eklenir / çıkarılır
+  function flSelIds() { return flMulti.size ? [...flMulti].filter(id => findFlowNode(id)) : (flSel && flSel.type === 'node' && findFlowNode(flSel.id) ? [flSel.id] : []); }
+  function flToggleMulti(id) {
+    if (!flMulti.size && flSel && flSel.type === 'node' && flSel.id !== id && findFlowNode(flSel.id)) flMulti.add(flSel.id);
+    if (flMulti.has(id)) flMulti.delete(id); else flMulti.add(id);
+    flSel = flMulti.size ? { type: 'node', id: flMulti.has(id) ? id : [...flMulti][flMulti.size - 1] } : null;
+    if (flMulti.size === 1) flMulti.clear();
+    flPaintSel();
+  }
+  function flPaintSel() {
+    const ids = new Set(flSelIds());
+    el('flNodes').querySelectorAll('.fl-node').forEach(g => g.classList.toggle('sel', ids.has(g.dataset.node)));
+    renderFlEdgePanel();
+    drawFlEdges();
+    flSelInfo();
+  }
+  let flHint0 = null;
+  function flRenderSelBar() {
+    const bar = el('flSelBar'), c = el('flCanvas'), n = flSelIds().length;
+    const show = currentView === 'flow' && (flMultiMode || flMulti.size > 1);
+    bar.style.display = show ? '' : 'none';
+    if (!show) return;
+    el('flSelCount').textContent = n ? n + ' seçili' : 'Şekillere dokun';
+    bar.querySelectorAll('[data-sel="copy"], [data-sel="dup"], [data-sel="del"]').forEach(b => { b.disabled = !n; });
+    bar.style.left = Math.round(c.offsetLeft + 8) + 'px';
+    bar.style.top = Math.round(c.offsetTop + 8) + 'px';
+  }
+  function flSelInfo() {
+    flRenderSelBar();
+    const n = flMulti.size, h = el('flHint');
+    if (flHint0 == null) flHint0 = h.textContent;
+    if (n > 1) { h.textContent = n + ' şekil seçili · birlikte taşı · Ctrl+C kopyala · Ctrl+V yapıştır · Ctrl+D çoğalt · Delete sil'; h.dataset.multi = '1'; }
+    else if (h.dataset.multi) { h.textContent = flHint0; delete h.dataset.multi; }
+  }
   function flSelect(sel) {
     flSel = sel;
+    flMulti.clear();
+    flSelInfo();
     el('flNodes').querySelectorAll('.fl-node').forEach(g => g.classList.toggle('sel', !!(sel && sel.type === 'node' && sel.id === g.dataset.node)));
     renderFlEdgePanel();
     drawFlEdges();
@@ -9994,6 +10131,9 @@
       flDrag.active = true;
       if (flDrag.mode === 'node') {
         flCheckpoint(); // taşımadan önceki konum geri alınabilsin
+        const me = findFlowNode(flDrag.id);
+        flDrag.group = flMulti.has(flDrag.id) && me ? [...flMulti].filter(id => id !== flDrag.id).map(findFlowNode).filter(Boolean).map(o => ({ n: o, x0: o.x, y0: o.y, el: el('flNodes').querySelector('.fl-node[data-node="' + o.id + '"]') })) : [];
+        flDrag.x0 = me ? me.x : 0; flDrag.y0 = me ? me.y : 0;
         flDrag.el.classList.add('moving');
         flDrag.el.parentNode.appendChild(flDrag.el); // en üstte çizilsin
         document.body.classList.add('fl-moving');
@@ -10011,6 +10151,11 @@
   /* İmlecin son konumunu sürükleme türüne göre uygular. */
   function flApply() {
     const p = toFlSurface(flDrag.lastX, flDrag.lastY);
+    if (flDrag.mode === 'band') {
+      const a = toFlSurface(flDrag.startX, flDrag.startY);
+      el('flTemp').innerHTML = '<rect class="fl-band" x="' + Math.min(a.x, p.x) + '" y="' + Math.min(a.y, p.y) + '" width="' + Math.abs(p.x - a.x) + '" height="' + Math.abs(p.y - a.y) + '"/>';
+      return;
+    }
     if (flDrag.mode === 'node') {
       const n = findFlowNode(flDrag.id);
       if (!n) return;
@@ -10018,14 +10163,28 @@
       let x = p.x - flDrag.offX, y = p.y - flDrag.offY;
       // Hizalama: başka bir şeklin merkezine 8 px'ten yakınsa ona otur (düz oklar için)
       let bx = 9, by = 9, sx = null, sy = null;
+      const moving = new Set([n.id].concat((flDrag.group || []).map(m => m.n.id)));
+      let gx = null, gy = null;
       projectFlowNodes(activeProject).forEach(o => {
-        if (o.id === n.id) return;
-        if (Math.abs(o.x - x) < bx) { bx = Math.abs(o.x - x); sx = o.x; }
-        if (Math.abs(o.y - y) < by) { by = Math.abs(o.y - y); sy = o.y; }
+        if (moving.has(o.id)) return;
+        if (Math.abs(o.x - x) < bx) { bx = Math.abs(o.x - x); sx = o.x; gx = o; }
+        if (Math.abs(o.y - y) < by) { by = Math.abs(o.y - y); sy = o.y; gy = o; }
       });
       n.x = Math.max(g.w / 2 + 4, Math.round(sx != null ? sx : x));
       n.y = Math.max(g.h / 2 + 4, Math.round(sy != null ? sy : y));
       flDrag.el.setAttribute('transform', 'translate(' + n.x + ',' + n.y + ')');
+      // seçili diğer şekiller de aynı kadar kayar
+      const dx = n.x - flDrag.x0, dy = n.y - flDrag.y0;
+      (flDrag.group || []).forEach(m => {
+        const og = flGeom(m.n);
+        m.n.x = Math.max(og.w / 2 + 4, Math.round(m.x0 + dx)); m.n.y = Math.max(og.h / 2 + 4, Math.round(m.y0 + dy));
+        if (m.el) m.el.setAttribute('transform', 'translate(' + m.n.x + ',' + m.n.y + ')');
+      });
+      // hizalama kılavuzu: aynı hizaya oturduğu şekle kesik çizgi
+      const Gd = (a, b, vert) => { const A = flBox(a), B = flBox(b);
+        return vert ? '<line class="fl-guide" x1="' + a.x + '" y1="' + Math.min(A.t, B.t) + '" x2="' + a.x + '" y2="' + Math.max(A.b, B.b) + '"/>'
+                    : '<line class="fl-guide" x1="' + Math.min(A.l, B.l) + '" y1="' + a.y + '" x2="' + Math.max(A.r, B.r) + '" y2="' + a.y + '"/>'; };
+      el('flTemp').innerHTML = (gx ? Gd(n, gx, true) : '') + (gy ? Gd(n, gy, false) : '');
       updateFlSurfaceSize();
       drawFlEdges();
     } else if (flDrag.mode === 'link') {
@@ -10033,7 +10192,8 @@
       if (!src) return;
       const under = document.elementFromPoint(flDrag.lastX, flDrag.lastY);
       const tEl = under && under.closest ? under.closest('.fl-node') : null;
-      const target = tEl && tEl.dataset.node !== src.id ? tEl : null;
+      const tN = tEl && findFlowNode(tEl.dataset.node);
+      const target = tEl && tEl.dataset.node !== src.id && tN && tN.kind !== 'note' ? tEl : null;
       if (target !== flDrag.target) {
         if (flDrag.target) flDrag.target.classList.remove('link-target');
         if (target) target.classList.add('link-target');
@@ -10088,6 +10248,7 @@
       if ((d.mode === 'node' || d.mode === 'link') && e.type !== 'pointercancel') {
         const now = Date.now();
         if (flLastTap.id === d.id && now - flLastTap.t < 450) { flLastTap = { id: null, t: 0 }; openFlNodeModal(d.id); }
+        else if (e.shiftKey || e.ctrlKey || e.metaKey || flMultiMode) { flLastTap = { id: null, t: 0 }; flToggleMulti(d.id); }
         else { flLastTap = { id: d.id, t: now }; flSelect({ type: 'node', id: d.id }); }
         flJustDragged = true; // ardından gelen click seçimi kaldırmasın
         setTimeout(() => { flJustDragged = false; }, 60);
@@ -10099,9 +10260,21 @@
 
     if (d.mode === 'node') {
       d.el.classList.remove('moving');
+      el('flTemp').innerHTML = '';
       const n = findFlowNode(d.id);
       if (n) await saveFlowNode(n);
+      for (const m of d.group || []) await saveFlowNode(m.n);
       renderFlow();
+    } else if (d.mode === 'band') {
+      el('flTemp').innerHTML = '';
+      const a = toFlSurface(d.startX, d.startY), b = toFlSurface(d.lastX, d.lastY);
+      const R = { l: Math.min(a.x, b.x), t: Math.min(a.y, b.y), r: Math.max(a.x, b.x), b: Math.max(a.y, b.y) };
+      const hit = projectFlowNodes(activeProject).filter(x => { const B = flBox(x); return B.l < R.r && B.r > R.l && B.t < R.b && B.b > R.t; });
+      if (!(e.ctrlKey || e.metaKey)) flMulti.clear();
+      hit.forEach(x => flMulti.add(x.id));
+      flSel = flMulti.size ? { type: 'node', id: hit.length ? hit[hit.length - 1].id : [...flMulti][0] } : null;
+      if (flMulti.size === 1) flMulti.clear();
+      flPaintSel();
     } else if (d.mode === 'link') {
       if (d.target) d.target.classList.remove('link-target');
       if (d.target && e.type !== 'pointercancel') await flConnect(d.id, d.target.dataset.node, d.side);
@@ -10165,7 +10338,7 @@
     const g = flGeom(n);
     const src = flSel && flSel.type === 'node' ? findFlowNode(flSel.id) : null;
     let from = null, label = '';
-    if (src && src.kind !== 'end' && kind !== 'start') {
+    if (src && src.kind !== 'end' && src.kind !== 'note' && kind !== 'start' && kind !== 'note') {
       const outs = flOut(src.id);
       if (flBranches(src) ? outs.length < 2 : !outs.length) { from = src; label = flBranches(src) ? flNextLabel(src) : ''; }
     }
@@ -10187,7 +10360,7 @@
     flSel = { type: 'node', id: n.id }; // yeni şekil seçili kalsın: sıradaki şekil buna bağlanır
     renderFlow();
     flJumpTo(n.id, false, true);
-    if (!from && src && src.kind !== 'end') flToast('Seçili şeklin boş çıkışı yoktu; yeni şekil bağlanmadan eklendi.');
+    if (!from && src && src.kind !== 'end' && src.kind !== 'note' && kind !== 'note') flToast('Seçili şeklin boş çıkışı yoktu; yeni şekil bağlanmadan eklendi.');
   }
 
   /* ---- OK ÇİZ ----
@@ -10209,6 +10382,190 @@
     }
     const e = await flAddEdgeRecord(a, b, flBranches(A) ? flNextLabel(A) : '', side);
     flSel = { type: 'edge', id: e.id };
+  }
+
+  /* ---- Kopyala / kes / yapıştır / çoğalt (şemalar ve projeler arasında da; pano bu cihazda saklanır) ---- */
+  function flCopySel(cut) {
+    const ids = flSelIds();
+    if (!ids.length) { flToast('Önce şekil seç (birden çok için Shift ile tıkla ya da Shift + sürükle).'); return false; }
+    const set = new Set(ids), nodes = ids.map(findFlowNode);
+    const clip = { v: 1, nodes: nodes.map(n => ({ id: n.id, kind: n.kind, text: n.text, x: n.x, y: n.y })),
+                   edges: flowEdges.filter(e => set.has(e.from) && set.has(e.to)).map(e => ({ from: e.from, to: e.to, label: e.label || '', fromSide: e.fromSide || '' })) };
+    localSet('pref:flclip', JSON.stringify(clip));
+    flPasteN = 0;
+    if (!cut) flToast(ids.length + ' şekil kopyalandı (Ctrl+V ile yapıştır).');
+    return true;
+  }
+  function flReadClip() {
+    let c = null;
+    try { c = JSON.parse(localGet('pref:flclip') || 'null'); } catch (e) {}
+    if (!c || !Array.isArray(c.nodes) || !c.nodes.length) return null;
+    const nodes = c.nodes.slice(0, 300).filter(n => n && typeof n.id === 'string' && Object.prototype.hasOwnProperty.call(FL_KINDS, n.kind)).map(n => ({
+      id: n.id, kind: n.kind, text: typeof n.text === 'string' ? n.text.slice(0, 500) : '', x: Number.isFinite(+n.x) ? +n.x : 0, y: Number.isFinite(+n.y) ? +n.y : 0 }));
+    const ids = new Set(nodes.map(n => n.id));
+    const edges = (Array.isArray(c.edges) ? c.edges : []).slice(0, 600).filter(e => e && ids.has(e.from) && ids.has(e.to) && e.from !== e.to).map(e => ({
+      from: e.from, to: e.to, label: ['Evet', 'Hayır'].includes(e.label) ? e.label : '', fromSide: FL_SIDES.includes(e.fromSide) ? e.fromSide : '' }));
+    return nodes.length ? { nodes: nodes, edges: edges } : null;
+  }
+  let flPasteN = 0;
+  async function flPaste(clip) {
+    clip = clip || flReadClip();
+    if (!clip) { flToast('Yapıştırılacak şekil yok: önce şekilleri kopyala (Ctrl+C).'); return; }
+    const cid = await ensureChart(activeProject);
+    flCheckpoint();
+    // yapıştırılanlar ekranın ortasına (aynı yere üst üste binmesin diye her seferinde biraz kayarak)
+    const c = el('flCanvas'), r = c.getBoundingClientRect(), mid = toFlSurface(r.left + c.clientWidth / 2, r.top + c.clientHeight / 2);
+    const xs = clip.nodes.map(n => n.x), ys = clip.nodes.map(n => n.y);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    flPasteN++;
+    const ox = Math.round(mid.x - cx + flPasteN * 24), oy = Math.round(mid.y - cy + flPasteN * 24);
+    const map = {}, now = Date.now(), made = [];
+    clip.nodes.forEach((n, i) => {
+      const nn = { id: uid(), projectId: activeProject, chartId: cid, kind: n.kind, text: n.text, x: n.x + ox, y: n.y + oy, created: now + i };
+      const g = flGeom(nn); nn.x = Math.max(g.w / 2 + 4, nn.x); nn.y = Math.max(g.h / 2 + 4, nn.y);
+      map[n.id] = nn.id; made.push(nn);
+    });
+    for (const n of made) { flowNodes.push(n); await saveFlowNode(n); }
+    for (const [i, e] of clip.edges.entries()) {
+      const ne = { id: uid(), projectId: activeProject, chartId: cid, from: map[e.from], to: map[e.to], label: e.label, fromSide: e.fromSide, created: now + i };
+      flowEdges.push(ne); await saveFlowEdge(ne);
+    }
+    flSel = { type: 'node', id: made[made.length - 1].id };
+    flMulti.clear();
+    if (made.length > 1) made.forEach(n => flMulti.add(n.id));
+    renderFlow();
+    flSelInfo();
+    flToast(made.length + ' şekil yapıştırıldı' + (made.length > 1 ? ' (seçili: birlikte taşıyabilirsin)' : '') + '.');
+  }
+  async function flDeleteSel() {
+    const ids = flSelIds();
+    if (ids.length <= 1) { if (ids.length) await flDeleteNode(ids[0]); return; }
+    flCheckpoint();
+    const set = new Set(ids), rel = flowEdges.filter(e => set.has(e.from) || set.has(e.to));
+    for (const e of rel) await deleteFlowEdgeStore(e.id);
+    for (const id of ids) await deleteFlowNodeStore(id);
+    flowEdges = flowEdges.filter(e => !rel.includes(e));
+    flowNodes = flowNodes.filter(x => !set.has(x.id));
+    flSel = null; flMulti.clear();
+    renderFlow();
+    flToast(ids.length + ' şekil silindi (geri almak için Ctrl+Z).');
+  }
+  function flSelectAll() {
+    const ns = projectFlowNodes(activeProject);
+    if (!ns.length) return;
+    flMulti.clear(); ns.forEach(n => flMulti.add(n.id));
+    flSel = { type: 'node', id: ns[ns.length - 1].id };
+    if (flMulti.size === 1) flMulti.clear();
+    flPaintSel();
+  }
+  /* ---- Mini harita: şema ekrana sığmıyorsa sağ altta küçük bir özet; tıklayınca / sürükleyince oraya gidilir ---- */
+  let flMiniOn = localGet('pref:flmini') !== '0', flMiniRaf = 0;
+  function flRenderMiniSoon() { if (!flMiniRaf) flMiniRaf = requestAnimationFrame(() => { flMiniRaf = 0; flRenderMini(); }); }
+  function flRenderMini() {
+    const box = el('flMini'), c = el('flCanvas');
+    const nodes = currentView === 'flow' ? projectFlowNodes(activeProject) : [];
+    if (!flMiniOn || !nodes.length || !c.clientWidth) { box.style.display = 'none'; return; }
+    let W = 0, H = 0;
+    nodes.forEach(n => { const b = flBox(n); W = Math.max(W, b.r + 20); H = Math.max(H, b.b + 20); });
+    const vw = c.clientWidth / flZoom, vh = c.clientHeight / flZoom, vx = c.scrollLeft / flZoom, vy = c.scrollTop / flZoom;
+    if (W <= vw + 2 && H <= vh + 2) { box.style.display = 'none'; return; } // hepsi görünüyor
+    W = Math.max(W, vx + vw); H = Math.max(H, vy + vh);
+    const mw = Math.min(180, Math.max(110, c.clientWidth * 0.22)), sc = Math.min(mw / W, 130 / H);
+    const bw = Math.round(W * sc), bh = Math.round(H * sc);
+    box.style.display = '';
+    box.style.width = bw + 'px'; box.style.height = bh + 'px';
+    box.style.left = Math.round(c.offsetLeft + c.clientWidth - bw - 10) + 'px';
+    box.style.top = Math.round(c.offsetTop + c.clientHeight - bh - 10) + 'px';
+    const svg = el('flMiniSvg');
+    svg.setAttribute('viewBox', '0 0 ' + Math.round(W) + ' ' + Math.round(H));
+    svg.innerHTML = nodes.map(n => { const b = flBox(n); return '<rect class="k-' + n.kind + '" x="' + Math.round(b.l) + '" y="' + Math.round(b.t) + '" width="' + Math.round(b.r - b.l) + '" height="' + Math.round(b.b - b.t) + '" rx="6"/>'; }).join('') +
+      '<rect class="fl-mini-view" x="' + Math.round(vx) + '" y="' + Math.round(vy) + '" width="' + Math.round(vw) + '" height="' + Math.round(vh) + '"/>';
+    box.dataset.sc = sc;
+  }
+  function flMiniGo(e) {
+    const box = el('flMini'), r = box.getBoundingClientRect(), sc = +box.dataset.sc || 1, c = el('flCanvas');
+    const x = (e.clientX - r.left) / sc, y = (e.clientY - r.top) / sc;
+    c.scrollLeft = x * flZoom - c.clientWidth / 2;
+    c.scrollTop = y * flZoom - c.clientHeight / 2;
+  }
+  function setFlMiniOn(on) {
+    flMiniOn = on;
+    localSet('pref:flmini', on ? '' : '0');
+    el('flMiniBtn').setAttribute('aria-pressed', on ? 'true' : 'false');
+    flRenderMini();
+  }
+
+  /* ---- Yan yana: algoritma yazısı ↔ şema. Yazdıkça (biraz durunca) şema yeniden çizilir; şema başka
+     yoldan değişince (şekil düzenleme, ekip arkadaşı) yazı da yenilenir. Yorum notları korunur. ---- */
+  let flSplitOn = false, flSplitSig = null, flSplitTimer = null, flSplitBusy = false;
+  function flSplitText() {
+    const cid = activeChartId(activeProject);
+    if (!cid || !flLogicNodes(activeProject).length) return '';
+    try { return flCodeGen(activeProject, cid, 'pseudo').replace(/\n+$/, '') + '\n'; } catch (e) { return flowToSteps(activeProject); }
+  }
+  function flFlowSig() {
+    return flKey() + '|' + projectFlowNodes(activeProject).map(n => n.id + n.kind + n.text).join('\u0001') + '|' + projectFlowEdges(activeProject).map(e => e.from + '>' + e.to + (e.label || '')).join('\u0001');
+  }
+  function setFlSplitOn(on) {
+    flSplitOn = on;
+    localSet('pref:flsplit', on ? '1' : '');
+    el('flSplitBtn').setAttribute('aria-pressed', on ? 'true' : 'false');
+    el('flSplit').style.display = on ? '' : 'none';
+    el('flWrap').classList.toggle('fl-split-on', on);
+    if (on) { el('flSplitText').value = flSplitText(); flSplitSig = flFlowSig(); el('flSplitMsg').textContent = ''; el('flSplitMsg').className = 'fl-split-msg'; }
+    setTimeout(() => { updateFlSurfaceSize(); drawFlEdges(); flRenderMini(); }, 0);
+  }
+  function flSplitSync() { // şema başka yoldan değişti: yazıyı yenile (yazarken dokunma)
+    if (!flSplitOn || flSplitBusy || document.activeElement === el('flSplitText')) return;
+    const sig = flFlowSig();
+    if (sig !== flSplitSig) { flSplitSig = sig; el('flSplitText').value = flSplitText(); }
+  }
+  async function flSplitApply() {
+    const ta = el('flSplitText'), msg = el('flSplitMsg');
+    let src = ta.value;
+    if (!src.trim()) { msg.className = 'fl-split-msg'; msg.textContent = 'Algoritmayı yaz: şema burada çizilir.'; return; }
+    let warn = [];
+    if (looksLikePython(src)) { const cv = pythonToAlgo(src); src = cv.text; warn = cv.warn; }
+    const res = parseAlgorithm(src);
+    if (res.nodes.length < 2) { msg.className = 'fl-split-msg'; msg.textContent = 'Henüz şekil çıkmadı.'; return; }
+    const key = JSON.stringify([res.nodes.map(n => n.kind + ':' + n.text), res.edges.map(e => e.from + '>' + e.to + e.label)]);
+    warn = warn.concat(res.warn || []);
+    msg.className = 'fl-split-msg' + (warn.length ? ' warn' : ' ok');
+    msg.textContent = warn.length ? '⚠ ' + warn.slice(0, 2).join(' · ') + (warn.length > 2 ? ' (+' + (warn.length - 2) + ')' : '') : '✓ Şema güncel';
+    if (key === flSplitApply.last && flSplitSig === flFlowSig()) return; // yapı değişmedi
+    flSplitApply.last = key;
+    flSplitBusy = true;
+    try {
+      const cid = await ensureChart(activeProject), pid = activeProject;
+      const empty = !flLogicNodes(pid).length;
+      flCheckpoint();
+      const mine = x => x.projectId === pid && x.chartId === cid;
+      const drop = flowNodes.filter(n => mine(n) && n.kind !== 'note'), dropIds = new Set(drop.map(n => n.id));
+      const dropE = flowEdges.filter(e => mine(e) && (dropIds.has(e.from) || dropIds.has(e.to)));
+      for (const e of dropE) await deleteFlowEdgeStore(e.id);
+      for (const n of drop) await deleteFlowNodeStore(n.id);
+      flowEdges = flowEdges.filter(e => !dropE.includes(e));
+      flowNodes = flowNodes.filter(n => !dropIds.has(n.id));
+      const idMap = {}, now = Date.now();
+      const nodes = res.nodes.map((n, i) => { const nn = { id: uid(), projectId: pid, chartId: cid, kind: n.kind, text: n.text, x: 0, y: 0, created: now + i }; idMap[n.id] = nn.id; return nn; });
+      const edges = res.edges.map((e, i) => ({ id: uid(), projectId: pid, chartId: cid, from: idMap[e.from], to: idMap[e.to], label: e.label, fromSide: '', created: now + i }));
+      flLayoutGraph(nodes, edges, 90, 50);
+      for (const n of nodes) { flowNodes.push(n); await saveFlowNode(n); }
+      for (const e of edges) { flowEdges.push(e); await saveFlowEdge(e); }
+      const ch = activeChart();
+      if (ch) { ch.source = ta.value.slice(0, 200000); saveFlowChart(ch); }
+      flSel = null; flMulti.clear();
+      renderFlow();
+      flSplitSig = flFlowSig();
+      if (empty) flFit(0.7);
+    } finally { flSplitBusy = false; }
+  }
+
+  function setFlMultiMode(on) {
+    flMultiMode = on;
+    el('flMultiBtn').setAttribute('aria-pressed', on ? 'true' : 'false');
+    flRenderSelBar();
+    if (on) flToast('Çoklu seçim açık: dokunduğun şekiller seçime eklenir, boş yerde sürükleyince dikdörtgen içindekiler seçilir.');
   }
 
   async function flDeleteNode(id) {
@@ -10323,7 +10680,7 @@
     const cs = getComputedStyle(document.body);
     const C = k => cs.getPropertyValue(k).trim();
     const P = { ink: C('--ink'), muted: C('--muted'), paper: C('--paper'), bg: C('--canvas'), green: C('--green') }; // zemin: tuvalin rengi
-    const fill = { start: 'term', end: 'term', input: 'io', output: 'io', process: 'proc', decision: 'dec', loop: 'loop' };
+    const fill = { start: 'term', end: 'term', input: 'io', output: 'io', process: 'proc', decision: 'dec', loop: 'loop', sub: 'proc', conn: 'term', note: 'dec' };
     const routes = flRouteAll(nodes, projectFlowEdges(pid, cid)).routes;
     const byId = {};
     nodes.forEach(n => { byId[n.id] = n; });
@@ -10396,7 +10753,9 @@
   function lintFlow(pid, cid) {
     const out = [];
     const add = (lvl, nid, msg) => out.push({ lvl: lvl, nid: nid, msg: msg });
-    const nodes = projectFlowNodes(pid, cid), edges = projectFlowEdges(pid, cid);
+    const all = projectFlowNodes(pid, cid), real = projectFlowEdges(pid, cid);
+    const nodes = all.filter(n => n.kind !== 'note'), edges = flConnEdges(nodes, real);
+    all.filter(n => n.kind === 'note' && real.some(e => e.from === n.id || e.to === n.id)).forEach(n => add('warn', n.id, 'Yorum notuna ok bağlanmaz; oku sil (not akışa katılmaz).'));
     if (!nodes.length) return out;
     const starts = nodes.filter(n => n.kind === 'start');
     if (!starts.length) add('err', null, 'Başla şekli yok: algoritmanın nereden başlayacağı belli değil.');
@@ -10407,6 +10766,13 @@
       const outs = edges.filter(e => e.from === n.id), ins = edges.filter(e => e.to === n.id);
       const nm = flName(n), kn = FL_KINDS[n.kind].name;
       if (n.kind !== 'start' && n.kind !== 'end' && !n.text.trim()) add('warn', n.id, kn + ' şeklinin içi boş (çift tıklayıp yaz).');
+      if (n.kind === 'sub' && n.text.trim() && !flSubChart(n.text, pid)) add('warn', n.id, nm + ': “' + flSubName(n.text) + '” adında bir akış şeması yok (alt program, bu projedeki bir şemanın adıdır).');
+      if (n.kind === 'conn' && n.text.trim()) {
+        const same = nodes.filter(x => x.kind === 'conn' && flFold(x.text.trim()) === flFold(n.text.trim()) && real.some(e => e.from === x.id));
+        if (!outs.length) add('err', n.id, '“' + n.text.trim() + '” bağlantısının devamı yok: aynı harfli ve oku olan bir bağlantı noktası ekle.');
+        else if (same.length > 1 && real.some(e => e.from === n.id)) add('err', n.id, '“' + n.text.trim() + '” harfli birden çok bağlantı noktasından ok çıkıyor; hangisine gidileceği belirsiz.');
+        return;
+      }
       if (n.kind === 'start' && ins.length) add('warn', n.id, 'Başla şekline ok girmemeli.');
       if (n.kind === 'end') {
         if (outs.length) add('err', n.id, 'Bitir şeklinden ok çıkmamalı.');
@@ -10447,7 +10813,7 @@
   function flLabelRank(l) { return l === 'Evet' ? 0 : (l === 'Hayır' ? 2 : 1); }
 
   function flowOrder(pid, cid) {
-    const nodes = projectFlowNodes(pid, cid), edges = projectFlowEdges(pid, cid);
+    const nodes = flLogicNodes(pid, cid), edges = flConnEdges(nodes, projectFlowEdges(pid, cid));
     const byId = {};
     nodes.forEach(n => { byId[n.id] = n; });
     const outs = {};
@@ -10504,6 +10870,8 @@
     const lines = [];
     order.forEach(n => {
       let t = oneLine(n.text) || FL_KINDS[n.kind].def;
+      if (n.kind === 'sub') t = 'Alt program ' + (flSubName(t) || t);
+      else if (n.kind === 'conn') t = 'Bağlantı ' + t;
       if (n.kind === 'decision') {
         const yes = branch(n, 'Evet') || (outs[n.id] || [])[0], no = branch(n, 'Hayır') || (outs[n.id] || []).find(e => e !== yes);
         t = 'Eğer ' + t.replace(/\?\s*$/, '').trim() + ' ise ' + step(yes && yes.to) + ' git, değilse ' + step(no && no.to) + ' git.';
@@ -10632,6 +11000,8 @@
     if ((r = pre(/^(?:until|kadar)\s+/)) != null) return { type: 'until', cond: stripCond(r) };
     if ((r = suf(/\s+(?:olana|olunca|olasiya)\s+kadar(?:\s+tekrarla)?$/)) != null) return { type: 'until', cond: r };
     if (/^(?:basla|baslat|baslangic|start|begin)$/.test(f)) return { type: 'start' };
+    if ((r = pre(/^(?:alt ?program[i]?|cagir|call)\s*:?\s+/)) != null && r) return { type: 'sub', text: r };
+    if ((r = pre(/^(?:baglanti(?: noktasi)?|connector)\s*:?\s+/)) != null && r && r.length <= 12) return { type: 'conn', text: r };
     if (/^(?:bitir|bitis|bitti|dur|son|stop|end|programi bitir|cik)$/.test(f)) return { type: 'end' };
     let g = gotoStep(t);
     if (g != null) return { type: 'goto', step: g };
@@ -10783,7 +11153,7 @@
           warn.push('Satır ' + l.no + ': "' + l.text + '" beklenmedik yerde, atlandı.');
           return pend;
         default:
-          n = mk(c.type, l.text); link(pend, n); return [{ n: n }];
+          n = mk(c.type, c.text != null ? c.text : l.text); link(pend, n); return [{ n: n }];
       }
     }
 
@@ -12310,10 +12680,10 @@
   }
 
   async function flAutoLayoutCmd() {
-    const nodes = projectFlowNodes(activeProject);
+    const nodes = flLogicNodes(activeProject);
     if (!nodes.length) { flToast('Dizilecek şekil yok. Önce şablondan bir şekil ekle.'); return; }
     flCheckpoint();
-    flLayoutGraph(nodes, projectFlowEdges(activeProject), 90, 50);
+    flLayoutGraph(nodes, flConnEdges(nodes, projectFlowEdges(activeProject)), 90, 50);
     for (const n of nodes) await saveFlowNode(n);
     renderFlow();
     // Telefonda bütün şemayı tek ekrana sığdırmak yazıları okunmaz yapıyordu: genişliğe göre sığdır
@@ -12981,6 +13351,16 @@
           flRunOutLine(vals.join(' '));
           break;
         }
+        case 'sub': flRunSub(t); break;
+        case 'note': break; // yorum notu: akışa katılmaz (oka bağlanmışsa geçilir)
+        case 'conn': {
+          if (!flOut(n.id).length) {
+            const v = flConnEdges(projectFlowNodes(activeProject, R.pid), projectFlowEdges(activeProject, R.pid)).find(e => e.from === n.id);
+            if (!v) throw flErr('“' + (t || '?') + '” bağlantı noktasının devamı yok: aynı harfli ve oku olan bir bağlantı noktası ekle.');
+            next = { id: null, to: v.to };
+          }
+          break;
+        }
         case 'decision': {
           let c = t.slice((flFold(t).match(/^(?:eger|if)\s+/) || [''])[0].length);
           c = c.slice(0, c.length - (flFold(c).match(/\s*(?:\s(?:ise|then))?\s*[?:]*\s*$/) || [''])[0].length);
@@ -13022,6 +13402,38 @@
       R.error = err.fl ? err.message : 'Beklenmeyen hata: ' + err.message;
       return 'error';
     }
+  }
+
+  /* Alt program: projedeki başka bir şemayı (adıyla) tek adımda baştan sona çalıştırır. Değişkenler ortak. */
+  const FL_SUB_BUDGET = 1e5;
+  const flSubName = t => String(t).trim().replace(/^(?:alt\s*program[ıi]?|çağır|cagir|call)\s*:?\s*/i, '').trim();
+  function flSubChart(t, pid) { const k = flFold(flSubName(t)); return k ? projectCharts(pid || activeProject).find(c => flFold(c.name.trim()) === k) : null; }
+  function flRunSub(t) {
+    const R = flRun, name = flSubName(t), ch = flSubChart(t);
+    if (!ch) throw flErr('“' + name + '” adında bir akış şeması yok. Alt program, bu projedeki başka bir şemanın (sekmenin) adıdır.');
+    if ((R.subDepth || 0) >= 20) throw flErr('Alt programlar birbirini çok derin çağırıyor (en fazla 20); kendini mi çağırıyor?');
+    const start = projectFlowNodes(activeProject, ch.id).find(x => x.kind === 'start');
+    if (!start) throw flErr('“' + ch.name + '” şemasında Başla yok.');
+    const save = { pid: R.pid, cur: R.cur, loops: R.loops, lastEdge: R.lastEdge, lastCond: R.lastCond }, changed = R.changed;
+    if (!R.subDepth) R.subBudget = FL_SUB_BUDGET; // iç içe alt programların bir adımdaki toplam adımı (sekme donmasın)
+    R.subDepth = (R.subDepth || 0) + 1;
+    R.pid = ch.id; R.cur = start.id; R.loops = {};
+    let err = null;
+    try {
+      for (let k = 0; ; k++) {
+        if (k >= FL_MAX_STEPS) { err = '“' + ch.name + '” alt programı ' + FL_MAX_STEPS + ' adımda bitmedi (sonsuz döngü olabilir).'; break; }
+        if (--R.subBudget < 0) { err = 'Alt programlar bu adımda çok uzun sürdü (toplam 100.000 adım); iç içe döngüleri azalt.'; break; }
+        const r = flStepCore();
+        R.changed.forEach(x => changed.add(x));
+        if (r === 'done') break;
+        if (r === 'ask') { R.ask = null; err = '“' + ch.name + '” alt programında Giriş (Oku) var; alt programda değer okunamaz, değeri ana şemada oku.'; break; }
+        if (r === 'error') { err = '“' + ch.name + '” alt programında: ' + R.error; R.error = null; break; }
+      }
+    } finally {
+      R.subDepth--;
+      Object.assign(R, save, { changed: changed, done: false });
+    }
+    if (err) throw flErr(err);
   }
 
   /* Giriş sorusuna verilen cevabı işler */
@@ -13571,6 +13983,8 @@
   function flAnalyzeNode(n) {
     const t = n.text.trim().replace(/\s*\n\s*/g, '; ');
     const desc = { kind: 'call', text: t || FL_KINDS[n.kind].name };
+    if (n.kind === 'sub') return { kind: 'call', text: flSubName(t) || FL_KINDS.sub.def, sub: true }; // doldurulacak metot (alt programın adıyla)
+    if (n.kind === 'conn' || n.kind === 'note') return { kind: 'multi', stmts: [] }; // bağlantı noktası: komut yok
     if (n.kind === 'decision') {
       const c = flCondText(t);
       const ast = flTryExpr(c);
@@ -13627,7 +14041,7 @@
 
   /* ---------- Grafı düz bloklara ayırma ---------- */
   function flStructure(pid, cid) {
-    const nodes = projectFlowNodes(pid, cid), edges = projectFlowEdges(pid, cid);
+    const nodes = flLogicNodes(pid, cid), edges = flConnEdges(nodes, projectFlowEdges(pid, cid));
     const byId = {}, succ = {}, pred = {};
     nodes.forEach(n => { byId[n.id] = n; succ[n.id] = []; pred[n.id] = []; });
     edges.slice().sort((a, b) => flLabelRank(a.label) - flLabelRank(b.label)).forEach(e => {
@@ -15003,7 +15417,8 @@
       return '# Bu şema düz bloklara ayrılamadı (atlamalar var); numaralı adım biçimi kullanıldı.\n' + flowToSteps(pid, cid) + '\n';
     }
     const out = [];
-    const txt = id => S.byId[id].text.trim().replace(/\s*\n\s*/g, '; ');
+    const txt = id => { const n = S.byId[id], t = n.text.trim().replace(/\s*\n\s*/g, '; ');
+      return n.kind === 'sub' ? 'Alt program ' + (flSubName(t) || FL_KINDS.sub.def) : n.kind === 'conn' ? 'Bağlantı ' + (t || 'A') : t; };
     const condTxt = (id, neg) => {
       const c = S.byId[id].kind === 'decision' ? flCondText(txt(id)) : txt(id);
       return neg ? 'değil (' + c + ')' : c;
@@ -15082,7 +15497,10 @@
     decision: ['Bir soru (koşul) sorulur. Doğruysa <b>Evet</b>, yanlışsa <b>Hayır</b> okundan devam edilir.', 'a > b'],
     loop:     ['Sayaçlı tekrar. Sayaç bitene kadar <b>Evet</b> yoluna girilir, bitince <b>Hayır</b> okundan çıkılır.', 'i = 1 .. 10'],
     output:   ['Sonuç ya da mesaj ekrana yazdırılır.', 'Yaz toplam'],
-    end:      ['Bitiş noktası. Algoritma burada sona erer.', 'Bitir']
+    end:      ['Bitiş noktası. Algoritma burada sona erer.', 'Bitir'],
+    sub:      ['Alt program: projedeki başka bir akış şemasını adıyla çalıştırır, bitince buradan devam edilir.', 'Hesapla'],
+    conn:     ['Bağlantı noktası: uzak iki yeri ok çizmeden bağlar. Devamı olmayan “A”dan, oku olan “A”ya geçilir.', 'A'],
+    note:     ['Yorum notu: açıklama yazısı; akışa katılmaz, çalıştırılmaz.', 'Açıklama']
   };
 
   function renderFlLegend() {
@@ -15179,9 +15597,19 @@
     else if (act === 'code') openFlAlgo('code');
     else if (act === 'duplicate') flDuplicateChart();
     else if (act === 'tests') openFlTests();
+
     else if (act === 'homework') openFlHw();
   }
-  el('flFileBtn').addEventListener('click', e => { e.stopPropagation(); el('flFileMenu').classList.toggle('open'); });
+  el('flFileBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    const m = el('flFileMenu');
+    m.classList.toggle('open');
+    m.style.left = ''; m.style.right = '';
+    if (m.classList.contains('open') && getComputedStyle(m).position === 'absolute') { // masaüstü: düğmenin altında
+      const r = m.getBoundingClientRect(), wrap = el('flWrap').getBoundingClientRect();
+      if (r.left < wrap.left) { m.style.left = '0'; m.style.right = 'auto'; }
+    }
+  });
   document.addEventListener('click', e => { if (!e.target.closest('#flFileMenu, #flFileBtn')) el('flFileMenu').classList.remove('open'); });
   el('flFileMenu').addEventListener('click', e => { const b = e.target.closest('[data-flact]'); if (b) flFileAction(b.dataset.flact); });
 
@@ -15229,8 +15657,9 @@
   // Boş yerden fareyle tutup kaydır
   el('flCanvas').addEventListener('pointerdown', e => {
     if (e.target.closest('.fl-node, .fl-edge-hit, .er-link-panel, .fl-empty-btns')) return;
-    if (e.pointerType !== 'mouse') return;
+    if (e.pointerType !== 'mouse' && !flMultiMode) return;
     const c = el('flCanvas');
+    if (e.shiftKey || flMultiMode) { e.preventDefault(); flStart(e, 'band', {}); return; } // Shift + sürükle: seçim dikdörtgeni
     flStart(e, 'pan', { scrollL: c.scrollLeft, scrollT: c.scrollTop });
   });
   // Oka tıkla -> seç (ayar kutusu açılır); boş yere tıkla -> seçimi kaldır
@@ -15238,7 +15667,7 @@
     if (flJustDragged || e.target.closest('.er-link-panel, .fl-empty-btns')) return;
     const hit = e.target.closest('.fl-edge-hit');
     if (hit) { flSelect({ type: 'edge', id: hit.dataset.edge }); return; }
-    if (!e.target.closest('.fl-node') && flSel) flSelect(null);
+    if (!e.target.closest('.fl-node') && (flSel || flMulti.size)) flSelect(null);
   });
   // Ok ayar kutusu
   el('flEdgePanel').addEventListener('change', e => {
@@ -15274,9 +15703,14 @@
     const mod = e.ctrlKey || e.metaKey;
     if (mod && !e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); flUndo(); }
     else if (mod && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { e.preventDefault(); flRedo(); }
-    else if ((e.key === 'Delete' || e.key === 'Backspace') && flSel) {
+    else if (mod && !e.shiftKey && e.key.toLowerCase() === 'c') { if (flSelIds().length) { e.preventDefault(); flCopySel(false); } }
+    else if (mod && !e.shiftKey && e.key.toLowerCase() === 'x') { if (flSelIds().length) { e.preventDefault(); if (flCopySel(true)) flDeleteSel().then(() => flToast('Kesildi: Ctrl+V ile yapıştır.')); } }
+    else if (mod && !e.shiftKey && e.key.toLowerCase() === 'v') { e.preventDefault(); flPaste(); }
+    else if (mod && !e.shiftKey && e.key.toLowerCase() === 'd') { if (flSelIds().length) { e.preventDefault(); if (flCopySel(true)) flPaste(); } }
+    else if (mod && !e.shiftKey && e.key.toLowerCase() === 'a') { e.preventDefault(); flSelectAll(); }
+    else if ((e.key === 'Delete' || e.key === 'Backspace') && (flSel || flMulti.size)) {
       e.preventDefault();
-      if (flSel.type === 'node') flDeleteNode(flSel.id); else flDeleteEdge(flSel.id);
+      if (flMulti.size || (flSel && flSel.type === 'node')) flDeleteSel(); else flDeleteEdge(flSel.id);
     }
     else if (e.key === 'Enter' && flSel && flSel.type === 'node') { e.preventDefault(); openFlNodeModal(flSel.id); }
     else if (e.key === 'F9' && flSel && flSel.type === 'node') { e.preventDefault(); flToggleBp(flSel.id); }
@@ -15709,6 +16143,33 @@
   el('flAskBtn').addEventListener('click', () => flAnswer(el('flAskIn').value));
   el('flAskIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); flAnswer(el('flAskIn').value); } });
   el('flRunBack').addEventListener('click', flStepBack);
+  el('flMultiBtn').addEventListener('click', () => setFlMultiMode(!flMultiMode));
+  el('flSelBar').addEventListener('click', e => {
+    const b = e.target.closest('[data-sel]');
+    if (!b) return;
+    const a = b.dataset.sel;
+    if (a === 'copy') flCopySel(false);
+    else if (a === 'paste') flPaste();
+    else if (a === 'dup') { if (flCopySel(true)) flPaste(); }
+    else if (a === 'del') flDeleteSel();
+    else if (a === 'all') flSelectAll();
+  });
+  el('flMiniBtn').addEventListener('click', () => setFlMiniOn(!flMiniOn));
+  el('flMiniBtn').setAttribute('aria-pressed', flMiniOn ? 'true' : 'false');
+  el('flSplitBtn').addEventListener('click', () => setFlSplitOn(!flSplitOn));
+  el('flCanvas').addEventListener('scroll', flRenderMiniSoon, { passive: true });
+  if (window.ResizeObserver) new ResizeObserver(() => { flRenderMiniSoon(); flRenderSelBar(); }).observe(el('flCanvas'));
+  window.addEventListener('resize', flRenderMiniSoon);
+  el('flMini').addEventListener('pointerdown', e => {
+    e.preventDefault();
+    flMiniGo(e);
+    const mv = ev => flMiniGo(ev), up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
+    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+  });
+  el('flSplitText').addEventListener('input', () => { clearTimeout(flSplitTimer); flSplitTimer = setTimeout(flSplitApply, 700); });
+  el('flSplitText').addEventListener('blur', () => { clearTimeout(flSplitTimer); flSplitApply(); });
+  el('flSplitText').addEventListener('keydown', e => { if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); document.execCommand('insertText', false, '    '); } });
+  if (localGet('pref:flsplit') === '1') setTimeout(() => { if (!flSplitOn) setFlSplitOn(true); }, 0);
   el('flRunBp').addEventListener('click', () => {
     if (flSel && flSel.type === 'node') flToggleBp(flSel.id);
     else flToast('Önce şemada bir şekle dokunup seç, sonra Kesme noktası\'na bas (ya da F9).');
