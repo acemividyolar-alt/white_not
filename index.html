@@ -2758,7 +2758,9 @@
       <div class="fl-help fl-leg-tips">
         <b>Okuma sırası:</b> Başla'dan başlanır, okları izleyerek ilerlenir, Bitir'de durulur.<br>
         <b>Kısa yollar:</b> şekle çift tık = düzenle · seçiliyken <code>Delete</code> = sil · <code>Ctrl+Z</code> = geri al ·
-        şekil seçiliyken şablondan yenisine tıklarsan altına eklenip bağlanır.
+        şekil seçiliyken şablondan yenisine tıklarsan altına eklenip bağlanır · <code>F9</code> = kesme noktası.<br>
+        <b>Çoklu seçim:</b> <code>Shift</code> + tıkla ya da <code>Shift</code> + boş yerde sürükle (telefonda <b>Seç</b>) ·
+        <code>Ctrl+C</code> / <code>Ctrl+V</code> kopyala / yapıştır · <code>Ctrl+D</code> çoğalt · <code>Ctrl+A</code> hepsi.
       </div>
       <div class="modal-actions">
         <span></span>
@@ -13403,6 +13405,7 @@
   }
 
   /* Alt program: projedeki başka bir şemayı (adıyla) tek adımda baştan sona çalıştırır. Değişkenler ortak. */
+  const FL_SUB_BUDGET = 1e5;
   const flSubName = t => String(t).trim().replace(/^(?:alt\s*program[ıi]?|çağır|cagir|call)\s*:?\s*/i, '').trim();
   function flSubChart(t, pid) { const k = flFold(flSubName(t)); return k ? projectCharts(pid || activeProject).find(c => flFold(c.name.trim()) === k) : null; }
   function flRunSub(t) {
@@ -13412,12 +13415,14 @@
     const start = projectFlowNodes(activeProject, ch.id).find(x => x.kind === 'start');
     if (!start) throw flErr('“' + ch.name + '” şemasında Başla yok.');
     const save = { pid: R.pid, cur: R.cur, loops: R.loops, lastEdge: R.lastEdge, lastCond: R.lastCond }, changed = R.changed;
+    if (!R.subDepth) R.subBudget = FL_SUB_BUDGET; // iç içe alt programların bir adımdaki toplam adımı (sekme donmasın)
     R.subDepth = (R.subDepth || 0) + 1;
     R.pid = ch.id; R.cur = start.id; R.loops = {};
     let err = null;
     try {
       for (let k = 0; ; k++) {
         if (k >= FL_MAX_STEPS) { err = '“' + ch.name + '” alt programı ' + FL_MAX_STEPS + ' adımda bitmedi (sonsuz döngü olabilir).'; break; }
+        if (--R.subBudget < 0) { err = 'Alt programlar bu adımda çok uzun sürdü (toplam 100.000 adım); iç içe döngüleri azalt.'; break; }
         const r = flStepCore();
         R.changed.forEach(x => changed.add(x));
         if (r === 'done') break;
