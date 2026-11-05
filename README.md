@@ -186,9 +186,19 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
   Karar (eşkenar dörtgen, Evet/Hayır çıkışlı), Döngü (altıgen, `i = 1 .. 10` gibi sayaçlı)
 - **Yeni şekiller:**
   - **Alt program** (iki yanı çift çizgili dikdörtgen): projedeki başka bir akış şemasını (sekmeyi) adıyla
-    çalıştırır (`Hesapla`). Değişkenler ortaktır; alt program Bitir'e gelince buradan devam edilir. Yazıda
-    `Alt program Hesapla` ya da `Çağır Hesapla`. Alt programda Giriş (Oku) olamaz; en fazla 20 iç içe çağrı.
-    Koda çevirirken doldurulacak bir metot olarak çıkar
+    çalıştırır (`Hesapla`). Yazıda `Alt program Hesapla` ya da `Çağır Hesapla`.
+    - Parametresiz ve değer döndürmeyen alt program ana şemanın değişkenlerini kullanır (koda çevirirken
+      doldurulacak metot olur)
+    - **Parametre ve dönüş değeri:** alt programın Başla'sı `Başla(a, b)` ise değer alır, Bitir'i
+      `Bitir(sonuc)` ya da `Döndür sonuc` ise değer döndürür; böyle bir alt program kendi değişkenleriyle
+      çalışır. Çağrı: `Topla(x, 5)` ya da `s = Topla(x, 5)`; ifadelerde de olur: `Yaz Faktoriyel(5)`,
+      `Eğer AsalMi(n) ise`. Kendini çağırabilir (özyineleme, en fazla 100 derinlik). Aynı adlı hazır
+      fonksiyon varsa (ör. `Toplam`) değer döndüren alt program önce gelir
+    - Alt program şeması kendi başına çalıştırılırsa önce parametreler sorulur, sonunda `Sonuç: …` yazılır
+    - Alt programda Giriş (Oku) varsa çalıştırma onun şemasına geçip değeri orada sorar
+    - **Koda çevirirken** parametreli / değer döndüren alt programlar gövdesiyle gerçek fonksiyon olur
+      (parametre ve dönüş türleri çağrılardan çıkarılır; C'de dizi parametresi `double A[], int A_n`);
+      yazılamayan durumda (C'de dizi döndürmek gibi) çağrı `// TODO` metot olarak kalır
   - **Bağlantı noktası** (daire): uzak iki yeri ok çizmeden bağlar. Devamı olmayan `A` noktasına gelince,
     aynı harfli ve oku olan `A` noktasından devam edilir (yazıda `Bağlantı A`). Devamı olmayan ya da birden
     çok çıkışlı aynı harf hata kontrolünde gösterilir
@@ -213,6 +223,8 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
   - `İken i <= n` · `İçin i = 1 .. n` (`i = 1'den 10'a kadar adım 2`) · `5 kez tekrarla`
   - `Tekrarla` … `tahmin = gizli olana kadar`
   - Numaralı biçim: `Adım 4: Eğer x > 0 ise Adım 6'ya git` · `Adım 7: Adım 3'e git`
+  - Alt program: `Başla(n)` … `Döndür sonuc`; bir kutuda birden çok şema: `# Alt program: Ad` satırından
+    sonrası o adla ayrı şema olur (aynı adlı şema varsa sorulup yerine yazılır)
   - İngilizce anahtar kelimeler de olur (`IF / ELSE / WHILE / FOR / INPUT / PRINT`)
 - **Diziler (listeler):** `A = [3, 1, 2]`, `A = dizi(5, 0)` (beş tane 0), `Dizi A[10]`, iç içe `M[i][j]`.
   Sıra numaraları 0'dan başlar: `A[0]` ilk eleman, `A[i] = 7` ile değişir, `Oku A[i]` ile okunur,
@@ -231,8 +243,20 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
   - Boş adımda Enter numaralı yazımı bitirir (girintiliyse bir dışarı çıkar); numaranın hemen arkasında
     Geri silme numarayı kaldırır. Tab / Shift+Tab bütün satırı girintiler. Shift+Enter numarasız satır açar.
   - Yapıştırılan metne (Python kodu dahil) numara eklenmez. Her değişiklik Ctrl+Z ile geri alınır.
+- **C# / Java / C / C++'tan şema:** kod yapıştırınca Türkçe algoritmaya çevrilir (**Koddan çevir** ile önce
+  görülebilir); `Main` / `main` ana şema, diğer her metot / fonksiyon parametreli **alt program şeması** olur.
+  - Değişken bildirimleri, atama, `++` / `+=`, `if / else if / else`, `switch` (→ Eğer zinciri), `while`,
+    `do-while` (→ Tekrarla … olana kadar), `for` (→ İçin, olmuyorsa İken), `foreach` / `for (int x : A)`,
+    `break` / `continue` (→ Adım N'e git), `return`, `c ? a : b` (→ Eğer / Değilse)
+  - Yazdırma: `Console.WriteLine` (`$"…{x:F2}"`, `{0}` biçimi), `System.out.println / printf`, `printf`,
+    `puts`, `cout <<` · Okuma: `Console.ReadLine()` (+ `int.Parse`, `Convert.ToInt32`), `Scanner`
+    (`nextInt` …), `scanf`, `cin >>`, `getline`
+  - Diziler ve listeler (`new int[n]`, `{1, 2}`, `int A[5]`, `List` / `ArrayList` / `vector`, `Add` /
+    `push_back` → `ekle`), `Math.*` / `sqrt` / `pow`, metin metotları (`Length`, `ToUpper`, `Substring`,
+    `charAt`, `Contains`, `IndexOf`, `Replace`, `strlen` …), tam sayı bölmesi (`7 / 2` → `7 div 2`)
+  - Çevrilemeyen satır yorum (`# …`) olarak kalır ve satır numarasıyla uyarı verilir. Kod çalıştırılmaz
 - **Python'dan şema:** kutuya Python kodu yapıştırınca önce Türkçe algoritmaya çevrilir, şema oradan çizilir
-  (**Python'dan çevir** ile çeviriyi önce görüp düzeltebilirsin). Kod çalıştırılmaz, sadece okunur.
+  (**Koddan çevir** ile çeviriyi önce görüp düzeltebilirsin). Kod çalıştırılmaz, sadece okunur.
   - `input()` → `Oku` · `print()` → `Yaz` (f-string, `.format()`, `%` dahil) · `if/elif/else` · `while`
   - `for i in range(...)` → `İçin` · `while True` + `break` → `Tekrarla … olana kadar`
   - `break` / `continue` / `return` → `Adım N'e git` · `match/case` → `Eğer` zinciri
@@ -268,6 +292,10 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
   metinler tırnak içinde gösterilir
   - **‹ Geri:** son adımı geri alır; değişkenler, dizi elemanları, ekrana yazılanlar ve izleme tablosu
     o adımdan önceki hâline döner (girişi geri alınca değer yeniden sorulur, başka bir değerle denenebilir)
+  - **İçine gir ↓ / Dışarı çık ↑:** Adım alt programı tek adımda çalıştırır; **İçine gir** alt programın
+    şemasına geçip adım adım izletir, **Dışarı çık** kalanını çalıştırıp çağırana döner. Panelde çağrı yığını
+    (`Ana › Faktoriyel › Faktoriyel`) yazar; izleme tablosunda alt programın kendi değişkenleri
+    `Faktoriyel.n` sütununda durur
   - **Kesme noktası:** bir şekli seçip **F9**'a (ya da Kesme noktası düğmesine) basınca şeklin solunda kırmızı
     nokta çıkar; **Oynat** o adıma her gelişte durur, tekrar Oynat ile devam eder. Noktaya tıklayınca kalkar.
     Kesme noktaları bu cihazda şemaya göre hatırlanır (ekip arkadaşlarına gitmez)
@@ -275,6 +303,12 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
     ekrana yazılanlar satır satır; "Değişmeyen değerleri de yaz" ile her satırda bütün değerler.
     **Kopyala** (Excel / Word'e yapıştırılır) ve **CSV indir** (Türkçe Excel'de doğru açılır). `=`, `+`, `-`, `@`
     ile başlayan metinler dışa aktarılırken formül olarak çalışmasın diye başına `'` eklenir
+  - **İzleme tablosu alıştırması** (tablodaki **Alıştırma**): şema görünmeden girdilerle çalıştırılır, adımlar
+    sırayla verilir; her satırda değişen değeri, Evet / Hayır'ı ve ekrana yazılanı sen doldurursun,
+    **Kontrol et** hücreleri yeşil / kırmızı yapar ve puanı yazar (`2,5` = `2.5`, `E` = `Evet`; değişmeyen
+    hücre boş kalabilir). **Cevapları göster** yanlışların doğrusunu yazar
+  - **GIF:** çalıştırma hareketli resim olarak iner — her adımda çalışan şekil ve geçilen ok vurgulu, altta
+    sıra, değişkenler ve ekran; alt programa girilirse onun şeması görünür (en fazla 150 adım, üç hız)
   - **Testler:** girdiler (her satıra bir değer) ve beklenen çıktı yazılır; **Hepsini çalıştır** her testi şemayı
     baştan çalıştırarak dener, farklı satırları yan yana gösterir ("Girdiler yetmedi", çalışma hatası, sonsuz
     döngü de söylenir). **Son çalıştırmadan test oluştur** elle yapılan çalıştırmanın girdileri ve çıktısıyla

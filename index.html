@@ -1472,6 +1472,8 @@
   }
   .fl-run-bar { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
   .fl-run-state { flex: 1; min-width: 10rem; font-size: 0.85rem; color: var(--muted); }
+  .fl-run-bar .er-btn[hidden], .fl-callstack[hidden] { display: none; }
+  .fl-callstack { flex-basis: 100%; order: 10; font-size: 0.78rem; font-weight: 600; color: var(--accent); }
   .fl-run-state b { color: var(--ink); }
   .fl-run-state.err { color: var(--danger); }
   .fl-run-state.ok { color: var(--green); }
@@ -1539,6 +1541,22 @@
   .fl-trace-t td.err { color: var(--danger); white-space: normal; min-width: 12rem; }
   .fl-trace-t td.step { max-width: 16rem; overflow: hidden; text-overflow: ellipsis; }
   .fl-trace-empty { padding: 0.6rem; font-size: 0.8rem; color: var(--muted); }
+  .fl-ex-bar { display: grid; grid-template-columns: auto 1fr; gap: 0.4rem 0.6rem; align-items: start; margin-bottom: 0.5rem; }
+  .fl-ex-bar textarea { resize: vertical; min-height: 2.4rem; font-family: var(--mono, monospace); }
+  .fl-ex-opts { grid-column: 1 / -1; display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; justify-content: space-between; }
+  .fl-ex-wrap { max-height: 52vh; }
+  .fl-ex-t td { padding: 0.15rem 0.25rem; }
+  .fl-ex-cell { width: 6.5rem; min-width: 3.5rem; font: inherit; font-size: 0.8rem; padding: 0.2rem 0.35rem; border: 1px solid var(--line); border-radius: 4px; background: var(--paper); color: var(--ink); }
+  .fl-ex-cell:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .fl-ex-cell.ok { border-color: var(--green); background: color-mix(in srgb, var(--green) 12%, var(--paper)); }
+  .fl-ex-cell.bad { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--paper)); }
+  .fl-ex-cell.shown { font-style: italic; }
+  .fl-ex-score { font-size: 0.9rem; font-weight: 650; min-height: 1.2rem; }
+  .fl-ex-score.ok { color: var(--green); }
+  .fl-ex-score.bad { color: var(--danger); }
+  @media (max-width: 760px) { .fl-ex-bar { grid-template-columns: 1fr; } .fl-ex-cell { width: 5rem; } }
+  .fl-gif-prev { display: block; max-width: 100%; max-height: 40vh; margin: 0.5rem auto 0; border: 1px solid var(--line); border-radius: var(--r); }
+  .fl-gif-prev[hidden] { display: none; }
   .fl-test-badge:empty { display: none; }
   .fl-test-badge { margin-left: 0.4rem; font-size: 0.72rem; font-weight: 700; padding: 0 0.4rem; border-radius: 99px; border: 1px solid var(--line); background: var(--paper-2); }
   .fl-test-badge.ok { color: var(--green); border-color: var(--green); }
@@ -2582,7 +2600,9 @@
           <div class="fl-run-bar">
             <button class="er-btn primary" id="flRunPlay" title="Sonuna kadar (ya da bir giriş istenene kadar) çalıştır"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.3v9.4L12.6 8z" fill="currentColor"/></svg>Oynat</button>
             <button class="er-btn" id="flRunBack" title="Bir adım geri al (değişkenler ve ekran da geri gelir)" disabled>&lsaquo; Geri</button>
-            <button class="er-btn" id="flRunStep" title="Sadece bir adım ilerle">Adım &rsaquo;</button>
+            <button class="er-btn" id="flRunStep" title="Sadece bir adım ilerle (alt program tek adımda çalışır)">Adım &rsaquo;</button>
+            <button class="er-btn" id="flRunInto" title="Alt programın şemasına geç, adım adım izle" hidden>İçine gir &darr;</button>
+            <button class="er-btn" id="flRunOut" title="Alt programın kalanını çalıştır, çağırana dön" hidden>Dışarı çık &uarr;</button>
             <button class="er-btn" id="flRunReset" title="Değişkenleri silip baştan başla"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.75 8a5.25 5.25 0 1 0 1.6-3.8M2.5 2.5v2.75h2.75"/></svg>Baştan</button>
             <select class="er-select" id="flRunSpeed" title="Oynatma hızı">
               <option value="700">Yavaş</option>
@@ -2593,7 +2613,9 @@
             <button class="er-btn" id="flRunBp" aria-label="Kesme noktası" title="Seçili şekle kesme noktası koy / kaldır (F9): Oynat o adıma gelince durur"><span class="fl-bp-ico" aria-hidden="true"></span><span class="lbl-long">Kesme noktası</span></button>
             <button class="er-btn tgl" id="flRunTrace" type="button" aria-pressed="false" title="Değişken izleme tablosu: her adımda değişkenlerin aldığı değerler"><span class="lbl-long">İzleme tablosu</span><span class="lbl-short">Tablo</span></button>
             <button class="er-btn" id="flRunTests" title="Test senaryoları: girdileri ve beklenen çıktıyı yaz, hepsini tek tıkla dene">Testler<span class="fl-test-badge" id="flTestBadge"></span></button>
+            <button class="er-btn" id="flRunGif" title="Çalıştırmayı hareketli resim (GIF) olarak kaydet: her adımda çalışan şekil vurgulanır, değişkenler altta yazar">GIF</button>
             <span class="fl-run-state" id="flRunState"></span>
+            <span class="fl-callstack" id="flCallStack" hidden></span>
             <button class="er-btn icon" id="flRunClose" title="Paneli kapat" aria-label="Paneli kapat">&times;</button>
           </div>
           <div class="fl-ask" id="flAsk" style="display:none">
@@ -2611,6 +2633,7 @@
               <label class="opt" title="Her satırda o anki bütün değerler yazılsın (değişenler yine vurgulu)"><input type="checkbox" id="flTraceAll"> <span class="lbl-long">Değişmeyen değerleri de yaz</span><span class="lbl-short">Hepsini yaz</span></label>
               <button class="er-btn" id="flTraceCopy" title="Tabloyu kopyala (Excel / Word'e yapıştırılabilir)">Kopyala</button>
               <button class="er-btn" id="flTraceCsv">CSV indir</button>
+              <button class="er-btn" id="flTraceEx" title="İzleme tablosu alıştırması: tabloyu sen doldur, sonra kontrol et">Alıştırma</button>
             </div>
             <div class="fl-trace-wrap" id="flTraceWrap"></div>
           </div>
@@ -3172,6 +3195,65 @@
   </div>
 </div>
 
+<!-- Çalıştırmanın GIF kaydı (Akış görünümü) -->
+<div class="modal-overlay" id="flGifModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-heading">Çalıştırmayı GIF olarak kaydet</div>
+      <button class="modal-close" id="flGifClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-note">Şema baştan çalıştırılır; her adımda çalışan şekil vurgulanır, altta değişkenler ve ekrana yazılan yazılır. Sunumda, ödevde ya da mesajda paylaşabilirsin (en fazla 150 adım).</p>
+      <div class="fl-ex-bar">
+        <label class="opt" for="flGifIn">Girdiler <small>(her satıra bir değer)</small></label>
+        <textarea class="modal-tags-input" id="flGifIn" rows="2" maxlength="2000" spellcheck="false" placeholder="ör.&#10;5&#10;3"></textarea>
+        <label class="opt" for="flGifSpeed">Hız</label>
+        <select class="modal-select" id="flGifSpeed">
+          <option value="1400">Yavaş (adım başına 1,4 sn)</option>
+          <option value="800" selected>Normal (0,8 sn)</option>
+          <option value="400">Hızlı (0,4 sn)</option>
+        </select>
+      </div>
+      <div class="er-msg" id="flGifMsg" role="status"></div>
+      <img class="fl-gif-prev" id="flGifPrev" alt="Kaydedilen çalıştırmanın önizlemesi" hidden>
+      <div class="modal-actions">
+        <span></span>
+        <div class="modal-actions-right"><button class="modal-btn primary" id="flGifGo" type="button">Kaydet ve indir</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- İzleme tablosu alıştırması (Akış görünümü): öğrenci tabloyu doldurur, uygulama kontrol eder -->
+<div class="modal-overlay" id="flExModal">
+  <div class="modal wide">
+    <div class="modal-head">
+      <div class="modal-heading">İzleme tablosu alıştırması</div>
+      <button class="modal-close" id="flExClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-note">Şemayı kafanda ya da kâğıtta çalıştır: her satırda o adımda <b>değişen</b> değeri, kararın sonucunu (<b>Evet / Hayır</b>) ve ekrana yazılanı doldur, sonra <b>Kontrol et</b>. Değişmeyen hücreleri boş bırakabilirsin.</p>
+      <div class="fl-ex-bar">
+        <label class="opt" for="flExIn">Girdiler <small>(her satıra bir değer)</small></label>
+        <textarea class="modal-tags-input" id="flExIn" rows="2" maxlength="2000" spellcheck="false" placeholder="ör.&#10;5&#10;3"></textarea>
+        <div class="fl-ex-opts">
+          <label class="opt"><input type="checkbox" id="flExAll"> Her satıra bütün değerleri yazacağım</label>
+          <button class="modal-btn" id="flExMake" type="button">Tabloyu yeniden hazırla</button>
+        </div>
+      </div>
+      <div class="er-msg" id="flExMsg"></div>
+      <div class="fl-trace-wrap fl-ex-wrap" id="flExWrap"></div>
+      <div class="modal-actions">
+        <div class="fl-ex-score" id="flExScore" role="status"></div>
+        <div class="modal-actions-right">
+          <button class="modal-btn" id="flExShow" type="button">Cevapları göster</button>
+          <button class="modal-btn primary" id="flExCheck" type="button">Kontrol et</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===================================================================
      ÖDEV ÇIKTISI PENCERESİ (Akış görünümü)
      Seçilen bölümlerle yazdırılabilir bir sayfa hazırlar; tarayıcının yazdır penceresinden PDF kaydedilir.
@@ -3342,7 +3424,7 @@
         </div>
         <div class="er-msg" id="flParseMsg"></div>
         <div class="modal-actions">
-          <button class="modal-btn" id="flPyBtn" type="button" title="Kutudaki Python kodunu Türkçe algoritmaya çevirir; şemayı çizmeden önce kontrol edebilirsin">Python'dan çevir</button>
+          <button class="modal-btn" id="flPyBtn" type="button" title="Kutudaki Python, C#, Java, C ya da C++ kodunu Türkçe algoritmaya çevirir; şemayı çizmeden önce kontrol edebilirsin. Main dışındaki metotlar ayrı alt program şeması olur.">Koddan çevir</button>
           <button class="modal-btn primary" id="flParseBtn">Akış şemasını oluştur</button>
         </div>
       </div>
@@ -12961,12 +13043,13 @@
   /* ---------- RESİM OLARAK DIŞA AKTARMA (PNG / SVG) ----------
      Ekrandaki SVG'den bağımsız, renkleri içine yazılmış bir SVG üretilir; PNG için bu
      SVG tuvale iki kat çözünürlükte basılır (şema görünümündeki gibi). */
-  function buildFlowSVG(pid, cid) {
+  function buildFlowSVG(pid, cid, hl) {   // hl (GIF karesi): { cur: çalışan şekil, edge: geçilen ok, lines: alt yazı, err }
     const nodes = projectFlowNodes(pid, cid);
     if (!nodes.length) return null;
     const cs = getComputedStyle(document.body);
     const C = k => cs.getPropertyValue(k).trim();
     const P = { ink: C('--ink'), muted: C('--muted'), paper: C('--paper'), bg: C('--canvas'), green: C('--green') }; // zemin: tuvalin rengi
+    const AC = C('--accent') || '#2563eb';
     const fill = { start: 'term', end: 'term', input: 'io', output: 'io', process: 'proc', decision: 'dec', loop: 'loop', sub: 'proc', conn: 'term', note: 'dec' };
     const routes = flRouteAll(nodes, projectFlowEdges(pid, cid)).routes;
     const byId = {};
@@ -12980,7 +13063,8 @@
       if (!A || !B || !r) return;
       if (gotoE[e.id]) { const jp = flPointAlong(r.pts, 22); jumps += flStepPill(jp, gotoE[e.id], flJumpTip(gotoE[e.id], B), P, true); grow(jp.x - 16, jp.y - 10, jp.x + 16, jp.y + 10); }
       r.pts.forEach(p => grow(p.x - 4, p.y - 4, p.x + 4, p.y + 4));
-      body += '<path d="' + flPathD(r.pts) + '" fill="none" stroke="' + P.muted + '" stroke-width="1.8" stroke-linejoin="round" marker-end="url(#a)"/>';
+      const on = hl && e.id === hl.edge;
+      body += '<path d="' + flPathD(r.pts) + '" fill="none" stroke="' + (on ? AC : P.muted) + '" stroke-width="' + (on ? 3 : 1.8) + '" stroke-linejoin="round" marker-end="url(#' + (on ? 'ah' : 'a') + ')"/>';
       if (flBranches(A) && e.label) {
         const lp = flLabelPos(r);
         body += '<text x="' + lp.x + '" y="' + lp.y + '" text-anchor="' + lp.a + '" font-family="' + FL_EXPORT_FONT + '" font-size="11.5" font-weight="bold" fill="' +
@@ -12993,16 +13077,214 @@
       const g = flGeom(n), b = flBox(n), k = nums && nums[n.id];
       grow(b.l, b.t, b.r, b.b);
       if (k) { const sp = flStepPos(n, g); grow(n.x + sp.x - 16, n.y + sp.y - 10, n.x + sp.x + 16, n.y + sp.y + 10); }
-      body += '<g transform="translate(' + n.x + ',' + n.y + ')"><path d="' + flShapePath(n.kind, g.w, g.h) + '" fill="' + C('--fl-' + fill[n.kind] + '-bg') +
-              '" stroke="' + C('--fl-' + fill[n.kind] + '-bd') + '" stroke-width="1.6"/>' + flTextSVG(n, g, P) + (k ? flStepBadgeSVG(n, g, k, P) : '') + '</g>';
+      const cur = hl && n.id === hl.cur, sp = flShapePath(n.kind, g.w, g.h);
+      body += '<g transform="translate(' + n.x + ',' + n.y + ')">' + (cur ? '<path d="' + sp + '" fill="none" stroke="' + AC + '" stroke-width="10" stroke-opacity="0.28" stroke-linejoin="round"/>' : '') +
+              '<path d="' + sp + '" fill="' + C('--fl-' + fill[n.kind] + '-bg') + '" stroke="' + (cur ? AC : C('--fl-' + fill[n.kind] + '-bd')) + '" stroke-width="' + (cur ? 3.2 : 1.6) + '"/>' +
+              flTextSVG(n, g, P) + (k ? flStepBadgeSVG(n, g, k, P) : '') + '</g>';
     });
     body += jumps; // atlama numaraları okların ve şekillerin üstünde
     const pad = 24;
     x1 -= pad; y1 -= pad; x2 += pad; y2 += pad;
+    let cap = '';
+    if (hl && hl.lines) {   // GIF karesinin alt yazısı: adım, değişkenler, ekran (ve hata)
+      const lines = hl.lines.concat(hl.err ? ['⚠ ' + hl.err] : []);
+      x2 = Math.max(x2, x1 + 460);
+      const top = y2, lh = 19;
+      cap = '<rect x="' + Math.floor(x1) + '" y="' + Math.floor(top) + '" width="' + Math.ceil(x2 - x1) + '" height="' + (lines.length * lh + 18) + '" fill="' + P.paper + '"/>' +
+        '<line x1="' + Math.floor(x1) + '" y1="' + Math.floor(top) + '" x2="' + Math.ceil(x2) + '" y2="' + Math.floor(top) + '" stroke="' + P.muted + '" stroke-opacity="0.5"/>' +
+        lines.map((t, i) => '<text x="' + Math.round(x1 + 14) + '" y="' + Math.round(top + 22 + i * lh) + '" font-family="' + FL_EXPORT_FONT + '" font-size="13"' + (i ? '' : ' font-weight="bold"') +
+          ' fill="' + (hl.err && i === lines.length - 1 ? C('--danger') : P.ink) + '">' + flXml(t) + '</text>').join('');
+      y2 = top + lines.length * lh + 18;
+    }
     const W = Math.ceil(x2 - x1), H = Math.ceil(y2 - y1);
     return '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="' + [Math.floor(x1), Math.floor(y1), W, H].join(' ') + '">' +
-      '<defs><marker id="a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="' + P.muted + '"/></marker></defs>' +
-      '<rect x="' + Math.floor(x1) + '" y="' + Math.floor(y1) + '" width="' + W + '" height="' + H + '" fill="' + P.bg + '"/>' + body + '</svg>';
+      '<defs><marker id="a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="' + P.muted + '"/></marker>' +
+      (hl ? '<marker id="ah" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="' + AC + '"/></marker>' : '') + '</defs>' +
+      '<rect x="' + Math.floor(x1) + '" y="' + Math.floor(y1) + '" width="' + W + '" height="' + H + '" fill="' + P.bg + '"/>' + body + cap + '</svg>';
+  }
+
+  /* ---------- GIF KAYDI: çalıştırma hareketli resim olur ----------
+     Şema görünmeden baştan çalıştırılır; her adımda çalışan şekil (ve geçilen ok) vurgulanır, altta adım,
+     değişkenler ve ekrana yazılan son satır yazılır. Kareler aynı boyuttaki tuvale çizilir, ortak 256 renkli
+     palete indirgenir; ilk kareden sonra yalnız değişen dikdörtgen kaydedilir (dosya küçük kalır).
+     Kodlayıcı GIF89a + LZW, dış kütüphane yok. */
+  const FL_GIF_MAX = 150, FL_GIF_SIDE = 960;
+  const flXml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  function flGifLzw(ix, minSize, out) {   // görüntü verisi: LZW + 255 baytlık alt bloklar
+    const clear = 1 << minSize, eoi = clear + 1;
+    let size = minSize + 1, next = eoi + 1, table = new Map(), cur = 0, shift = 0;
+    const buf = [];
+    const put = c => { cur |= c << shift; shift += size; while (shift >= 8) { buf.push(cur & 255); cur >>>= 8; shift -= 8; } };
+    out.push(minSize);
+    put(clear);
+    let prefix = ix[0];
+    for (let i = 1; i < ix.length; i++) {
+      const k = ix[i], key = (prefix << 8) | k, c = table.get(key);
+      if (c !== undefined) { prefix = c; continue; }
+      put(prefix);
+      if (next === 4096) { put(clear); next = eoi + 1; size = minSize + 1; table = new Map(); }
+      else { if (next >= (1 << size)) size++; table.set(key, next++); }
+      prefix = k;
+    }
+    put(prefix);
+    put(eoi);
+    if (shift > 0) buf.push(cur & 255);
+    for (let i = 0; i < buf.length; i += 255) { const n = Math.min(255, buf.length - i); out.push(n); for (let j = 0; j < n; j++) out.push(buf[i + j]); }
+    out.push(0);
+  }
+  function flGifPalette(samples) {   // en sık 256 renk (5 bit / kanal kovaları, kova ortalaması)
+    const cnt = new Uint32Array(32768), sr = new Float64Array(32768), sg = new Float64Array(32768), sb = new Float64Array(32768);
+    samples.forEach(d => { for (let i = 0; i < d.length; i += 8) { const c = ((d[i] >> 3) << 10) | ((d[i + 1] >> 3) << 5) | (d[i + 2] >> 3); cnt[c]++; sr[c] += d[i]; sg[c] += d[i + 1]; sb[c] += d[i + 2]; } });
+    const used = [];
+    for (let c = 0; c < 32768; c++) if (cnt[c]) used.push(c);
+    used.sort((a, b) => cnt[b] - cnt[a]);
+    const pal = used.slice(0, 256).map(c => [Math.round(sr[c] / cnt[c]), Math.round(sg[c] / cnt[c]), Math.round(sb[c] / cnt[c])]);
+    while (pal.length < 256) pal.push([0, 0, 0]);
+    const map = new Int16Array(32768).fill(-1);
+    const nearest = c => {
+      if (map[c] >= 0) return map[c];
+      const r = ((c >> 10) << 3) + 4, g = (((c >> 5) & 31) << 3) + 4, b = ((c & 31) << 3) + 4;
+      let best = 0, bd = Infinity;
+      for (let k = 0; k < pal.length; k++) { const x = pal[k], dd = (x[0] - r) * (x[0] - r) * 3 + (x[1] - g) * (x[1] - g) * 4 + (x[2] - b) * (x[2] - b) * 2; if (dd < bd) { bd = dd; best = k; } }
+      return (map[c] = best);
+    };
+    return { pal: pal, index: d => { const ix = new Uint8Array(d.length / 4); for (let i = 0, j = 0; i < d.length; i += 4, j++) ix[j] = nearest(((d[i] >> 3) << 10) | ((d[i + 1] >> 3) << 5) | (d[i + 2] >> 3)); return ix; } };
+  }
+  /* Kareleri (şema SVG'si + vurgulama + alt yazı) hazırlar: [{ pid, cur, edge, lines: [...] }] */
+  function flGifFrames(inputs, max) {
+    const saved = flRun, start = projectFlowNodes(activeProject).find(n => n.kind === 'start');
+    if (!start) return { frames: [], note: 'Başla şekli yok.' };
+    flRun = { pid: flKey(), cur: start.id, vars: new Map(), out: [], steps: 0, loops: {}, ask: null, done: false, error: null, timer: null, playing: false,
+              lastEdge: null, changed: new Set(), hist: [], histSize: 0, trace: [], inputs: [], headless: true };
+    const R = flRun, frames = [];
+    let k = 0, note = '';
+    const varsLine = () => {
+      const parts = [];
+      R.vars.forEach((e, key) => parts.push((R.changed.has(key) ? '▸' : '') + e.name + ' = ' + flShow(e.value)));
+      const s = parts.join('  ·  ');   // SVG'de art arda boşluklar tek boşluk olur
+      return s.length > 150 ? s.slice(0, 149) + '…' : s;
+    };
+    const outLine = () => { const o = R.out.filter(x => x.cls !== 'in'); const t = o.length ? o[o.length - 1].text : ''; return t.length > 110 ? t.slice(0, 109) + '…' : t; };
+    const label = id => { const n = findFlowNode(id); const t = n ? (n.text.trim() || FL_KINDS[n.kind].name).replace(/\s+/g, ' ') : ''; return t.length > 70 ? t.slice(0, 69) + '…' : t; };
+    const snap = (id, step) => {
+      const n = findFlowNode(id);
+      frames.push({ pid: n ? n.chartId : R.pid, cur: id, edge: R.lastEdge, lines: [
+        (step ? 'Sıra ' + step + ': ' : '') + label(id) + (R.lastCond != null && n && flBranches(n) ? ' → ' + (R.lastCond ? 'Evet' : 'Hayır') : ''),
+        'Değişkenler: ' + (varsLine() || '—'), 'Ekran: ' + (outLine() || '—')], err: R.error });
+    };
+    try {
+      snap(start.id, 0);
+      for (let g = 0; g < max; g++) {
+        const id = R.cur;
+        R.lastCond = null;
+        let r = flStepOnce();
+        if (r === 'ask') {
+          if (k >= inputs.length) { note = 'Girdiler bitti: “' + flTargetLabel(R.ask.names[R.ask.i]) + '” için değer yok; kayıt orada durdu.'; snap(id, R.steps); break; }
+          while (R.ask && k < inputs.length) flAnswerCore(inputs[k++]);
+          if (R.ask) { note = 'Girdiler bitti; kayıt orada durdu.'; snap(id, R.steps); break; }
+          r = R.error ? 'error' : 'ok';
+        }
+        snap(id, R.steps);
+        if (r === 'done' || r === 'error' || R.done || R.error) { if (R.error) note = 'Şema hata verdi: ' + R.error; break; }
+        if (g === max - 1) note = 'İlk ' + max + ' adım kaydedildi.';
+      }
+    } finally { flRun = saved; }
+    return { frames: frames, note: note };
+  }
+  async function flGifRender(svg, W, H, bg) {
+    const img = new Image();
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    await img.decode();
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    const s = Math.min(W / img.width, H / img.height);
+    ctx.drawImage(img, Math.round((W - img.width * s) / 2), 0, Math.round(img.width * s), Math.round(img.height * s));
+    return ctx.getImageData(0, 0, W, H).data;
+  }
+  async function flRecordGif(inputs, delay, progress) {
+    const F = flGifFrames(inputs, FL_GIF_MAX);
+    if (!F.frames.length) return { error: F.note || 'Kaydedilecek adım yok.' };
+    // her kare: o anki şema (alt programa girildiyse onun şeması) + vurgu + alt yazı
+    const svgs = F.frames.map(f => buildFlowSVG(activeProject, f.pid, { cur: f.cur, edge: f.edge, lines: f.lines, err: f.err }));
+    const dims = svgs.map(s => { const m = /width="(\d+)" height="(\d+)"/.exec(s); return m ? [+m[1], +m[2]] : [400, 300]; });
+    const w0 = Math.max(...dims.map(d => d[0])), h0 = Math.max(...dims.map(d => d[1]));
+    const sc = Math.min(1.5, FL_GIF_SIDE / Math.max(w0, h0));
+    const W = Math.max(16, Math.round(w0 * sc)), H = Math.max(16, Math.round(h0 * sc));
+    const bg = getComputedStyle(document.body).getPropertyValue('--canvas').trim() || '#fff';
+    // palet: ilk, orta ve son kareden
+    const pick = [...new Set([0, Math.floor(svgs.length / 2), svgs.length - 1])];
+    const samples = [];
+    for (const i of pick) samples.push(await flGifRender(svgs[i], W, H, bg));
+    const P = flGifPalette(samples);
+    const out = [];
+    const w16 = v => { out.push(v & 255, (v >> 8) & 255); };
+    'GIF89a'.split('').forEach(c => out.push(c.charCodeAt(0)));
+    w16(W); w16(H); out.push(0xF7, 0, 0);
+    P.pal.forEach(c => out.push(c[0], c[1], c[2]));
+    out.push(0x21, 0xFF, 11); 'NETSCAPE2.0'.split('').forEach(c => out.push(c.charCodeAt(0))); out.push(3, 1, 0, 0, 0);   // sonsuz döngü
+    let prev = null, last = null;
+    const cs = Math.max(2, Math.round(delay / 10));   // gecikme: saniyenin yüzde biri
+    const patch = f => { out[f.at] = f.d & 255; out[f.at + 1] = (f.d >> 8) & 255; };
+    for (let i = 0; i < svgs.length; i++) {
+      if (progress) progress(i + 1, svgs.length);
+      const ix = P.index(await flGifRender(svgs[i], W, H, bg));
+      let x1 = 0, y1 = 0, x2 = W - 1, y2 = H - 1;
+      if (prev) {   // değişen dikdörtgen
+        x1 = W; y1 = H; x2 = -1; y2 = -1;
+        for (let y = 0; y < H; y++) {
+          const o = y * W;
+          for (let x = 0; x < W; x++) if (ix[o + x] !== prev[o + x]) { if (x < x1) x1 = x; if (x > x2) x2 = x; if (y < y1) y1 = y; if (y > y2) y2 = y; }
+        }
+        if (x2 < 0) { if (last) last.d += cs; continue; }   // değişiklik yok: önceki kare uzar
+      }
+      const w = x2 - x1 + 1, h = y2 - y1 + 1, sub = new Uint8Array(w * h);
+      for (let y = 0; y < h; y++) sub.set(ix.subarray((y1 + y) * W + x1, (y1 + y) * W + x1 + w), y * w);
+      if (last) patch(last);
+      out.push(0x21, 0xF9, 4, 1 << 2);   // GCE: önceki kare yerinde kalır, üstüne değişen parça çizilir
+      last = { at: out.length, d: cs };
+      w16(0); out.push(0, 0);
+      out.push(0x2C); w16(x1); w16(y1); w16(w); w16(h); out.push(0);
+      flGifLzw(sub, 8, out);
+      prev = ix;
+      if (i % 4 === 3) await new Promise(r => setTimeout(r, 0));   // sekme donmasın
+    }
+    if (last) { last.d += cs * 3; patch(last); }   // son durum biraz daha uzun görünsün
+    out.push(0x3B);
+    return { blob: new Blob([new Uint8Array(out)], { type: 'image/gif' }), frames: svgs.length, note: F.note, W: W, H: H };
+  }
+  function openFlGif() {
+    if (!activeChart() || !flLogicNodes(activeProject).length) { flToast('Önce bir akış şeması çiz.'); return; }
+    const used = flRun && flRun.pid === flKey() && flRun.inputs ? flRun.inputs : [];
+    if (!el('flGifIn').value.trim() && used.length) el('flGifIn').value = used.join('\n');
+    el('flGifMsg').className = 'er-msg';
+    el('flGifMsg').textContent = '';
+    el('flGifModal').classList.add('open');
+  }
+  let flGifBusy = false, flGifUrl = null;
+  async function flGifMake() {
+    if (flGifBusy) return;
+    flGifBusy = true;
+    const msg = el('flGifMsg'), btn = el('flGifGo');
+    btn.disabled = true;
+    msg.className = 'er-msg';
+    try {
+      const inputs = flLines(el('flGifIn').value).map(x => x.trim()).filter((x, i, a) => x || i < a.length - 1);
+      const r = await flRecordGif(inputs, +el('flGifSpeed').value || 800, (i, n) => { msg.textContent = 'Kareler hazırlanıyor… ' + i + ' / ' + n; });
+      if (r.error) { msg.className = 'er-msg err'; msg.textContent = r.error; return; }
+      if (flGifUrl) URL.revokeObjectURL(flGifUrl);
+      flGifUrl = URL.createObjectURL(r.blob);
+      el('flGifPrev').src = flGifUrl;
+      el('flGifPrev').hidden = false;
+      download(r.blob, flFileName('calistirma') + '.gif', 'image/gif');
+      msg.className = 'er-msg ok';
+      msg.textContent = '✓ GIF indirildi: ' + r.frames + ' kare, ' + r.W + ' × ' + r.H + ', ' + Math.max(1, Math.round(r.blob.size / 1024)) + ' KB.' + (r.note ? ' ' + r.note : '');
+    } catch (e) {
+      msg.className = 'er-msg err';
+      msg.textContent = 'GIF hazırlanamadı: ' + (e && e.message ? e.message : e);
+    } finally { flGifBusy = false; btn.disabled = false; }
   }
 
   /* İndirilen dosyanın adı: proje-adı-şema-adı-ek */
@@ -13287,6 +13569,8 @@
     if ((r = pre(/^(?:until|kadar)\s+/)) != null) return { type: 'until', cond: stripCond(r) };
     if ((r = suf(/\s+(?:olana|olunca|olasiya)\s+kadar(?:\s+tekrarla)?$/)) != null) return { type: 'until', cond: r };
     if (/^(?:basla|baslat|baslangic|start|begin)$/.test(f)) return { type: 'start' };
+    if (/^(?:basla|baslat|start|begin)\s*\([^()]*\)$/.test(f)) return { type: 'start' };   // Başla(a, b): değer alan alt program
+    if (/^(?:bitir|son|end)\s*\([\s\S]*\)$/.test(f) || /^(?:(?:bitir|son|end)\s*[:,]?\s*)?(?:geri\s+)?(?:dondur|return)\s+\S/.test(f)) return { type: 'end' };   // Bitir(sonuc) · Döndür sonuc
     if ((r = pre(/^(?:alt ?program[i]?|cagir|call)\s*:?\s+/)) != null && r) return { type: 'sub', text: r };
     if ((r = pre(/^(?:baglanti(?: noktasi)?|connector)\s*:?\s+/)) != null && r && r.length <= 12) return { type: 'conn', text: r };
     if (/^(?:bitir|bitis|bitti|dur|son|stop|end|programi bitir|cik)$/.test(f)) return { type: 'end' };
@@ -13865,6 +14149,118 @@
   const pyClean = s => String(s).replace(/"/g, "'").replace(/[\r\n]+/g, ' ');
 
   /* Python kodunu Türkçe algoritmaya çevirir. Döner: { text, warn: [...] } */
+  const FL_IR_KIDS = ['then', 'els', 'body', 'orelse'];
+  const flIsJumpIR = x => x.k === 'break' || x.k === 'continue' || x.k === 'jump';
+  /* ---- IR → algoritma yazısı: girintili satırlar + gerekirse "Adım N:" etiketleri ve "Adım N'e git" satırları
+     (Python ve C# / Java / C / C++ çeviricileri ortak kullanır). opt.start: "Başla(a, b)" · opt.noTrailEnd: son satır zaten Döndür ---- */
+  function flEmitIR(ir, W, opt) {
+    opt = opt || {};
+    const KIDS = FL_IR_KIDS, isJumpIR = flIsJumpIR;
+    const END = { k: 'end', fin: true };
+    const firstReal = (l, i) => { for (; i < l.length; i++) if (l[i].k !== 'c' && l[i].k !== 'mark') return l[i]; return null; };
+    function link(l, after) {
+      l.forEach((x, i) => {
+        x.cont = firstReal(l, i + 1) || after;
+        if (x.k === 'if') { link(x.then, x.cont); link(x.els, x.cont); }
+        else if (x.k === 'while' || x.k === 'for' || x.k === 'count') { link(x.body, x); if (x.orelse) link(x.orelse, x.cont); }
+        else if (x.k === 'repeat') link(x.body, { k: 'until' });
+        else if (x.k === 'forever') link(x.body, firstReal(x.body, 0) || x.cont);
+      });
+    }
+    const tgt = x => { for (let g = 0; x && x.k === 'forever' && g < 50; g++) x = firstReal(x.body, 0) || x.cont; return x; };
+    const jumpTo = j => j.k === 'break' ? tgt(j.loop.cont) : j.k === 'continue' ? tgt(j.loop.inc || (j.loop.k === 'forever' ? firstReal(j.loop.body, 0) : j.loop)) : tgt(j.to.cont);
+    const jumpLine = j => { const t = jumpTo(j); return t && t !== tgt(j.cont) ? t : null; }; // null: zaten oraya akıyor
+    const emits = l => l.some(x => x.k === 'c' || x.k === 'mark' ? false : isJumpIR(x) ? !!jumpLine(x) : x.k === 'if' ? emits(x.then) || emits(x.els) : true);
+    function prune(l) {
+      let ch = false;
+      for (let i = l.length - 1; i >= 0; i--) {
+        const x = l[i];
+        KIDS.forEach(f => { if (x[f] && prune(x[f])) ch = true; });
+        if (x.k === 'if' && !emits(x.then) && !emits(x.els)) { l.splice(i, 1); ch = true; }
+      }
+      return ch;
+    }
+    for (let g = 0; g < 8; g++) { link(ir, END); if (!prune(ir)) break; }
+    link(ir, END);
+    // atlanılan hedefler (Değilse eğer satırı etiket alamaz)
+    const targets = new Set();
+    (function walk(l) {
+      l.forEach(x => {
+        if (isJumpIR(x)) { const t = jumpLine(x); if (t) targets.add(t); }
+        if (x.k === 'forever') targets.add(tgt(firstReal(x.body, 0) || x.cont));
+        KIDS.forEach(f => { if (x[f]) walk(x[f]); });
+      });
+    })(ir);
+    const out = [];
+    const put = (d, text, ir2, go) => out.push({ d: d, text: text, ir: ir2 || null, go: go || null });
+    const emitList = (l, d) => l.forEach(x => emitOne(x, d));
+    function emitBody(l, d) {
+      const n0 = out.length;
+      emitList(l, d + 1);
+      if (!out.slice(n0).some(o => o.go || !/^#/.test(o.text))) put(d, 'Döngü sonu'); // boş gövde: kapanış satırı
+    }
+    function emitIf(x, d, prefix) {
+      let cond = x.cond, then = x.then, els = x.els;
+      if (!emits(then)) { cond = x.ncond; then = x.els; els = []; }
+      if (!emits(then)) return;
+      const lab = prefix === 'Eğer ' ? x : null, tr2 = then.filter(y => y.k !== 'c' && y.k !== 'mark');
+      if (!emits(els) && tr2.length === 1 && isJumpIR(tr2[0])) { put(d, prefix + cond + ' ise ', lab, jumpLine(tr2[0])); return; }
+      put(d, prefix + cond + ' ise', lab);
+      emitList(then, d + 1);
+      if (!emits(els)) return;
+      const er = els.filter(y => y.k !== 'c' && y.k !== 'mark');
+      if (er.length === 1 && er[0].k === 'if' && !targets.has(er[0])) { emitIf(er[0], d, 'Değilse eğer '); return; }
+      put(d, 'Değilse');
+      emitList(els, d + 1);
+    }
+    function emitOne(x, d) {
+      switch (x.k) {
+        case 'c': put(d, x.text); break;
+        case 's': put(d, x.text, x); break;
+        case 'end': put(d, x.text || 'Bitir', x); break;
+        case 'break': case 'continue': case 'jump': {
+          const t = jumpLine(x);
+          if (t === x) { put(d, 'İken doğru', x); put(d, 'Döngü sonu'); } // kendine dönen atlama: sonsuz döngü
+          else if (t) put(d, '', x, t);
+          break;
+        }
+        case 'if': emitIf(x, d, 'Eğer '); break;
+        case 'while': put(d, 'İken ' + x.cond, x); emitBody(x.body, d); if (x.orelse) emitList(x.orelse, d); break;
+        case 'for': put(d, 'İçin ' + x.header, x); emitBody(x.body, d); if (x.orelse) emitList(x.orelse, d); break;
+        case 'count': put(d, x.count + ' kez tekrarla', x); emitBody(x.body, d); if (x.orelse) emitList(x.orelse, d); break;
+        case 'repeat': put(d, 'Tekrarla', x); emitList(x.body, d + 1); put(d, x.until + ' olana kadar'); break;
+        case 'forever': emitList(x.body, d); put(d, '', null, tgt(firstReal(x.body, 0) || x.cont)); break;
+      }
+    }
+    while (ir.length && ir[0].k === 'c') put(0, ir.shift().text); // baştaki açıklama satırları Başla'dan önce
+    put(0, opt.start || 'Başla');
+    emitList(ir, 0);
+    const lastOut = out[out.length - 1];
+    if (!opt.noTrailEnd || !lastOut || !lastOut.ir || lastOut.ir.k !== 'end') put(0, 'Bitir', END);
+    // etiketler yukarıdan aşağı 1, 2, 3 ...
+    const want = new Set(out.filter(o => o.go).map(o => o.go));
+    let num = 0;
+    out.forEach(o => { if (o.ir && want.has(o.ir) && !o.ir.lbl) o.ir.lbl = ++num; });
+    if ([...want].some(t => !t.lbl)) W(0, 'Bazı "Adım … git" satırlarının hedefi bulunamadı.');
+    // akış şemasında çalışmayacak adımlar için uyarı
+    out.forEach(o => {
+      const x = o.ir;
+      if (!x || x.free || x.bad || !x.no) return;
+      let kind = null, text = o.text;
+      if (x.k === 's') kind = flClassify(text).type;
+      else if (x.k === 'if') { kind = 'decision'; text = flCondText(text.trim()); }
+      else if (x.k === 'while') { kind = 'decision'; text = x.cond; }
+      else if (x.k === 'for') { kind = 'loop'; text = x.header; }
+      if (!['process', 'input', 'output', 'decision', 'loop'].includes(kind)) return;
+      // henüz çizilmemiş alt programı çağıran adım (koddaki fonksiyon) sorun sayılmaz
+      if (opt.fns && opt.fns.size && [...opt.fns].some(f => text.split(/[^\p{L}\p{N}_]+/u).includes(f))) return;
+      let a = null;
+      try { a = flAnalyzeNode({ kind: kind, text: text }); } catch (e) { a = null; }
+      if (!a || a.kind === 'call' || a.kind === 'condcall') W(x.no, '"' + text + '" adımı akış şemasında çalıştırılamayabilir.');
+    });
+    return out.filter(o => !o.go || o.go.lbl).map(o => '    '.repeat(o.d) + (o.ir && o.ir.lbl ? 'Adım ' + o.ir.lbl + ': ' : '') + (o.text || '') + (o.go ? 'Adım ' + trDative(o.go.lbl) + ' git' : '')).join('\n');
+  }
+
   function pythonToAlgo(src) {
     const warn = [];
     const W = (no, msg) => { const m = (no ? 'Satır ' + no + ': ' : '') + msg; if (!warn.includes(m)) warn.push(m); };
@@ -14732,109 +15128,6 @@
       });
     }
 
-    /* ---- çıktı: girintili satırlar + gerekirse "Adım N:" etiketleri ve "Adım N'e git" satırları ---- */
-    function emitAll(ir) {
-      const END = { k: 'end', fin: true };
-      const firstReal = (l, i) => { for (; i < l.length; i++) if (l[i].k !== 'c' && l[i].k !== 'mark') return l[i]; return null; };
-      function link(l, after) {
-        l.forEach((x, i) => {
-          x.cont = firstReal(l, i + 1) || after;
-          if (x.k === 'if') { link(x.then, x.cont); link(x.els, x.cont); }
-          else if (x.k === 'while' || x.k === 'for' || x.k === 'count') { link(x.body, x); if (x.orelse) link(x.orelse, x.cont); }
-          else if (x.k === 'repeat') link(x.body, { k: 'until' });
-          else if (x.k === 'forever') link(x.body, firstReal(x.body, 0) || x.cont);
-        });
-      }
-      const tgt = x => { for (let g = 0; x && x.k === 'forever' && g < 50; g++) x = firstReal(x.body, 0) || x.cont; return x; };
-      const jumpTo = j => j.k === 'break' ? tgt(j.loop.cont) : j.k === 'continue' ? tgt(j.loop.inc || (j.loop.k === 'forever' ? firstReal(j.loop.body, 0) : j.loop)) : tgt(j.to.cont);
-      const jumpLine = j => { const t = jumpTo(j); return t && t !== tgt(j.cont) ? t : null; }; // null: zaten oraya akıyor
-      const emits = l => l.some(x => x.k === 'c' || x.k === 'mark' ? false : isJumpIR(x) ? !!jumpLine(x) : x.k === 'if' ? emits(x.then) || emits(x.els) : true);
-      function prune(l) {
-        let ch = false;
-        for (let i = l.length - 1; i >= 0; i--) {
-          const x = l[i];
-          KIDS.forEach(f => { if (x[f] && prune(x[f])) ch = true; });
-          if (x.k === 'if' && !emits(x.then) && !emits(x.els)) { l.splice(i, 1); ch = true; }
-        }
-        return ch;
-      }
-      for (let g = 0; g < 8; g++) { link(ir, END); if (!prune(ir)) break; }
-      link(ir, END);
-      // atlanılan hedefler (Değilse eğer satırı etiket alamaz)
-      const targets = new Set();
-      (function walk(l) {
-        l.forEach(x => {
-          if (isJumpIR(x)) { const t = jumpLine(x); if (t) targets.add(t); }
-          if (x.k === 'forever') targets.add(tgt(firstReal(x.body, 0) || x.cont));
-          KIDS.forEach(f => { if (x[f]) walk(x[f]); });
-        });
-      })(ir);
-      const out = [];
-      const put = (d, text, ir2, go) => out.push({ d: d, text: text, ir: ir2 || null, go: go || null });
-      const emitList = (l, d) => l.forEach(x => emitOne(x, d));
-      function emitBody(l, d) {
-        const n0 = out.length;
-        emitList(l, d + 1);
-        if (!out.slice(n0).some(o => o.go || !/^#/.test(o.text))) put(d, 'Döngü sonu'); // boş gövde: kapanış satırı
-      }
-      function emitIf(x, d, prefix) {
-        let cond = x.cond, then = x.then, els = x.els;
-        if (!emits(then)) { cond = x.ncond; then = x.els; els = []; }
-        if (!emits(then)) return;
-        const lab = prefix === 'Eğer ' ? x : null, tr2 = then.filter(y => y.k !== 'c' && y.k !== 'mark');
-        if (!emits(els) && tr2.length === 1 && isJumpIR(tr2[0])) { put(d, prefix + cond + ' ise ', lab, jumpLine(tr2[0])); return; }
-        put(d, prefix + cond + ' ise', lab);
-        emitList(then, d + 1);
-        if (!emits(els)) return;
-        const er = els.filter(y => y.k !== 'c' && y.k !== 'mark');
-        if (er.length === 1 && er[0].k === 'if' && !targets.has(er[0])) { emitIf(er[0], d, 'Değilse eğer '); return; }
-        put(d, 'Değilse');
-        emitList(els, d + 1);
-      }
-      function emitOne(x, d) {
-        switch (x.k) {
-          case 'c': put(d, x.text); break;
-          case 's': put(d, x.text, x); break;
-          case 'end': put(d, 'Bitir', x); break;
-          case 'break': case 'continue': case 'jump': {
-            const t = jumpLine(x);
-            if (t === x) { put(d, 'İken doğru', x); put(d, 'Döngü sonu'); } // kendine dönen atlama: sonsuz döngü
-            else if (t) put(d, '', x, t);
-            break;
-          }
-          case 'if': emitIf(x, d, 'Eğer '); break;
-          case 'while': put(d, 'İken ' + x.cond, x); emitBody(x.body, d); if (x.orelse) emitList(x.orelse, d); break;
-          case 'for': put(d, 'İçin ' + x.header, x); emitBody(x.body, d); if (x.orelse) emitList(x.orelse, d); break;
-          case 'count': put(d, x.count + ' kez tekrarla', x); emitBody(x.body, d); if (x.orelse) emitList(x.orelse, d); break;
-          case 'repeat': put(d, 'Tekrarla', x); emitList(x.body, d + 1); put(d, x.until + ' olana kadar'); break;
-          case 'forever': emitList(x.body, d); put(d, '', null, tgt(firstReal(x.body, 0) || x.cont)); break;
-        }
-      }
-      while (ir.length && ir[0].k === 'c') put(0, ir.shift().text); // baştaki açıklama satırları Başla'dan önce
-      put(0, 'Başla');
-      emitList(ir, 0);
-      put(0, 'Bitir', END);
-      // etiketler yukarıdan aşağı 1, 2, 3 ...
-      const want = new Set(out.filter(o => o.go).map(o => o.go));
-      let num = 0;
-      out.forEach(o => { if (o.ir && want.has(o.ir) && !o.ir.lbl) o.ir.lbl = ++num; });
-      if ([...want].some(t => !t.lbl)) W(0, 'Bazı "Adım … git" satırlarının hedefi bulunamadı.');
-      // akış şemasında çalışmayacak adımlar için uyarı
-      out.forEach(o => {
-        const x = o.ir;
-        if (!x || x.free || x.bad || !x.no) return;
-        let kind = null, text = o.text;
-        if (x.k === 's') kind = flClassify(text).type;
-        else if (x.k === 'if') { kind = 'decision'; text = flCondText(text.trim()); }
-        else if (x.k === 'while') { kind = 'decision'; text = x.cond; }
-        else if (x.k === 'for') { kind = 'loop'; text = x.header; }
-        if (!['process', 'input', 'output', 'decision', 'loop'].includes(kind)) return;
-        let a = null;
-        try { a = flAnalyzeNode({ kind: kind, text: text }); } catch (e) { a = null; }
-        if (!a || a.kind === 'call' || a.kind === 'condcall') W(x.no, '"' + text + '" adımı akış şemasında çalıştırılamayabilir.');
-      });
-      return out.filter(o => !o.go || o.go.lbl).map(o => '    '.repeat(o.d) + (o.ir && o.ir.lbl ? 'Adım ' + o.ir.lbl + ': ' : '') + (o.text || '') + (o.go ? 'Adım ' + trDative(o.go.lbl) + ' git' : '')).join('\n');
-    }
 
     try {
       const lines = pyPrep(src), tree = pyTree(lines);
@@ -14858,12 +15151,1088 @@
         if (r) ir = ir.concat(r);
       }
       if (!ir.some(x => x.k !== 'c')) W(0, 'Çevrilecek komut bulunamadı.');
-      return { text: emitAll(ir), warn: warn };
+      return { text: flEmitIR(ir, W), warn: warn };
     } catch (e) {
       return { text: '', warn: ['Python kodu çevrilemedi: ' + e.message], failed: true };
     }
   }
   /* Kutudaki yazı Türkçe algoritma mı, Python kodu mu? */
+  /* ===================================================================
+     C# / JAVA / C / C++ → TÜRKÇE ALGORİTMA
+     Öğrenci programlarında sık geçen yapılar çevrilir: değişken bildirimleri, atamalar, if / else if / else, switch,
+     while, do-while, for / foreach, break / continue, Console / System.out / printf / cout yazdırma, ReadLine /
+     Scanner / scanf / cin okuma, diziler ve listeler, Math fonksiyonları, metin metotları. Main dışındaki her metot
+     kendi akış şeması (alt program) olur; yazıda "# Alt program: Ad" satırıyla ayrılır. Çevrilemeyen komut yorum
+     satırı olarak kalır ve uyarı verilir.
+     =================================================================== */
+  const CL_TYPE = new Set(('int long short byte sbyte ushort uint ulong char float double decimal bool boolean string String var auto void ' +
+    'unsigned signed object Object Integer Double Float Long Boolean Character size_t').split(' '));
+  const CL_MOD = new Set(('public private protected internal static final const readonly unsafe virtual override abstract sealed extern inline ' +
+    'async volatile synchronized transient native strictfp constexpr register mutable').split(' '));
+  const CL_OPS = ['>>=', '<<=', '->', '::', '++', '--', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '==', '!=', '<=', '>=', '&&', '||', '<<', '>>', '??', '=>', '?.'];
+  function clLex(src) {
+    const s = String(src).replace(/\r\n?/g, '\n'), toks = [];
+    let i = 0, line = 1, bol = true;
+    const esc = ch => ({ n: '\n', t: '\t', r: '', '0': '', a: '', b: '', f: '', v: '' })[ch] ?? ch;
+    while (i < s.length) {
+      const c = s[i];
+      if (c === '\n') { line++; i++; bol = true; continue; }
+      if (/\s/.test(c)) { i++; continue; }
+      if (c === '/' && s[i + 1] === '/') { while (i < s.length && s[i] !== '\n') i++; continue; }
+      if (c === '/' && s[i + 1] === '*') { const e = s.indexOf('*/', i + 2), end = e < 0 ? s.length : e + 2; line += (s.slice(i, end).match(/\n/g) || []).length; i = end; continue; }
+      if (c === '#' && bol) {   // önişlemci: #include atlanır, "#define AD değer" sabit olur
+        let e = i;
+        while (e < s.length && s[e] !== '\n') { if (s[e] === '\\' && s[e + 1] === '\n') { line++; e += 2; continue; } e++; }
+        const d = /^#\s*define\s+([A-Za-z_]\w*)\s+([^\n]+)$/.exec(s.slice(i, e).replace(/\\\n/g, ' ').trim());
+        if (d) toks.push({ t: 'define', v: d[1], val: d[2].trim(), line: line, pos: i, end: e });
+        i = e;
+        continue;
+      }
+      bol = false;
+      const ln = line, st = i;
+      let pre = '';
+      if ((c === '@' || c === '$') && s[i + 1] === '"') pre = c;
+      else if ((c === '@' || c === '$') && (s[i + 1] === '@' || s[i + 1] === '$') && s[i + 2] === '"') pre = c + s[i + 1];
+      if (pre || c === '"') {
+        const verb = pre.includes('@');
+        let j = i + pre.length + 1, v = '';
+        for (; j < s.length; j++) {
+          const ch = s[j];
+          if (ch === '\n') { if (!verb) break; line++; }
+          if (verb) { if (ch === '"') { if (s[j + 1] === '"') { v += '"'; j++; continue; } break; } v += ch; continue; }
+          if (ch === '\\') { v += esc(s[j + 1]); j++; continue; }
+          if (ch === '"') break;
+          v += ch;
+        }
+        toks.push({ t: pre.includes('$') ? 'istr' : 'str', v: v, line: ln, pos: st, end: j + 1 });
+        i = j + 1;
+        continue;
+      }
+      if (c === "'") {
+        let j = i + 1, v;
+        if (s[j] === '\\') { v = esc(s[j + 1]); j += 2; } else { const cp = s.codePointAt(j); v = cp == null ? '' : String.fromCodePoint(cp); j += v.length || 1; }
+        while (j < s.length && s[j] !== "'" && s[j] !== '\n') j++;
+        toks.push({ t: 'chr', v: v, line: ln, pos: st, end: j + 1 });
+        i = j + 1;
+        continue;
+      }
+      let m;
+      if (/[\d.]/.test(c) && (m = /^(?:0[xX][0-9a-fA-F]+|(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)[fFdDmMlLuU]*/.exec(s.slice(i, i + 60)))) {
+        const raw = m[0].replace(/[fFdDmMlLuU]+$/, '');
+        let v = raw;   // 7.0 ondalık kalsın (7.0 / 2 = 3.5), 0x1F → 31, 1e3 → 1000.0
+        if (/^0[xX]/.test(raw)) v = String(parseInt(raw, 16));
+        else if (/[eE]/.test(raw)) { const n = Number(raw); v = Number.isFinite(n) ? String(n) + (Number.isInteger(n) ? '.0' : '') : raw; }
+        else v = raw.replace(/^\./, '0.').replace(/\.$/, '.0');
+        toks.push({ t: 'num', v: v, line: ln, pos: st, end: i + m[0].length });
+        i += m[0].length;
+        continue;
+      }
+      if ((m = /^[\p{L}_][\p{L}\p{N}_]*/u.exec(s.slice(i, i + 200)))) { toks.push({ t: 'id', v: m[0], line: ln, pos: st, end: i + m[0].length }); i += m[0].length; continue; }
+      const op = CL_OPS.find(o => s.startsWith(o, i)) || c;
+      toks.push({ t: 'op', v: op, line: ln, pos: st, end: i + op.length });
+      i += op.length;
+    }
+    return toks;
+  }
+  function looksLikeCLike(src) {
+    const s = String(src);
+    if (looksLikeTurkishAlgo(s)) return false;
+    return /#\s*include\s*[<"]|\bint\s+main\s*\(|\bvoid\s+main\s*\(|\bstatic\s+(?:void|int|async)\s+Main\s*\(|\bpublic\s+static\s+void\s+main\s*\(|\bConsole\s*\.\s*(?:Write|Read)|\bSystem\s*\.\s*out\s*\.|\bprintf\s*\(|\bcout\s*<<|\bcin\s*>>|\bnew\s+Scanner\s*\(/.test(s);
+  }
+  function clikeToAlgo(src) {
+    const warn = [];
+    const W = (no, msg) => { const m = (no ? 'Satır ' + no + ': ' : '') + msg; if (!warn.includes(m)) warn.push(m); };
+    const text0 = String(src).replace(/\r\n?/g, '\n');
+    let toks;
+    try { toks = clLex(text0); } catch (e) { return { failed: true, text: '', warn: ['Kod okunamadı.'] }; }
+    const cpp = /\bcout\b|\bcin\b|\bstd::|\bvector\s*</.test(text0);
+    let p = 0;
+    const T = k => toks[p + (k || 0)];
+    const isV = (v, k) => { const t = T(k); return !!t && (t.t === 'op' || t.t === 'id') && t.v === v; };
+    const isId = k => { const t = T(k); return !!t && t.t === 'id'; };
+    const fail = msg => { const e = new Error(msg); e.cl = true; throw e; };
+    const take = v => { if (!isV(v)) fail('"' + v + '" bekleniyordu' + (T() ? ', "' + T().v + '" geldi' : '')); return toks[p++]; };
+    const CLOSE = { '(': ')', '[': ']', '{': '}' };
+    function skipBal() {   // açılan parantezin kapanışına kadar
+      const open = T().v, close = CLOSE[open];
+      let d = 0;
+      do { const t = T(); if (t.t === 'op') { if (t.v === open) d++; else if (t.v === close) d--; } p++; } while (p < toks.length && d > 0);
+    }
+    function skipStmt() {   // bir sonraki ; ya da kapanan } (iç içe parantezler atlanır)
+      while (p < toks.length) {
+        const t = T();
+        if (t.t === 'op' && CLOSE[t.v]) { skipBal(); if (t.v === '{') return; continue; }
+        if (t.t === 'op' && t.v === '}') return;
+        p++;
+        if (t.t === 'op' && t.v === ';') return;
+      }
+    }
+    const srcAt = (a, b) => (toks[a] && toks[b - 1] ? text0.slice(toks[a].pos, toks[b - 1].end) : '').replace(/\s+/g, ' ').trim();
+
+    /* ---- türler ---- */
+    function parseType(noArr) {
+      const s0 = p;
+      while (isId() && (CL_MOD.has(T().v) || T().v === 'struct' || T().v === 'ref' || T().v === 'out' || T().v === 'params')) p++;
+      if (!isId() || /^(?:return|new|if|else|while|for|foreach|do|switch|case|break|continue|goto|throw|try|catch|delete|sizeof|typeof|true|false|null|this)$/.test(T().v)) { p = s0; return null; }
+      let base = toks[p++].v;
+      while (isId() && /^(?:int|long|short|char|double)$/.test(T().v) && /(?:^|\s)(?:unsigned|signed|long|short)$/.test(base)) base += ' ' + toks[p++].v;
+      for (;;) {
+        if ((isV('::') || isV('.')) && isId(1) && (base === 'std' || /^[A-Z]/.test(T(1).v) || isV('::'))) { p++; base = toks[p++].v; continue; }   // std::string · System.String
+        break;
+      }
+      let gen = null;
+      if (isV('<')) {   // List<int> · Dictionary<string, int> · List<List<int>>
+        const g0 = p;
+        let d = 0, ok = false;
+        for (let k = 0; p < toks.length && k < 60; k++) {
+          const t = T();
+          if (t.t === 'op' && t.v === '<') d++;
+          else if (t.t === 'op' && t.v === '>') d--;
+          else if (t.t === 'op' && t.v === '>>') d -= 2;
+          else if (!(t.t === 'id' || (t.t === 'op' && [',', '[', ']', '?', '::', '.', '*'].includes(t.v)))) break;
+          p++;
+          if (d <= 0) { ok = d === 0 || d === -1; break; }
+        }
+        if (!ok) { p = s0; return null; }
+        gen = srcAt(g0 + 1, p - 1);
+      }
+      let dims = 0, ptr = 0;
+      for (;;) {
+        if (!noArr && isV('[') && isV(']', 1)) { p += 2; dims++; continue; }
+        if (!noArr && isV('[') && isV(',', 1)) { let k = 1; while (isV(',', k)) k++; if (isV(']', k)) { p += k + 1; dims += k; continue; } }
+        if (isV('*') || isV('&') || isV('&&')) { p++; ptr++; continue; }
+        if (isV('?') && isId(1) && !isV('(', 2)) { p++; continue; }   // int? x (boş olabilen)
+        break;
+      }
+      return { base: base, gen: gen, dims: dims, ptr: ptr };
+    }
+    const LISTS = /^(?:List|ArrayList|LinkedList|IList|ICollection|Collection|vector|deque|Stack|Queue)$/;
+    function kindOfType(ty) {
+      if (!ty) return 'other';
+      const b = ty.base;
+      if (ty.dims) return 'arr';
+      if (ty.gen != null && LISTS.test(b)) return 'list';
+      if (/^(?:char)$/.test(b) && ty.ptr) return 'string';
+      if (/^(?:(?:unsigned|signed|long|short)(?: (?:int|long|short))*|int|long|short|byte|sbyte|ushort|uint|ulong|size_t|Integer|Long|Short|Byte)$/.test(b)) return 'int';
+      if (/^(?:float|double|decimal|Double|Float|long double)$/.test(b)) return 'double';
+      if (/^(?:char|Character)$/.test(b)) return 'char';
+      if (/^(?:bool|boolean|Boolean)$/.test(b)) return 'bool';
+      if (/^(?:string|String|wstring)$/.test(b)) return 'string';
+      if (b === 'Scanner') return 'scanner';
+      if (b === 'Random') return 'random';
+      if (b === 'var' || b === 'auto') return 'auto';
+      return 'other';
+    }
+    const elemKind = ty => { const k = kindOfType(Object.assign({}, ty, { dims: 0, gen: null })); return ty.gen != null ? kindOfType({ base: ty.gen.replace(/<[\s\S]*$/, '').trim(), dims: 0, ptr: 0 }) : k; };
+
+    /* ---- ifadeler ---- */
+    const BIN = { '||': 1, '&&': 2, '|': 3, '^': 4, '&': 5, '==': 6, '!=': 6, '<': 7, '>': 7, '<=': 7, '>=': 7, '<<': 8, '>>': 8, '+': 9, '-': 9, '*': 10, '/': 10, '%': 10 };
+    const operandStart = t => !!t && (t.t !== 'op' || ['(', '!', '-', '~', '+'].includes(t.v));
+    function expr() { return assign(); }
+    function assign() {
+      const a = tern();
+      if (T() && T().t === 'op' && /^(?:=|\+=|-=|\*=|\/=|%=)$/.test(T().v)) { const op = toks[p++].v; return { t: 'asg', op: op, a: a, b: assign() }; }
+      return a;
+    }
+    function tern() {
+      const c = bin(1);
+      if (isV('?')) { p++; const a = expr(); take(':'); return { t: 'tern', c: c, a: a, b: tern() }; }
+      if (isV('??')) { p++; return { t: 'bin', op: '??', a: c, b: tern() }; }
+      return c;
+    }
+    function bin(min) {
+      let a = unary();
+      for (;;) {
+        const t = T();
+        if (!t || t.t !== 'op' || !Object.prototype.hasOwnProperty.call(BIN, t.v) || BIN[t.v] < min) return a;
+        p++;
+        a = { t: 'bin', op: t.v, a: a, b: bin(BIN[t.v] + 1) };
+      }
+    }
+    function unary() {
+      const t = T();
+      if (t && t.t === 'op') {
+        if (['!', '-', '+', '~', '&', '*'].includes(t.v)) { p++; return { t: 'un', op: t.v, a: unary() }; }
+        if (t.v === '++' || t.v === '--') { p++; return { t: 'pre', op: t.v, a: unary() }; }
+        if (t.v === '(') {   // tür dönüşümü: (int) x
+          const s0 = p;
+          p++;
+          const ty = parseType();
+          if (ty && isV(')') && CL_TYPE.has(ty.base) && operandStart(T(1))) { p++; return { t: 'cast', type: ty, a: unary() }; }
+          p = s0;
+        }
+      }
+      if (isV('new')) return postfix(newExpr());
+      if (isV('sizeof')) { p++; const s0 = p; if (isV('(')) skipBal(); else unary(); return { t: 'sizeof', src: srcAt(s0, p) }; }
+      return postfix(primary());
+    }
+    function postfix(a) {
+      for (;;) {
+        if (isV('.') || isV('->') || isV('?.')) { p++; const n = T(); if (!n || n.t !== 'id') fail('ad bekleniyordu'); p++; a = { t: 'mem', a: a, name: n.v }; continue; }
+        if (isV('::') && isId(1)) { p++; a = { t: 'id', v: toks[p++].v }; continue; }   // std::sqrt → sqrt
+        if (isV('[')) {
+          p++;
+          const idx = [expr()];
+          while (isV(',')) { p++; idx.push(expr()); }   // C#: M[i, j]
+          take(']');
+          idx.forEach(i => { a = { t: 'idx', a: a, i: i }; });
+          continue;
+        }
+        if (isV('(')) { p++; const args = []; if (!isV(')')) { args.push(expr()); while (isV(',')) { p++; args.push(expr()); } } take(')'); a = { t: 'call', f: a, args: args }; continue; }
+        if (isV('++') || isV('--')) { a = { t: 'post', op: toks[p++].v, a: a }; continue; }
+        return a;
+      }
+    }
+    function braceList() {
+      take('{');
+      const items = [];
+      while (!isV('}')) { items.push(isV('{') ? braceList() : expr()); if (!isV(',')) break; p++; }
+      take('}');
+      return { t: 'arr', items: items };
+    }
+    function primary() {
+      const t = T();
+      if (!t) fail('ifade yarım kaldı');
+      if (t.t === 'op' && t.v === '{') return braceList();
+      p++;
+      if (t.t === 'num') return { t: 'num', v: t.v };
+      if (t.t === 'str') return { t: 'str', v: t.v };
+      if (t.t === 'chr') return { t: 'chr', v: t.v };
+      if (t.t === 'istr') return { t: 'istr', v: t.v };
+      if (t.t === 'op') {
+        if (t.v === '(') { const e = expr(); take(')'); return { t: 'par', a: e }; }
+        fail('beklenmeyen "' + t.v + '"');
+      }
+      if (t.v === 'true' || t.v === 'false') return { t: 'bool', v: t.v === 'true' };
+      if (t.v === 'null' || t.v === 'nullptr' || t.v === 'NULL') return { t: 'null' };
+      if (t.v === 'this' && isV('.')) { p++; return primary(); }
+      return { t: 'id', v: t.v };
+    }
+    function newExpr() {
+      take('new');
+      const ty = parseType(true), dims = [];
+      if (!ty) fail('tür bekleniyordu');
+      while (isV('[')) {
+        p++;
+        if (isV(']')) { p++; dims.push(null); continue; }
+        dims.push(expr());
+        while (isV(',')) { p++; dims.push(expr()); }
+        take(']');
+      }
+      let args = null, init = null;
+      if (isV('(')) { p++; args = []; if (!isV(')')) { args.push(expr()); while (isV(',')) { p++; args.push(expr()); } } take(')'); }
+      if (isV('{')) init = braceList();
+      return { t: 'new', type: ty, dims: dims, args: args, init: init };
+    }
+    function subExpr(code) {   // metnin içindeki ifade ($"{a + b}", #define)
+      const saved = [toks, p];
+      try { toks = clLex(code); p = 0; const e = expr(); if (p < toks.length) fail('fazla'); return e; }
+      finally { toks = saved[0]; p = saved[1]; }
+    }
+
+    /* ---- program: fonksiyonlar, sınıflar, genel komutlar ---- */
+    const fns = [], tops = [], defines = new Map();
+    function topLevel(endTok) {
+      while (p < toks.length && !(endTok && isV(endTok))) {
+        const t = T();
+        if (t.t === 'define') { try { defines.set(t.v, subExpr(t.val)); } catch (e) { W(t.line, '#define ' + t.v + ' çevrilmedi.'); } p++; continue; }
+        if (isV(';')) { p++; continue; }
+        if (isV('using') && !isV('(', 1) || isV('import') || isV('package')) { skipStmt(); continue; }
+        if (isV('[')) { skipBal(); continue; }   // C# özniteliği: [STAThread]
+        if (isV('@') && isId(1)) { p += 2; if (isV('(')) skipBal(); continue; }   // Java: @Override
+        if (isV('namespace')) { p++; while (p < toks.length && !isV('{') && !isV(';')) p++; if (isV(';')) { p++; continue; } p++; topLevel('}'); if (isV('}')) p++; continue; }
+        if (isV('template')) { p++; if (isV('<')) { let d = 0; do { if (isV('<')) d++; else if (isV('>')) d--; p++; } while (p < toks.length && d > 0); } continue; }
+        let k = 0;
+        while (isId(k) && CL_MOD.has(T(k).v)) k++;
+        if (isId(k) && /^(?:class|struct|interface|record)$/.test(T(k).v) && isId(k + 1)) {
+          p += k + 2;
+          while (p < toks.length && !isV('{') && !isV(';')) p++;
+          if (isV(';')) { p++; continue; }
+          p++;
+          topLevel('}');
+          if (isV('}')) p++;
+          continue;
+        }
+        if (isId(k) && T(k).v === 'enum') { W(t.line, 'enum çevrilmedi.'); p += k; while (p < toks.length && !isV('{')) p++; if (isV('{')) skipBal(); if (isV(';')) p++; continue; }
+        const s0 = p;
+        const ty = parseType();
+        if (ty && isId() && isV('(', 1)) {   // fonksiyon / metot
+          const name = toks[p++].v, line = T(-1).line;
+          const pa = p;
+          skipBal();
+          const params = [];
+          const ptoks = toks.slice(pa + 1, p - 1);
+          if (ptoks.length && !(ptoks.length === 1 && ptoks[0].v === 'void')) {
+            let d = 0, cur = [];
+            const flush = () => {
+              if (!cur.length) return;
+              const saved = [toks, p];
+              toks = cur; p = 0;
+              const pt = parseType();
+              const nm = isId() ? toks[p++].v : null;
+              let dims = 0;
+              while (isV('[')) { skipBal(); dims++; }
+              toks = saved[0]; p = saved[1];
+              if (pt && nm) params.push({ name: nm, type: dims ? Object.assign({}, pt, { dims: pt.dims + dims }) : pt });
+              cur = [];
+            };
+            ptoks.forEach(x => {
+              if (x.t === 'op' && '([{<'.includes(x.v)) d++;
+              else if (x.t === 'op' && ')]}>'.includes(x.v)) d--;
+              if (!d && x.t === 'op' && x.v === ',') { flush(); return; }
+              if (!d && x.t === 'op' && x.v === '=') d = 99;   // varsayılan değer atlanır
+              cur.push(x);
+            });
+            d = 0;
+            flush();
+          }
+          while (p < toks.length && !isV('{') && !isV(';') && !isV('=>')) p++;   // const / throws … / noexcept
+          if (isV(';')) { p++; continue; }   // bildirim (prototip)
+          if (isV('=>')) { const b0 = p; skipStmt(); fns.push({ name: name, params: params, ret: ty, b0: b0, b1: p, arrow: true, line: line }); continue; }
+          if (!isV('{')) continue;
+          const b0 = p;
+          skipBal();
+          fns.push({ name: name, params: params, ret: ty, b0: b0, b1: p, line: line });
+          continue;
+        }
+        p = s0;
+        if (isId() && isV('(', 1) && fns.length >= 0 && /^[A-Z]/.test(T().v) && endTok) {   // kurucu: Ad(...) { }
+          p++; skipBal();
+          if (isV(':')) while (p < toks.length && !isV('{')) p++;
+          if (isV('{')) skipBal();
+          continue;
+        }
+        // alan ya da genel komut (C# üst düzey komutlar): ana programın başına
+        const a = p;
+        skipStmt();
+        if (p === a) p++;
+        tops.push({ b0: a, b1: p });
+      }
+    }
+    try { topLevel(null); } catch (e) { return { failed: true, text: '', warn: [e instanceof RangeError ? 'Kod çok derin iç içe; çevrilemedi.' : 'Kodun yapısı anlaşılamadı' + (e.cl ? ': ' + e.message : '.')] }; }
+    const userFns = new Set(fns.map(f => f.name));
+    if (!fns.length && !tops.length) return { failed: true, text: '', warn: ['Çevrilecek fonksiyon ya da komut bulunamadı.'] };
+
+    /* ---- bir fonksiyonun gövdesi → IR (Python çeviricisiyle aynı yapı) ---- */
+    let F = null;   // { fn, types: Map(ad → { k, el }), loops: [], isMain }
+    const S = (text, no) => ({ k: 's', text: text, no: no });
+    const C = (text, no) => ({ k: 'c', text: '# ' + String(text).replace(/\s+/g, ' ').slice(0, 160), no: no });
+    const nm = v => (PY_RESERVED.has(flFold(v)) ? v + '_' : v);
+    const q = s => '"' + String(s).replace(/"/g, "'").replace(/[\r\n]+/g, ' ') + '"';
+    const unpar = a => { while (a && a.t === 'par') a = a.a; return a; };
+    const dotted = a => { a = unpar(a); if (!a) return null; if (a.t === 'id') return a.v; if (a.t === 'mem') { const d = dotted(a.a); return d ? d + '.' + a.name : null; } return null; };
+    let BAD = null;   // çevrilemeyen ifade parçaları (komut yorum olur)
+    const bad = (why) => { if (BAD) BAD.push(why || '?'); return { s: '?', p: 9 }; };
+    const typeOfVar = v => (F && F.types.get(v)) || null;
+    const kindOf = a => {   // ifadenin kabaca türü: int · double · string · char · bool · arr · list · null
+      a = unpar(a);
+      if (!a) return null;
+      switch (a.t) {
+        case 'num': return /[.eE]/.test(a.v) ? 'double' : 'int';
+        case 'str': case 'istr': return 'string';
+        case 'chr': return 'char';
+        case 'bool': return 'bool';
+        case 'id': { if (defines.has(a.v)) return kindOf(defines.get(a.v)); const x = typeOfVar(a.v); return x ? x.k : null; }
+        case 'idx': { const b = unpar(a.a); if (b.t === 'id') { const x = typeOfVar(b.v); if (x && (x.k === 'arr' || x.k === 'list')) return x.el; if (x && x.k === 'string') return 'char'; } return null; }
+        case 'cast': return kindOfType(a.type);
+        case 'un': return a.op === '!' ? 'bool' : kindOf(a.a);
+        case 'bin':
+          if (['==', '!=', '<', '>', '<=', '>=', '&&', '||'].includes(a.op)) return 'bool';
+          if (a.op === '+' && (kindOf(a.a) === 'string' || kindOf(a.b) === 'string')) return 'string';
+          if (['+', '-', '*', '/', '%'].includes(a.op)) { const x = kindOf(a.a), y = kindOf(a.b); return (x === 'int' || x === 'char') && (y === 'int' || y === 'char') ? 'int' : x === 'double' || y === 'double' ? 'double' : null; }
+          return null;
+        case 'call': {
+          const f = a.f, n = f.t === 'mem' ? f.name : f.t === 'id' ? f.v : '';
+          if (f.t === 'id' && userFns.has(n)) { const uf = fns.find(x => x.name === n); return uf ? kindOfType(uf.ret) : null; }   // kendi fonksiyonunun dönüş türü
+          if (/^(?:strlen|length|size|Count|IndexOf|indexOf|find|Next|nextInt|parseInt|atoi|stoi|ToInt32|abs)$/.test(n)) return 'int';
+          if (/^(?:Sqrt|sqrt|Pow|pow|nextDouble|parseDouble|atof|stod|ToDouble)$/.test(n)) return 'double';
+          if (/^(?:ToUpper|ToLower|toUpperCase|toLowerCase|Trim|trim|Substring|substring|substr|Replace|replace|ReadLine|nextLine|next|ToString|toString|to_string)$/.test(n)) return 'string';
+          return null;
+        }
+        case 'mem': return /^(?:Length|length|Count)$/.test(a.name) ? 'int' : null;
+        case 'tern': return kindOf(a.a) || kindOf(a.b);
+      }
+      return null;
+    };
+    // koşullu ifade (c ? a : b) komutun değeriyse Eğer / Değilse olur: x = c ? a : b · return c ? a : b · Yaz c ? a : b
+    function liftTern(e, make) {
+      e = unpar(e);
+      if (!e || e.t !== 'tern') return make(e);
+      return [{ k: 'if', cond: X(e.c).s, ncond: notX(e.c), then: liftTern(e.a, make), els: liftTern(e.b, make) }];
+    }
+    // sayı ekle / çıkar: n - 1 - 1 → n - 2
+    function plusConst(e, d) {
+      const u = unpar(e);
+      if (u.t === 'num' && /^-?\d+$/.test(u.v)) return { t: 'num', v: String(+u.v + d) };
+      if (u.t === 'bin' && (u.op === '+' || u.op === '-') && unpar(u.b).t === 'num' && /^\d+$/.test(unpar(u.b).v)) {
+        const k = (u.op === '+' ? 1 : -1) * +unpar(u.b).v + d;
+        return k === 0 ? u.a : { t: 'bin', op: k > 0 ? '+' : '-', a: u.a, b: { t: 'num', v: String(Math.abs(k)) } };
+      }
+      return d === 0 ? e : { t: 'bin', op: d > 0 ? '+' : '-', a: e, b: { t: 'num', v: String(Math.abs(d)) } };
+    }
+    const intish = a => { const k = kindOf(a); return k === 'int' || k === 'char'; };
+    function X(a) {
+      const R = (s, pr) => ({ s: s, p: pr });
+      const P = (b, min) => { const r = X(b); return r.p < min ? '(' + r.s + ')' : r.s; };
+      a = a || { t: 'null' };
+      switch (a.t) {
+        case 'num': return R(a.v, 9);
+        case 'str': return R(q(a.v), 9);
+        case 'chr': return R(q(a.v), 9);
+        case 'bool': return R(a.v ? 'doğru' : 'yanlış', 9);
+        case 'null': return R('""', 9);
+        case 'par': return X(a.a);
+        case 'id':
+          if (defines.has(a.v)) return X(defines.get(a.v));
+          if (a.v === 'endl') return R('""', 9);
+          return R(nm(a.v), 9);
+        case 'istr': return interp(a.v);
+        case 'un':
+          if (a.op === '-') return R('-' + P(a.a, 7), 7);
+          if (a.op === '+' || a.op === '&' || a.op === '*') return X(a.a);
+          if (a.op === '!') return R(notX(a.a), 3);
+          return bad('~');
+        case 'cast': {
+          const k = kindOfType(a.type), ka = kindOf(a.a);
+          if (k === 'int' && ka !== 'int' && ka !== 'char') return R('tam(' + X(a.a).s + ')', 9);
+          if (k === 'int' && ka === 'char') return R('kod(' + X(a.a).s + ')', 9);
+          if (k === 'char' && ka === 'int') return R('karakter(' + X(a.a).s + ')', 9);
+          if (k === 'string') return R('metin(' + X(a.a).s + ')', 9);
+          return X(a.a);
+        }
+        case 'bin': {
+          const op = a.op;
+          if (op === '==' || op === '!=') return R(P(a.a, 5) + (op === '==' ? ' = ' : ' <> ') + P(a.b, 5), 4);
+          if (['<', '>', '<=', '>='].includes(op)) return R(P(a.a, 5) + ' ' + op + ' ' + P(a.b, 5), 4);
+          if (op === '&&') return R(P(a.a, 2) + ' ve ' + P(a.b, 3), 2);
+          if (op === '||') return R(P(a.a, 1) + ' veya ' + P(a.b, 2), 1);
+          if (op === '+' || op === '-') {
+            // 'a' + 1 gibi harf hesabı akış şemasında yok
+            if ((kindOf(a.a) === 'char' && kindOf(a.b) !== 'string') || (kindOf(a.b) === 'char' && kindOf(a.a) !== 'string')) return bad('harf hesabı');
+            return R(P(a.a, 5) + ' ' + op + ' ' + P(a.b, 6), 5);
+          }
+          if (op === '*') return R(P(a.a, 6) + ' * ' + P(a.b, 7), 6);
+          if (op === '%') {
+            const l = unpar(a.a);   // rand() % n → rastgele(0, n - 1)
+            if (l.t === 'call' && l.f.t === 'id' && l.f.v === 'rand' && !l.args.length) return R('rastgele(0, ' + P(a.b, 5) + ' - 1)', 9);
+            return R(P(a.a, 6) + ' mod ' + P(a.b, 7), 6);
+          }
+          if (op === '/') return R(P(a.a, 6) + (intish(a.a) && intish(a.b) ? ' div ' : ' / ') + P(a.b, 7), 6);   // tam sayı bölmesi
+          if (op === '??') return X(a.a);
+          return bad(op);
+        }
+        case 'tern': return bad('?:');
+        case 'idx': return R(P(a.a, 9) + '[' + X(a.i).s + ']', 9);
+        case 'arr': return R('[' + a.items.map(x => X(x).s).join(', ') + ']', 9);
+        case 'new': return newX(a);
+        case 'call': return callX(a);
+        case 'mem': {
+          const d = dotted(a);
+          if (d === 'Math.PI' || d === 'M_PI') return R('pi', 9);
+          if (d === 'Math.E') return R('2.718281828459045', 9);
+          if (/^(?:Length|length|Count)$/.test(a.name)) return R('uzunluk(' + X(a.a).s + ')', 9);
+          return bad(d || a.name);
+        }
+        case 'sizeof': return bad('sizeof');
+      }
+      return bad(a.t);
+    }
+    function notX(c) {
+      const u = unpar(c), FLIP = { '==': '!=', '!=': '==', '<': '>=', '>': '<=', '<=': '>', '>=': '<' };
+      if (u.t === 'un' && u.op === '!') return X(u.a).s;
+      if (u.t === 'bin' && FLIP[u.op]) return X({ t: 'bin', op: FLIP[u.op], a: u.a, b: u.b }).s;
+      if (u.t === 'bool') return u.v ? 'yanlış' : 'doğru';
+      const r = X(c);
+      return 'değil ' + (r.p < 4 ? '(' + r.s + ')' : r.s);
+    }
+    function newX(a) {
+      const k = kindOfType(Object.assign({}, a.type, { dims: 0 })), R = (s, pr) => ({ s: s, p: pr });
+      const fill = k === 'string' ? '""' : k === 'bool' ? 'yanlış' : k === 'char' ? '" "' : '0';
+      if (a.init) return X(a.init);
+      if (a.dims.length) {
+        if (a.dims.some(x => !x)) return bad('dizi boyutu');
+        let s = fill;
+        for (let i = a.dims.length - 1; i >= 0; i--) s = 'dizi(' + X(a.dims[i]).s + ', ' + s + ')';
+        return R(s, 9);
+      }
+      if (LISTS.test(a.type.base)) {
+        if (a.args && a.args.length === 2 && a.type.base === 'vector') return R('dizi(' + X(a.args[0]).s + ', ' + X(a.args[1]).s + ')', 9);
+        return R('[]', 9);
+      }
+      return bad('new ' + a.type.base);
+    }
+    const MATH = { sqrt: 'karekök', abs: 'mutlak', fabs: 'mutlak', floor: 'taban', ceil: 'tavan', ceiling: 'tavan', round: 'yuvarla', max: 'max', min: 'min', fmax: 'max', fmin: 'min', truncate: 'tam', trunc: 'tam' };
+    function callX(a) {
+      const R = (s, pr) => ({ s: s, p: pr }), P = (b, min) => { const r = X(b); return r.p < min ? '(' + r.s + ')' : r.s; };
+      const f = unpar(a.f), A = a.args, obj = f.t === 'mem' ? f.a : null, fname = f.t === 'mem' ? f.name : f.t === 'id' ? f.v : null;
+      const on = obj ? dotted(obj) : null, d = dotted(f) || '';
+      const args = () => A.map(x => X(x).s).join(', ');
+      if (!fname) return bad('çağrı');
+      if (!obj && userFns.has(fname)) return R(fname + '(' + args() + ')', 9);
+      if ((!obj || on === 'Math' || on === 'std') && fname) {
+        const k = fname.toLowerCase();
+        if (k === 'pow') return R(P(A[0], 9) + ' ^ ' + P(A[1], 7), 8);
+        if (k === 'round' && A.length === 2) return R('yuvarla(' + args() + ')', 9);
+        if (MATH[k] && (obj || /^[a-z]/.test(fname))) return R(MATH[k] + '(' + args() + ')', 9);
+      }
+      if (/^(?:int|Int32|Int64|long|double|Double|float|decimal)\.(?:Parse)$|^Convert\.To(?:Int\d*|Double|Decimal|Single)$|^Integer\.(?:parseInt|valueOf)$|^(?:Double|Float)\.(?:parseDouble|parseFloat|valueOf)$|^(?:atoi|atof|atol|stoi|stod|stof|stol)$/.test(d)) return R('sayı(' + X(A[0]).s + ')', 9);
+      if (/^(?:Convert\.ToString|String\.valueOf|Integer\.toString|Double\.toString|to_string)$/.test(d)) return R('metin(' + X(A[0]).s + ')', 9);
+      if ((fname === 'ToString' || fname === 'toString') && obj && !A.length) return R('metin(' + X(obj).s + ')', 9);
+      if (fname === 'strlen' && !obj) return R('uzunluk(' + X(A[0]).s + ')', 9);
+      if (obj && /^(?:length|size|Count)$/.test(fname) && !A.length) return R('uzunluk(' + X(obj).s + ')', 9);
+      if (obj) {
+        const o = () => X(obj).s, ot = typeOfVar(on);
+        switch (fname) {
+          case 'ToUpper': case 'toUpperCase': case 'ToUpperInvariant': return R('büyükharf(' + o() + ')', 9);
+          case 'ToLower': case 'toLowerCase': case 'ToLowerInvariant': return R('küçükharf(' + o() + ')', 9);
+          case 'Trim': case 'trim': return R('kırp(' + o() + ')', 9);
+          case 'Contains': case 'contains': return R('içerir(' + o() + ', ' + X(A[0]).s + ')', 9);
+          case 'IndexOf': case 'indexOf': case 'find': if (A.length === 1) return R('bul(' + o() + ', ' + X(A[0]).s + ')', 9); break;
+          case 'Replace': case 'replace': if (A.length === 2) return R('değiştir(' + o() + ', ' + args() + ')', 9); break;
+          case 'Substring': case 'substr': return R('parça(' + o() + ', ' + args() + ')', 9);
+          case 'substring': return A.length === 1 ? R('parça(' + o() + ', ' + X(A[0]).s + ')', 9) : R('parça(' + o() + ', ' + X(A[0]).s + ', ' + P(A[1], 5) + ' - ' + P(A[0], 6) + ')', 9);
+          case 'charAt': case 'at': case 'get': case 'ElementAt': return R(P(obj, 9) + '[' + X(A[0]).s + ']', 9);
+          case 'equals': case 'Equals': return R(P(obj, 5) + ' = ' + P(A[0], 5), 4);
+          case 'equalsIgnoreCase': return R('küçükharf(' + o() + ') = küçükharf(' + X(A[0]).s + ')', 4);
+          case 'Next': if (ot && ot.k === 'random') return A.length === 2 ? R('rastgele(' + X(A[0]).s + ', ' + P(A[1], 5) + ' - 1)', 9) : A.length === 1 ? R('rastgele(0, ' + P(A[0], 5) + ' - 1)', 9) : bad('Next()'); break;
+          case 'nextInt': if (ot && ot.k === 'random') return A.length === 1 ? R('rastgele(0, ' + P(A[0], 5) + ' - 1)', 9) : A.length === 2 ? R('rastgele(' + X(A[0]).s + ', ' + P(A[1], 5) + ' - 1)', 9) : bad('nextInt()'); break;
+        }
+      }
+      return bad(d + '( )');
+    }
+    /* metin parçaları → Yaz satırı: parçalar arasında boşluk varsa "Yaz a, "=", b", yoksa metin birleştirme */
+    function yazOf(pieces, concat) {
+      const ps = [];
+      pieces.forEach(x => { if (x.lit != null) { if (!x.lit) return; const l = ps[ps.length - 1]; if (l && l.lit != null) l.lit += x.lit; else ps.push({ lit: x.lit }); } else ps.push(x); });
+      const val = x => { const r = X(x.e); return x.dec != null ? { s: 'yuvarla(' + r.s + ', ' + x.dec + ')', p: 9 } : r; };
+      let comma = !concat;
+      ps.forEach((x, i) => {
+        if (x.lit == null) { if (i && ps[i - 1].lit == null) comma = false; return; }
+        if ((i && ps[i - 1].lit == null && !/^ /.test(x.lit)) || (ps[i + 1] && ps[i + 1].lit == null && !/ $/.test(x.lit)) || /^ {2}| {2}$|^ +$/.test(x.lit) && x.lit !== ' ') comma = false;
+        if (!i && /^ /.test(x.lit) || i === ps.length - 1 && / $/.test(x.lit) && ps.length > 1 && ps[i - 1].lit != null) comma = false;
+      });
+      if (!ps.length) return '""';
+      if (comma) return ps.map(x => x.lit != null ? (x.lit.trim() ? q(x.lit.trim()) : null) : val(x).s).filter(Boolean).join(', ') || '""';
+      return ps.map((x, i) => {
+        if (x.lit != null) return q(x.lit);
+        const r = val(x);
+        if (!i && (ps.length === 1 || ps[1].lit == null)) return 'metin(' + r.s + ')';
+        return r.p < 6 ? '(' + r.s + ')' : r.s;
+      }).join(' + ');
+    }
+    // "a + b" zinciri metinle başlıyorsa parçalara ayrılır (Console.WriteLine("Toplam: " + t))
+    function concatPieces(e) {
+      const out = [];
+      (function walk(x) { x = unpar(x); if (x.t === 'bin' && x.op === '+' && (kindOf(x) === 'string')) { walk(x.a); walk(x.b); return; } out.push(x); })(e);
+      if (!out.length || kindOf(out[0]) !== 'string' && !(out[1] && kindOf(out[1]) === 'string')) return [{ e: e }];
+      return out.map(x => x.t === 'str' || x.t === 'chr' ? { lit: x.v } : x.t === 'istr' ? null : { e: x }).reduce((l, x, i) => l.concat(x ? [x] : istrPieces(out[i].v)), []);
+    }
+    function istrPieces(body) {   // $"Toplam: {t:F2}" → parçalar
+      const ps = [];
+      let lit = '';
+      for (let i = 0; i < body.length; i++) {
+        const c = body[i];
+        if ((c === '{' || c === '}') && body[i + 1] === c) { lit += c; i++; continue; }
+        if (c !== '{') { lit += c; continue; }
+        let d = 0, j = i;
+        for (; j < body.length; j++) { if (body[j] === '{') d++; else if (body[j] === '}' && --d === 0) break; }
+        const inner = body.slice(i + 1, j);
+        const m = /^([\s\S]*?)(?:,\s*-?\d+)?(?::([^:]*))?$/.exec(inner) || [inner, inner, ''];
+        if (lit) { ps.push({ lit: lit }); lit = ''; }
+        let e;
+        try { e = subExpr(m[1]); } catch (err) { if (BAD) BAD.push('{' + inner + '}'); e = { t: 'id', v: '?' }; }
+        const fm = /^(?:[FfNn](\d+)|0\.(0+)|#\.(#+))$/.exec((m[2] || '').trim());
+        ps.push({ e: e, dec: fm ? (fm[1] ? +fm[1] : (fm[2] || fm[3]).length) : null });
+        i = j;
+      }
+      if (lit) ps.push({ lit: lit });
+      return ps;
+    }
+    const interp = body => { const ps = istrPieces(body); return ps.length === 1 && ps[0].lit != null ? { s: q(ps[0].lit), p: 9 } : { s: yazOf(ps, true), p: 5 }; };
+    function fmtPieces(fmt, args) {   // printf / String.Format biçimi → parçalar ("\n" yeni satır demektir)
+      const ps = [];
+      let k = 0, last = 0, m;
+      if (/\{\d+/.test(fmt) && !/%[-+ #0]*\d*(?:\.\d+)?[a-zA-Z]/.test(fmt)) {   // C# "{0} + {1}"
+        const re = /\{(\d+)(?:,\s*-?\d+)?(?::([^}]*))?\}/g;
+        while ((m = re.exec(fmt))) {
+          if (m.index > last) ps.push({ lit: fmt.slice(last, m.index).replace(/\{\{/g, '{').replace(/\}\}/g, '}') });
+          last = m.index + m[0].length;
+          const fm = /^(?:[FfNn](\d+)|0\.(0+))$/.exec((m[2] || '').trim());
+          ps.push({ e: args[+m[1]] || { t: 'null' }, dec: fm ? (fm[1] ? +fm[1] : fm[2].length) : null });
+        }
+      } else {
+        const re = /%[-+ #0]*(\d+|\*)?(?:\.(\d+))?(?:hh|h|ll|l|L|z|j|t)?([diouxXeEfFgGcsp%])/g;
+        while ((m = re.exec(fmt))) {
+          if (m.index > last) ps.push({ lit: fmt.slice(last, m.index) });
+          last = m.index + m[0].length;
+          if (m[3] === '%') { ps.push({ lit: '%' }); continue; }
+          const e = args[k++] || { t: 'null' };
+          ps.push({ e: e, dec: m[2] != null && /[fFeEgG]/.test(m[3]) ? +m[2] : null });
+        }
+      }
+      if (last < fmt.length) ps.push({ lit: fmt.slice(last) });
+      return ps;
+    }
+    function yazTern(ps, out, no) {   // parçalardan biri c ? a : b ise iki ayrı Yaz
+      const ti = ps.findIndex(x => x.e && unpar(x.e).t === 'tern');
+      if (ti < 0) { yazLines(ps, out, no, ''); return; }
+      liftTern(ps[ti].e, v => { const tmp = []; yazTern(ps.map((x, i) => (i === ti ? Object.assign({}, x, { e: v }) : x)), tmp, no); return tmp; }).forEach(x => out.push(x));
+    }
+    function yazLines(pieces, out, no, newline) {   // parçaları satırlara böler; her satır bir "Yaz"
+      let line = [];
+      const flush = force => { if (line.length || force) out.push(S('Yaz ' + yazOf(line), no)); line = []; };
+      pieces.forEach(x => {
+        if (x.lit == null || !x.lit.includes('\n')) { line.push(x); return; }
+        const parts = x.lit.split('\n');
+        parts.forEach((pt, i) => { if (i) flush(true); if (pt) line.push({ lit: pt }); });
+      });
+      if (line.length || newline === 'empty') flush(true);
+    }
+    const inputCall = e => {   // Console.ReadLine() / sc.nextInt() … (sarmalanmış olabilir: int.Parse(…), Convert.ToInt32(…))
+      e = unpar(e);
+      if (!e) return false;
+      if (e.t === 'cast') return inputCall(e.a);
+      if (e.t !== 'call') return false;
+      const f = unpar(e.f), d = dotted(f) || '';
+      if (/^Console\.ReadLine$/.test(d) || /^(?:getchar)$/.test(d)) return true;
+      if (f.t === 'mem' && /^(?:next|nextInt|nextDouble|nextLine|nextFloat|nextLong|nextBoolean)$/.test(f.name)) { const o = dotted(f.a), ot = o && typeOfVar(o); return !ot || ot.k === 'scanner'; }
+      if (e.args.length === 1 && inputCall(e.args[0])) return /Parse|^Convert\.|parseInt|parseDouble|valueOf|^(?:Trim|trim)$/.test(d + '.' + (f.name || '')) || f.t === 'mem' && /^(?:Trim|trim)$/.test(f.name);
+      if (f.t === 'mem' && !e.args.length && /^(?:Trim|trim)$/.test(f.name)) return inputCall(f.a);
+      return false;
+    };
+    const target = e => { e = unpar(e); while (e && e.t === 'un' && (e.op === '&' || e.op === '*')) e = unpar(e.a); return e && (e.t === 'id' || (e.t === 'idx' && target(e.a))) ? X(e).s : null; };
+    function declare(name, ty, init) {
+      const k = kindOfType(ty);
+      if (k === 'auto') { const ik = kindOf(init); F.types.set(name, { k: ik || 'other', el: null }); return; }
+      F.types.set(name, { k: k, el: k === 'arr' || k === 'list' ? elemKind(ty) : null });
+    }
+
+    /* ---- komutlar ---- */
+    function block() {
+      if (isV('{')) { p++; const out = []; while (p < toks.length && !isV('}')) stmt(out); take('}'); return out; }
+      const out = [];
+      stmt(out);
+      return out;
+    }
+    function stmt(out) {
+      const s0 = p, t = T();
+      if (!t) return;
+      const no = t.line, n = out.length, saved = BAD;
+      BAD = [];
+      try {
+        stmtInner(out, no);
+        if (BAD.length) {   // çevrilemeyen parça: komut yorum olarak kalır
+          out.splice(n);
+          W(no, '"' + srcAt(s0, p).slice(0, 80) + '" çevrilemedi (' + [...new Set(BAD)].slice(0, 3).join(', ') + ').');
+          out.push(C(srcAt(s0, p), no));
+        }
+      } catch (e) {
+        if (e instanceof RangeError) throw e;   // çok derin iç içe: bütün çeviri durur
+        out.splice(n);
+        p = s0;
+        skipStmt();
+        if (p === s0) p++;
+        W(no, '"' + srcAt(s0, p).slice(0, 80) + '" çevrilemedi: ' + e.message + '.');
+        out.push(C(srcAt(s0, p), no));
+      } finally { BAD = saved; }
+    }
+    // koşul: çevrilemezse koddaki hâli yazılır (şekil kalır, uyarı verilir) — gövde kaybolmasın
+    function condAt(e, a, b, no) {
+      const nb = BAD.length, c = X(e).s, n = notX(e);
+      if (BAD.length === nb) return { c: c, n: n };
+      BAD.length = nb;
+      const raw = srcAt(a, b);
+      W(no, 'koşul çevrilemedi, düzeltmen gerekir: ' + raw);
+      return { c: raw, n: 'değil (' + raw + ')' };
+    }
+    function stmtInner(out, no) {
+      const t = T();
+      if (isV(';')) { p++; return; }
+      if (isV('{')) { block().forEach(x => out.push(x)); return; }
+      if (t.t === 'id') switch (t.v) {
+        case 'if': {
+          p++; take('(');
+          const c0 = p, c = expr(), cc = condAt(c, c0, p, no);
+          take(')');
+          const then = block();
+          let els = [];
+          if (isV('else')) { p++; els = block(); }
+          out.push({ k: 'if', cond: cc.c, ncond: cc.n, then: then, els: els, no: no });
+          return;
+        }
+        case 'while': {
+          p++; take('(');
+          const c0 = p, c = expr(), cc = condAt(c, c0, p, no);
+          take(')');
+          const L = { k: 'while', cond: cc.c, body: null, no: no };
+          if (unpar(c).t === 'bool' && unpar(c).v) { L.k = 'forever'; delete L.cond; }
+          F.loops.push(L);
+          L.body = block();
+          F.loops.pop();
+          out.push(L);
+          return;
+        }
+        case 'do': {
+          p++;
+          const L = { k: 'repeat', body: null, until: null, no: no };
+          F.loops.push(L);
+          L.body = block();
+          F.loops.pop();
+          take('while'); take('(');
+          const c0 = p, c = expr(), cc = condAt(c, c0, p, no);
+          take(')');
+          if (isV(';')) p++;
+          L.until = cc.n;
+          out.push(L);
+          return;
+        }
+        case 'for': case 'foreach': {
+          p++; take('(');
+          // foreach (var x in A) · for (int x : A)
+          const f0 = p;
+          const ty = parseType();
+          if (ty && isId() && (isV('in', 1) || isV(':', 1))) {
+            const v = toks[p++].v;
+            p++;
+            const coll = expr();
+            take(')');
+            const cv = 'k_' + v;
+            const ck = kindOf(coll);
+            declare(v, ty, null);
+            if (kindOfType(ty) === 'auto') F.types.set(v, { k: (typeOfVar(dotted(coll)) || {}).el || (ck === 'string' ? 'char' : 'other'), el: null });
+            const L = { k: 'for', header: cv + ' = 0 .. uzunluk(' + X(coll).s + ') - 1', body: null, no: no };
+            F.loops.push(L);
+            const body = block();
+            F.loops.pop();
+            L.body = [S(nm(v) + ' = ' + (X(coll).p < 9 ? '(' + X(coll).s + ')' : X(coll).s) + '[' + cv + ']', no)].concat(body);
+            out.push(L);
+            return;
+          }
+          p = f0;
+          const init = [];
+          if (!isV(';')) {
+            const d = declStart();
+            if (d) declRest(d, init, no, true);
+            else { const e = expr(); exprStmt(e, init, no); while (isV(',')) { p++; exprStmt(expr(), init, no); } take(';'); }
+          } else p++;
+          const c0 = p, c = isV(';') ? null : expr(), cc = c ? condAt(c, c0, p, no) : null;
+          take(';');
+          const steps = [];
+          if (!isV(')')) { steps.push(expr()); while (isV(',')) { p++; steps.push(expr()); } }
+          take(')');
+          const b0 = p;
+          const L = { k: 'while', cond: cc ? cc.c : 'doğru', body: null, no: no };
+          F.loops.push(L);
+          const body = block();
+          F.loops.pop();
+          // İçin i = a .. b (adım k): sayaç bir değişken, koşul onu bir sınırla karşılaştırıyor, adım sabit, gövde sayacı değiştirmiyor
+          const iv = init.length === 1 && init[0].k === 's' && /^([\p{L}_][\p{L}\p{N}_]*) = ([\s\S]+)$/u.exec(init[0].text);
+          const cu = c && unpar(c), st = steps.length === 1 ? unpar(steps[0]) : null;
+          let step = null;
+          if (iv && st) {
+            const isVar = x => { x = unpar(x); return x && x.t === 'id' && nm(x.v) === iv[1]; };
+            if ((st.t === 'post' || st.t === 'pre') && isVar(st.a)) step = st.op === '++' ? 1 : -1;
+            else if (st.t === 'asg' && isVar(st.a) && (st.op === '+=' || st.op === '-=') && unpar(st.b).t === 'num') step = (st.op === '+=' ? 1 : -1) * +unpar(st.b).v;
+            else if (st.t === 'asg' && st.op === '=' && isVar(st.a) && unpar(st.b).t === 'bin' && ['+', '-'].includes(unpar(st.b).op) && isVar(unpar(st.b).a) && unpar(unpar(st.b).b).t === 'num') step = (unpar(st.b).op === '+' ? 1 : -1) * +unpar(unpar(st.b).b).v;
+            if (step && cu && cu.t === 'bin' && ['<', '<=', '>', '>=', '!='].includes(cu.op) && isVar(cu.a) && !assignsTok(b0, p, iv[1])) {
+              const lim = cu.b, up = step > 0;
+              let end = null;
+              const num = unpar(lim).t === 'num' ? +unpar(lim).v : null;
+              if (up && (cu.op === '<' || (cu.op === '!=' && step === 1))) end = num != null && Number.isInteger(num) ? String(num - 1) : X(plusConst(lim, -1)).s;
+              else if (up && cu.op === '<=') end = X(lim).s;
+              else if (!up && (cu.op === '>' || (cu.op === '!=' && step === -1))) end = num != null && Number.isInteger(num) ? String(num + 1) : X(plusConst(lim, 1)).s;
+              else if (!up && cu.op === '>=') end = X(lim).s;
+              if (end != null) {
+                L.k = 'for';
+                L.header = iv[1] + ' = ' + iv[2] + ' .. ' + end + (step !== 1 ? ' adım ' + step : '');
+                delete L.cond;
+                L.body = body;
+                out.push(L);
+                return;
+              }
+            }
+          }
+          init.forEach(x => out.push(x));
+          const stepIR = [];
+          steps.forEach(x => exprStmt(x, stepIR, no));
+          if (!c) { L.k = 'forever'; delete L.cond; }
+          L.body = body.concat(stepIR);
+          if (stepIR.length) L.inc = stepIR[0];
+          out.push(L);
+          return;
+        }
+        case 'switch': {
+          p++; take('(');
+          const v = expr();
+          take(')'); take('{');
+          const cases = [];
+          let cur = null;
+          const SW = { k: 'switch' };
+          F.loops.push(SW);
+          while (p < toks.length && !isV('}')) {
+            if (isV('case')) {
+              p++;
+              const e = expr();
+              take(':');
+              if (cur && !cur.body.length) cur.vals.push(e);
+              else { cur = { vals: [e], body: [], no: T(-1).line }; cases.push(cur); }
+              continue;
+            }
+            if (isV('default')) { p++; take(':'); cur = { vals: null, body: [], no: T(-1).line }; cases.push(cur); continue; }
+            if (!cur) { skipStmt(); continue; }
+            if (isV('break') && isV(';', 1)) { p += 2; cur.done = true; cur = null; continue; }
+            stmt(cur.body);
+          }
+          take('}');
+          F.loops.pop();
+          const vx = X(v);
+          const side = vx.p < 5 ? '(' + vx.s + ')' : vx.s;
+          let chain = [];
+          for (let i = cases.length - 1; i >= 0; i--) {
+            const cs = cases[i];
+            if (!cs.vals) { chain = cs.body; continue; }
+            const cc = cs.vals.map(x => side + ' = ' + (X(x).p < 5 ? '(' + X(x).s + ')' : X(x).s));
+            chain = [{ k: 'if', cond: cc.join(' veya '), ncond: cs.vals.map(x => side + ' <> ' + X(x).s).join(' ve '), then: cs.body, els: chain, no: cs.no }];
+          }
+          chain.forEach(x => out.push(x));
+          return;
+        }
+        case 'break': {
+          p++; take(';');
+          const L = F.loops[F.loops.length - 1];
+          if (!L) { W(no, 'break bir döngünün içinde değil.'); return; }
+          if (L.k === 'switch') { W(no, 'switch içindeki break (case\'in ortasında) çevrilemedi.'); out.push(C('break', no)); return; }
+          out.push({ k: 'break', loop: L, no: no });
+          return;
+        }
+        case 'continue': {
+          p++; take(';');
+          const L = [...F.loops].reverse().find(x => x.k !== 'switch');
+          if (!L) return;
+          out.push({ k: 'continue', loop: L, no: no });
+          return;
+        }
+        case 'return': {
+          p++;
+          const e = isV(';') ? null : expr();
+          if (isV(';')) p++;
+          if (F.isMain || !e) { out.push({ k: 'end', no: no, ret: true }); return; }
+          liftTern(e, v => [{ k: 'end', text: 'Döndür ' + X(v).s, no: no, ret: true }]).forEach(x => out.push(x));
+          return;
+        }
+        case 'try': {
+          p++;
+          W(no, 'try / catch: yalnız try bloğu çevrildi (hata yakalama şemada yok).');
+          block().forEach(x => out.push(x));
+          while (isV('catch')) { p++; if (isV('(')) skipBal(); if (isV('{')) skipBal(); }
+          if (isV('finally')) { p++; block().forEach(x => out.push(x)); }
+          return;
+        }
+        case 'throw': skipStmt(); out.push({ k: 'end', no: no }); W(no, 'throw: program orada biter.'); return;
+        case 'goto': case 'case': case 'default': case 'else': fail(t.v + ' beklenmiyordu');
+      }
+      // C++: cout << … ; cin >> … ;
+      if (isId() && (T().v === 'cout' || T().v === 'cerr') && isV('<<', 1)) {
+        p++;
+        const ps = [];
+        while (isV('<<')) {
+          p++;
+          const e = bin(9);   // << zincirini yemesin
+          const u = unpar(e);
+          if (u.t === 'id' && u.v === 'endl') ps.push({ lit: '\n' });
+          else if (u.t === 'str' || u.t === 'chr') ps.push({ lit: u.v });
+          else if (u.t === 'id' && /^(?:fixed|setprecision|setw|left|right)$/.test(u.v)) continue;
+          else if (u.t === 'call' && unpar(u.f).t === 'id' && /^(?:setprecision|setw)$/.test(unpar(u.f).v)) continue;
+          else ps.push({ e: e });
+        }
+        take(';');
+        const nl = ps.length && ps[ps.length - 1].lit != null && /\n$/.test(ps[ps.length - 1].lit);
+        if (nl) ps[ps.length - 1].lit = ps[ps.length - 1].lit.replace(/\n$/, '');
+        if (nl && ps.every(x => x.lit === '')) { out.push(S('Yaz ""', no)); return; }
+        yazTern(ps, out, no);
+        return;
+      }
+      if (isId() && T().v === 'cin' && isV('>>', 1)) {
+        p++;
+        const tg = [];
+        while (isV('>>')) { p++; const e = bin(9); const x = target(e); if (!x) fail('okunacak değişken anlaşılamadı'); tg.push(x); }
+        take(';');
+        out.push(S('Oku ' + tg.join(', '), no));
+        return;
+      }
+      // bildirim: tür ad (= …)
+      const d = declStart();
+      if (d) { declRest(d, out, no, false); return; }
+      const e = expr();
+      take(';');
+      exprStmt(e, out, no);
+    }
+    function assignsTok(b0, b1, v) {   // [b0, b1) aralığındaki kodda v değişkenine atama var mı
+      for (let i = b0; i < b1; i++) {
+        const t = toks[i];
+        if (t.t !== 'id' || nm(t.v) !== v) continue;
+        const n = toks[i + 1], pv = toks[i - 1];
+        if (n && n.t === 'op' && /^(?:=|\+=|-=|\*=|\/=|%=|\+\+|--)$/.test(n.v)) return true;
+        if (pv && pv.t === 'op' && (pv.v === '++' || pv.v === '--')) return true;
+        if (pv && pv.t === 'op' && pv.v === '>>' ) return true;   // cin >> i
+        if (pv && pv.t === 'op' && pv.v === '&') return true;     // scanf("%d", &i)
+      }
+      return false;
+    }
+    function declStart() {   // bildirimin başı mı: tür + ad (+ = ; , [ ( )
+      const s0 = p;
+      while (isId() && CL_MOD.has(T().v)) p++;
+      const ty = parseType();
+      if (ty && isId() && !CL_MOD.has(T().v) && (isV('=', 1) || isV(';', 1) || isV(',', 1) || isV('[', 1) || (isV('(', 1) && (cpp || ty.gen != null)))) return ty;
+      p = s0;
+      return null;
+    }
+    function declRest(ty, out, no, inFor) {
+      for (;;) {
+        const name = toks[p++].v;
+        let t2 = ty;
+        const cdims = [];
+        while (isV('[')) { p++; cdims.push(isV(']') ? null : expr()); take(']'); }   // C: int A[5]
+        if (cdims.length) t2 = Object.assign({}, ty, { dims: ty.dims + cdims.length });
+        let init = null, ctor = null;
+        if (isV('=')) { p++; init = isV('{') ? braceList() : expr(); }
+        else if (isV('(')) { p++; ctor = []; if (!isV(')')) { ctor.push(expr()); while (isV(',')) { p++; ctor.push(expr()); } } take(')'); }   // vector<int> v(5, 0)
+        declare(name, t2, init);
+        const k = kindOfType(t2), v = nm(name);
+        if (init && unpar(init).t === 'tern') {
+          liftTern(init, x => { const tmp = []; exprStmt({ t: 'asg', op: '=', a: { t: 'id', v: name }, b: x }, tmp, no); return tmp; }).forEach(x => out.push(x));
+          if (isV(',')) { p++; continue; }
+          break;
+        }
+        const nw = init && unpar(init).t === 'new' && /^(?:Scanner|Random|StringBuilder|BufferedReader|InputStreamReader)$/.test(unpar(init).type.base) ? unpar(init).type.base : null;
+        if (k === 'scanner' || k === 'random' || nw) {
+          if (nw) F.types.set(name, { k: nw === 'Random' ? 'random' : 'scanner', el: null });
+        } else if (init && inputCall(init)) out.push(S('Oku ' + v, no));
+        else if (init) {
+          const u = unpar(init);
+          if (u.t === 'new' && u.dims.length && !u.init && u.dims.every(Boolean) && k === 'arr' && /^(?:int|double)$/.test(elemKind(t2))) out.push(S('Dizi ' + v + u.dims.map(x => '[' + X(x).s + ']').join(''), no));
+          else if (cdims.length && u.t === 'arr' && cdims[0] && unpar(cdims[0]).t === 'num' && u.items.length < +unpar(cdims[0]).v) {
+            const n = +unpar(cdims[0]).v, fill = elemKind(t2) === 'string' ? '""' : '0';
+            out.push(S(v + ' = [' + u.items.map(x => X(x).s).concat(Array(Math.min(n, 1000) - u.items.length).fill(fill)).join(', ') + ']', no));
+          } else if (k === 'char' && (u.t === 'num')) out.push(S(v + ' = karakter(' + X(init).s + ')', no));
+          else out.push(S(v + ' = ' + X(init).s, no));
+        } else if (ctor) {
+          if (k === 'list' && ctor.length === 2) out.push(S(v + ' = dizi(' + X(ctor[0]).s + ', ' + X(ctor[1]).s + ')', no));
+          else if (k === 'list' && ctor.length === 1 && kindOf(ctor[0]) === 'int') out.push(S(v + ' = dizi(' + X(ctor[0]).s + ', 0)', no));
+          else if (k === 'string' && ctor.length === 1) out.push(S(v + ' = ' + X(ctor[0]).s, no));
+        } else if (cdims.length) {
+          if (k === 'arr' && /^(?:string|char)$/.test(elemKind(t2)) && cdims.length === 1 && elemKind(ty) === 'char') F.types.set(name, { k: 'string', el: null });   // char s[100]: metin
+          else if (cdims.every(Boolean)) out.push(S('Dizi ' + v + cdims.map(x => '[' + X(x).s + ']').join(''), no));
+        } else if (k === 'list') out.push(S(v + ' = []', no));
+        if (isV(',')) { p++; continue; }
+        break;
+      }
+      if (!inFor || isV(';')) take(';');
+    }
+    function exprStmt(e, out, no) {
+      const u = unpar(e);
+      const R2 = s => out.push(S(s, no));
+      if (u.t === 'asg' && unpar(u.b).t === 'tern') { liftTern(u.b, x => { const tmp = []; exprStmt({ t: 'asg', op: u.op, a: u.a, b: x }, tmp, no); return tmp; }).forEach(x => out.push(x)); return; }
+      if (u.t === 'asg') {
+        const tg = target(u.a);
+        if (!tg) { BAD.push('atama hedefi'); return; }
+        if (u.op === '=' && inputCall(u.b)) { R2('Oku ' + tg); return; }
+        if (u.op === '=') {
+          if (unpar(u.b).t === 'asg') { exprStmt(u.b, out, no); R2(tg + ' = ' + target(unpar(u.b).a)); return; }   // a = b = 0
+          const k = kindOf(u.a);
+          R2(tg + ' = ' + (k === 'char' && kindOf(u.b) === 'int' ? 'karakter(' + X(u.b).s + ')' : X(u.b).s));
+          return;
+        }
+        if (u.op === '%=') { R2(tg + ' = ' + tg + ' mod ' + (X(u.b).p < 7 ? '(' + X(u.b).s + ')' : X(u.b).s)); return; }
+        if (u.op === '/=' && intish(u.a) && intish(u.b)) { R2(tg + ' = ' + tg + ' div ' + (X(u.b).p < 7 ? '(' + X(u.b).s + ')' : X(u.b).s)); return; }
+        R2(tg + ' ' + u.op + ' ' + X(u.b).s);
+        return;
+      }
+      if (u.t === 'post' || u.t === 'pre') {
+        const tg = target(u.a);
+        if (!tg) { BAD.push(u.op); return; }
+        R2(tg + ' = ' + tg + (u.op === '++' ? ' + 1' : ' - 1'));
+        return;
+      }
+      if (u.t === 'call') {
+        const f = unpar(u.f), d = dotted(f) || '', A = u.args, fname = f.t === 'mem' ? f.name : f.t === 'id' ? f.v : '';
+        const obj = f.t === 'mem' ? f.a : null;
+        // yazdırma
+        if (/^(?:Console\.(?:WriteLine|Write|Out\.WriteLine|Out\.Write)|System\.out\.(?:println|print|printf|format)|printf|puts|putchar|System\.Console\.WriteLine|System\.Console\.Write)$/.test(d)) {
+          const ln = /WriteLine|println|puts/.test(d);
+          if (!A.length) { if (ln) R2('Yaz ""'); return; }
+          let ps;
+          const a0 = unpar(A[0]);
+          if (/printf|format/.test(d) || (A.length > 1 && a0.t === 'str')) ps = a0.t === 'str' ? fmtPieces(a0.v, A.slice(1)) : (BAD.push('biçim'), []);
+          else if (a0.t === 'str' || a0.t === 'chr') ps = [{ lit: a0.v }];
+          else if (a0.t === 'istr') ps = istrPieces(a0.v);
+          else ps = concatPieces(A[0]);
+          let nl = false;
+          const last = ps[ps.length - 1];
+          if (last && last.lit != null && /\n$/.test(last.lit)) { last.lit = last.lit.replace(/\n$/, ''); nl = true; }
+          if (!ps.some(x => x.lit == null || x.lit)) { if (ln || nl) R2('Yaz ""'); return; }
+          yazTern(ps, out, no);
+          return;
+        }
+        // okuma
+        if (/^(?:scanf|scanf_s)$/.test(d)) {
+          const tg = A.slice(1).map(x => target(x));
+          if (!tg.length || tg.some(x => !x)) { BAD.push('scanf'); return; }
+          R2('Oku ' + tg.join(', '));
+          return;
+        }
+        if (/^(?:gets|gets_s|fgets)$/.test(d) && A.length) { const x = target(A[0]); if (x) { R2('Oku ' + x); return; } }
+        if (d === 'getline' && A.length === 2) { const x = target(A[1]); if (x) { R2('Oku ' + x); return; } }
+        if (inputCall(u)) return;   // sc.nextLine(); (satır sonunu atlar) · Console.ReadLine(); (bekletme)
+        if (/^(?:Console\.(?:ReadKey|Clear|Read)|getch|_getch|system|System\.Console\.ReadKey|fflush|sc\.close|Thread\.Sleep|Sleep|srand|setlocale|Console\.SetCursorPosition)$/.test(d) || (fname === 'close' && obj)) return;
+        if (/^(?:exit|System\.exit|Environment\.Exit)$/.test(d)) { out.push({ k: 'end', no: no }); return; }
+        // listeye ekleme
+        if (obj && /^(?:Add|add|push_back|emplace_back|append)$/.test(fname) && A.length === 1) { const x = target(obj); if (x) { R2('ekle(' + x + ', ' + X(A[0]).s + ')'); return; } }
+        if (obj && fname === 'set' && A.length === 2) { const x = target(obj); if (x) { R2(x + '[' + X(A[0]).s + '] = ' + X(A[1]).s); return; } }
+        // kullanıcının fonksiyonu
+        if (!obj && userFns.has(fname)) { R2('Alt program: ' + fname + '(' + A.map(x => X(x).s).join(', ') + ')'); return; }
+      }
+      BAD.push(srcOfAst(u));
+    }
+    const srcOfAst = a => { const d = dotted(a.t === 'call' ? a.f : a); return d ? d + (a.t === 'call' ? '( )' : '') : a.t; };
+
+    /* ---- fonksiyonlar → bölümler ---- */
+    const parsed = [];
+    const mainFn = fns.find(f => /^(?:Main|main)$/.test(f.name)) || null;
+    const order = mainFn ? [mainFn].concat(fns.filter(f => f !== mainFn)) : tops.length ? [null].concat(fns) : fns;
+    try { order.forEach(fn => {
+      F = { fn: fn, types: new Map(), loops: [], isMain: !fn || fn === mainFn };
+      const ir = [];
+      if (fn) fn.params.forEach(pm => declare(pm.name, pm.type, null));
+      if (F.isMain) tops.forEach(r => { p = r.b0; const end = r.b1; while (p < end) stmt(ir); });   // sınıf alanları, üst düzey komutlar
+      if (fn) {
+        p = fn.b0;
+        if (fn.arrow) { p++; const e = expr(); ir.push(fn.ret && fn.ret.base !== 'void' ? { k: 'end', text: 'Döndür ' + X(e).s, no: fn.line, ret: true } : S('?', fn.line)); }
+        else { p++; while (p < fn.b1 - 1) stmt(ir); }
+      }
+      // ana programın sonundaki "return 0;" yazılmaz
+      if (F.isMain && ir.length && ir[ir.length - 1].k === 'end' && ir[ir.length - 1].ret && !ir[ir.length - 1].text) ir.pop();
+      const params = fn && !F.isMain ? fn.params.map(x => nm(x.name)) : [];
+      const isFnChart = fn && (!F.isMain || (!mainFn && !tops.length));
+      const start = isFnChart && (params.length || ir.some(function has(x) { return (x.k === 'end' && x.text) || FL_IR_KIDS.some(k => x[k] && x[k].some(has)); })) ? 'Başla(' + (fn ? fn.params.map(x => nm(x.name)).join(', ') : '') + ')' : 'Başla';
+      parsed.push({ name: fn ? fn.name : null, text: flEmitIR(ir, W, { start: start, noTrailEnd: true, fns: userFns }), main: F.isMain || (!mainFn && !tops.length && fn === order[0]) });
+    }); } catch (e) { return { failed: true, text: '', warn: [e instanceof RangeError ? 'Kod çok derin iç içe; çevrilemedi.' : 'Kod çevrilemedi.'] }; }
+    if (!parsed.length) return { failed: true, text: '', warn: ['Çevrilecek fonksiyon bulunamadı.'] };
+    const head = parsed[0], rest = parsed.slice(1);
+    const lead = (text0.match(/^\s*\/\/\s*([^\n]{2,60})/) || [])[1];
+    const text = (lead ? '# ' + lead.trim() + '\n' : '') + head.text + rest.map(x => '\n\n# Alt program: ' + x.name + '\n' + x.text).join('');
+    return { text: text, warn: warn, charts: rest.length + 1 };
+  }
+  /* Algoritma yazısını bölümlere ayırır: ilk bölüm ana şema, "# Alt program: Ad" satırlarından sonrakiler alt programlar */
+  function flSplitSections(text) {
+    const secs = [{ name: null, lines: [] }];
+    String(text).replace(/\r/g, '').split('\n').forEach(l => {
+      const m = /^\s*#\s*alt\s*program\s*:\s*(.+?)\s*$/i.exec(flFold(l));
+      if (m) { const raw = l.replace(/^\s*#\s*/, '').replace(/^[^:]*:\s*/, '').trim(); if (raw) { secs.push({ name: raw.slice(0, 60), lines: [] }); return; } }
+      secs[secs.length - 1].lines.push(l);
+    });
+    return secs.map(s => ({ name: s.name, text: s.lines.join('\n') })).filter((s, i) => i === 0 || s.text.trim());
+  }
   function looksLikeTurkishAlgo(src) {
     return String(src).split('\n').some(l => {
       const f = flFold(l.trim());
@@ -15287,11 +16656,14 @@
         const key = flFold(t.v);
         if (isOp('(')) {
           p++;
-          const fn = flFn(key);
-          if (!fn) throw flErr('Bilinmeyen fonksiyon: ' + t.v + '( )');
+          // aynı adlı alt program (akış şeması): değer döndürüyorsa hazır fonksiyondan önce gelir (ör. kendi "Toplam" şeman)
+          const fn0 = flFn(key), ch0 = flRun ? flSubChart(t.v) : null, sg = ch0 && fn0 ? flChartSig(ch0) : null;
+          const ch = ch0 && (!fn0 || (sg.start && !sg.bad && sg.ret)) ? ch0 : null, fn = ch ? null : fn0;
+          if (!fn && !ch) throw flErr('Bilinmeyen fonksiyon: ' + t.v + '( )');
           const args = [];
           if (!isOp(')')) { args.push(or()); while (isOp(',')) { p++; args.push(or()); } }
           take(')');
+          if (ch) { label = null; return flCallFunc(ch, args); }
           if (args.length < fn[0]) throw flErr(t.v + '( ) için ' + fn[0] + ' değer gerekiyor.');
           if (args.length > fn[2]) throw flErr(t.v + '( ) en fazla ' + fn[2] + ' değer alır.');
           const r = fn[1](...args);
@@ -15380,7 +16752,7 @@
   function flSetVar(name, value) {
     const key = flFold(name);
     const old = flRun.vars.get(key);
-    flLog({ t: 'var', key: key, old: old }, old && old.value);
+    flLog({ t: 'var', key: key, old: old, map: flRun.vars }, old && old.value);   // alt programın kendi değişkenleri ayrı tabloda
     flRun.vars.set(key, { name: old ? old.name : name, value: value });
     flRun.changed.add(key);
   }
@@ -15502,7 +16874,7 @@
     const R = flRun;
     if (R.headless) { R.undoCur = null; return; }
     const u = { cur: R.cur, steps: R.steps, lastEdge: R.lastEdge, loops: Object.assign({}, R.loops), changed: R.changed,
-                trace: R.trace.length, inputs: R.inputs.length, ops: [], size: 1 };
+                trace: R.trace.length, inputs: R.inputs.length, ops: [], size: 1, pid: R.pid, vars: R.vars, stack: (R.stack || []).slice() };
     R.hist.push(u); R.undoCur = u; R.histSize += 1;
     while (R.hist.length > 1 && (R.hist.length > FL_HIST_MAX || R.histSize > FL_HIST_SIZE)) { const x = R.hist.shift(); R.histSize -= x.size; }
   }
@@ -15513,14 +16885,16 @@
     const u = R.hist.pop();
     R.histSize -= u.size;
     for (let i = u.ops.length - 1; i >= 0; i--) {
-      const o = u.ops[i];
-      if (o.t === 'var') { if (o.old) R.vars.set(o.key, o.old); else R.vars.delete(o.key); }
+      const o = u.ops[i], m = o.map || R.vars;
+      if (o.t === 'var') { if (o.old) m.set(o.key, o.old); else m.delete(o.key); }
       else if (o.t === 'el') o.arr[o.k] = o.old;
       else if (o.t === 'pop') o.arr.pop();
       else if (o.t === 'out') R.out.pop();
       else if (o.t === 'unshift') R.out.unshift(o.line);
     }
     Object.assign(R, { cur: u.cur, steps: u.steps, lastEdge: u.lastEdge, loops: u.loops, changed: u.changed, done: false, error: null, ask: null, bpHit: null });
+    if (u.vars) Object.assign(R, { pid: u.pid, vars: u.vars, stack: u.stack });   // alt programa girip çıkmak da geri alınır
+    flFollowRun();
     R.trace.length = Math.min(R.trace.length, u.trace);
     R.inputs.length = Math.min(R.inputs.length, u.inputs);
     R.undoCur = R.hist[R.hist.length - 1] || null;
@@ -15533,12 +16907,13 @@
   const flTraceVal = e => { if (!e) return ''; const t = flShow(e.value); return t.length > 60 ? t.slice(0, 59) + '…' : t; };
   function flTraceRow(id, r, mark) {
     const R = flRun;
-    if (R.headless) return;
+    if (R.headless && !R.traceOn) return;
     if (R.trace.length >= FL_TRACE_MAX) { R.traceCut = true; return; }
     const n = findFlowNode(id);
     if (!n) return;
     const row = { k: R.steps, id: id, vals: {}, names: {}, cond: null, out: [], err: r === 'error' ? R.error : null };
-    R.changed.forEach(key => { const e = R.vars.get(key); if (e) { row.vals[key] = flTraceVal(e); row.names[key] = e.name; } });
+    const sc = flVarScope();   // alt programın kendi değişkenleri ayrı sütunda: "Faktoriyel.n"
+    R.changed.forEach(key => { const e = R.vars.get(key); if (e) { const k = sc ? sc + '\u0001' + key : key; row.vals[k] = flTraceVal(e); row.names[k] = sc ? sc + '.' + e.name : e.name; } });
     if ((n.kind === 'decision' || n.kind === 'loop') && r === 'ok' && R.lastCond != null) row.cond = R.lastCond ? 'Evet' : 'Hayır';
     const pushed = (R.outPushes || 0) - mark;
     if (pushed > 0) row.out = R.out.slice(-pushed).filter(o => o.cls !== 'in').map(o => o.text.length > 80 ? o.text.slice(0, 79) + '…' : o.text);
@@ -15547,8 +16922,9 @@
   /* Giriş adımının satırına okunan değeri yazar (değer adım bittikten sonra girilir) */
   function flTraceInput(key) {
     const R = flRun, row = R.trace[R.trace.length - 1], e = R.vars.get(key);
-    if (R.headless || !row || !R.ask || row.id !== R.ask.node || !e) return;
-    row.vals[key] = flTraceVal(e); row.names[key] = e.name;
+    if ((R.headless && !R.traceOn) || !row || !R.ask || row.id !== R.ask.node || !e) return;
+    const sc = flVarScope(), k = sc ? sc + '\u0001' + key : key;
+    row.vals[k] = flTraceVal(e); row.names[k] = sc ? sc + '.' + e.name : e.name;
   }
 
   /* ---- Kesme noktaları: şemaya göre cihazda saklanır (ekip arkadaşlarına gitmez) ---- */
@@ -15612,7 +16988,18 @@
     try {
       const t = n.text.trim();
       switch (n.kind) {
-        case 'end': R.done = true; R.lastEdge = null; return 'done';
+        case 'end': {
+          if (R.stack && R.stack.length) return flReturnSub(n);   // alt programın sonu: çağırana dön
+          const e = flEndExpr(t);   // alt program kendi başına çalıştırıldı: döndürdüğü değer yazılır
+          if (e != null) flRunOutLine('Sonuç: ' + flFmt(flEval(e, R.vars)));
+          R.done = true; R.lastEdge = null; return 'done';
+        }
+        case 'start': {   // kendi başına çalıştırılan alt program Başla(a, b) ile değer alıyor: önce değerler sorulur
+          const m = !(R.stack && R.stack.length) && /\(([^()]*)\)\s*$/.exec(t);
+          const ps = m ? m[1].split(',').map(x => x.trim()).filter(Boolean) : [];
+          if (ps.length && ps.every(p => FL_ID_RE.test(p))) { R.ask = { node: n.id, names: ps, i: 0 }; return 'ask'; }
+          break;
+        }
         case 'input': {
           const names = flInputVars(t);
           if (!names.length) throw flErr(flName(n) + ': hangi değişkene okunacağı anlaşılamadı. Örnek: Oku a, b');
@@ -15638,7 +17025,7 @@
           flRunOutLine(vals.join(' '));
           break;
         }
-        case 'sub': flRunSub(t); break;
+        case 'sub': return flCallSubNode(n, t);
         case 'note': break; // yorum notu: akışa katılmaz (oka bağlanmışsa geçilir)
         case 'conn': {
           if (!flOut(n.id).length) {
@@ -15691,36 +17078,168 @@
     }
   }
 
-  /* Alt program: projedeki başka bir şemayı (adıyla) tek adımda baştan sona çalıştırır. Değişkenler ortak. */
-  const FL_SUB_BUDGET = 1e5;
+  /* ---------- ALT PROGRAMLAR ----------
+     Alt program, bu projedeki başka bir akış şemasıdır (sekmenin adıyla çağrılır). Çağrı yığını (stack) tutulur:
+       • Parametresiz ve değer döndürmeyen alt program ana şemanın değişkenlerini kullanır (eski davranış).
+       • Başla(a, b) ile parametre alan ya da Bitir(sonuc) / "Döndür sonuc" ile değer döndüren alt program kendi
+         değişkenleriyle çalışır; Alt program şekli: "Topla(x, 5)" ya da "s = Topla(x, 5)". İfadelerde de çağrılabilir:
+         "Yaz Faktoriyel(5)", "Eğer AsalMi(n)" (kendini çağırabilir, en fazla 100 derinlik).
+       • Normal adımda alt program tek adımda çalışır (üzerinden geç); "İçine gir" ile şemasına geçip adım adım izlenir. */
+  const FL_SUB_BUDGET = 1e5, FL_SUB_DEPTH = 100;
+  const FL_ID_RE = /^[\p{L}_][\p{L}\p{N}_]*$/u;
   const flSubName = t => String(t).trim().replace(/^(?:alt\s*program[ıi]?|çağır|cagir|call)\s*:?\s*/i, '').trim();
   function flSubChart(t, pid) { const k = flFold(flSubName(t)); return k ? projectCharts(pid || activeProject).find(c => flFold(c.name.trim()) === k) : null; }
-  function flRunSub(t) {
-    const R = flRun, name = flSubName(t), ch = flSubChart(t);
-    if (!ch) throw flErr('“' + name + '” adında bir akış şeması yok. Alt program, bu projedeki başka bir şemanın (sekmenin) adıdır.');
-    if ((R.subDepth || 0) >= 20) throw flErr('Alt programlar birbirini çok derin çağırıyor (en fazla 20); kendini mi çağırıyor?');
-    const start = projectFlowNodes(activeProject, ch.id).find(x => x.kind === 'start');
-    if (!start) throw flErr('“' + ch.name + '” şemasında Başla yok.');
-    const save = { pid: R.pid, cur: R.cur, loops: R.loops, lastEdge: R.lastEdge, lastCond: R.lastCond }, changed = R.changed;
-    if (!R.subDepth) R.subBudget = FL_SUB_BUDGET; // iç içe alt programların bir adımdaki toplam adımı (sekme donmasın)
-    R.subDepth = (R.subDepth || 0) + 1;
-    R.pid = ch.id; R.cur = start.id; R.loops = {};
+  /* Bitir şeklinin döndürdüğü ifade: Bitir(sonuc) · Döndür sonuc · Return sonuc (yoksa null) */
+  function flEndExpr(t) {
+    const s = String(t || '').trim();
+    let m = /^(?:bitir|son|end|stop|dur)?\s*\(([\s\S]*)\)\s*$/i.exec(s);
+    if (m) return m[1].trim() || null;
+    m = /^(?:(?:bitir|son|end)\s*[:,]?\s*)?(?:geri\s+)?(?:d[öo]nd[üu]r|return)\s+([\s\S]+)$/i.exec(s);
+    return m ? m[1].trim() : null;
+  }
+  /* Şemanın imzası: Başla(a, b) → parametreler; değer döndürüyor mu */
+  function flChartSig(ch) {
+    const nodes = projectFlowNodes(activeProject, ch.id), start = nodes.find(x => x.kind === 'start');
+    let params = [];
+    const m = start && /\(([^()]*)\)\s*$/.exec(start.text.trim());
+    if (m) params = m[1].split(',').map(s => s.trim()).filter(Boolean);
+    return { start: start, params: params, ret: nodes.some(x => x.kind === 'end' && flEndExpr(x.text) != null), bad: params.find(p => !FL_ID_RE.test(p)) };
+  }
+  /* Alt program şeklinin yazısı: "Ad" · "Ad(x, 5)" · "s = Ad(x, 5)" */
+  function flParseCall(t) {
+    const raw = flSubName(t);
+    const ch = flSubChart(raw);
+    if (ch) return { ch: ch, name: raw, args: [], target: null };
+    const m = /^(?:([\p{L}_][\p{L}\p{N}_]*(?:\[[^\]]*\])*)\s*(?:=|←|<-|:=)\s*)?([^=(]+?)\s*\(([\s\S]*)\)\s*$/u.exec(raw);
+    if (!m) return { ch: null, name: raw, args: [], target: null };
+    return { ch: flSubChart(m[2]), name: m[2].trim(), args: m[3].trim() ? splitTopLevel(m[3], ',').map(s => s.trim()) : [], target: m[1] || null };
+  }
+  function flCheckSig(ch, sig, n) {
+    if (!sig.start) throw flErr('“' + ch.name + '” şemasında Başla yok.');
+    if (sig.bad) throw flErr('“' + ch.name + '” şemasının Başla şeklinde geçersiz parametre adı: ' + sig.bad);
+    if (n !== sig.params.length) throw flErr('“' + ch.name + '” alt programı ' + sig.params.length + ' değer bekliyor' + (sig.params.length ? ' (' + sig.params.join(', ') + ')' : '') + ', ' + n + ' verildi.');
+  }
+  function flPushFrame(ch, sig, vals, info) {
+    const R = flRun;
+    R.stack = R.stack || [];
+    if (R.stack.length >= FL_SUB_DEPTH) throw flErr('Alt programlar birbirini çok derin çağırıyor (en fazla ' + FL_SUB_DEPTH + '); kendini durmadan mı çağırıyor?');
+    R.stack.push({ pid: R.pid, cur: R.cur, vars: R.vars, loops: R.loops, changed: R.changed, lastEdge: R.lastEdge, local: info.local, target: info.target, expr: !!info.expr, name: ch.name, node: info.node });
+    if (info.local) {
+      const v = new Map();
+      sig.params.forEach((p, i) => v.set(flFold(p), { name: p, value: vals[i] }));
+      R.vars = v; R.changed = new Set(sig.params.map(flFold));
+    }
+    R.pid = ch.id; R.cur = sig.start.id; R.loops = {}; R.lastEdge = null;
+  }
+  /* Alt programın Bitir'ine gelindi: değer hesaplanır, çağırana dönülür */
+  function flReturnSub(endNode) {
+    const R = flRun, f = R.stack[R.stack.length - 1], ex = flEndExpr(endNode.text);
+    const val = ex != null ? flEval(ex, R.vars) : undefined;
+    R.stack.pop();
+    Object.assign(R, { pid: f.pid, vars: f.vars, loops: f.loops, lastEdge: f.lastEdge, changed: new Set() });
+    R.ret = { has: ex != null, val: val, name: f.name };
+    if (f.expr) { R.cur = f.cur; return 'ok'; }   // ifadedeki çağrı: çağıran adım kendi devam eder
+    R.cur = f.node;
+    if (f.target) {
+      if (ex == null) throw flErr('“' + f.name + '” bir değer döndürmeden bitti: sonunu Bitir(sonuc) ya da "Döndür sonuc" yap.');
+      const tp = flScanTarget(f.target, 0);
+      flAssign(tp ? tp.name : f.target, tp ? tp.idx : [], '', val);
+    }
+    const call = findFlowNode(f.node), outs = call ? flOut(call.id) : [];
+    if (!outs.length) throw flErr((call ? flName(call) : 'Alt program') + ' adımından sonra devam eden ok yok.');
+    R.lastEdge = outs[0].id; R.cur = outs[0].to;
+    return 'ok';
+  }
+  /* Yığın verilen derinliğe inene kadar çalışır (alt programın üzerinden geçmek) */
+  function flRunToDepth(depth, name) {
+    const R = flRun, base = R.stack[depth], C0 = base.changed, V0 = base.vars;
+    if (!R.sync) R.subBudget = FL_SUB_BUDGET;   // iç içe alt programların bir adımdaki toplam adımı (sekme donmasın)
+    R.sync = (R.sync || 0) + 1;
     let err = null;
     try {
-      for (let k = 0; ; k++) {
-        if (k >= FL_MAX_STEPS) { err = '“' + ch.name + '” alt programı ' + FL_MAX_STEPS + ' adımda bitmedi (sonsuz döngü olabilir).'; break; }
+      for (let k = 0; R.stack.length > depth; k++) {
+        if (k >= FL_MAX_STEPS) { err = '“' + name + '” alt programı ' + FL_MAX_STEPS + ' adımda bitmedi (sonsuz döngü olabilir).'; break; }
         if (--R.subBudget < 0) { err = 'Alt programlar bu adımda çok uzun sürdü (toplam 100.000 adım); iç içe döngüleri azalt.'; break; }
         const r = flStepCore();
-        R.changed.forEach(x => changed.add(x));
-        if (r === 'done') break;
-        if (r === 'ask') { R.ask = null; err = '“' + ch.name + '” alt programında Giriş (Oku) var; alt programda değer okunamaz, değeri ana şemada oku.'; break; }
-        if (r === 'error') { err = '“' + ch.name + '” alt programında: ' + R.error; R.error = null; break; }
+        if (R.vars === V0 && R.changed !== C0) R.changed.forEach(x => C0.add(x));   // ortak değişkenli alt programda değişenler çağrı adımında görünsün
+        if (r === 'ask') { R.ask = null; err = '“' + name + '” bir ifadenin içinden çağrıldığı için içindeki Giriş (Oku) çalışamaz: değeri önce oku, parametre olarak ver.'; break; }
+        if (r === 'error') { err = '“' + name + '” alt programında: ' + R.error; R.error = null; break; }
       }
-    } finally {
-      R.subDepth--;
-      Object.assign(R, save, { changed: changed, done: false });
+    } finally { R.sync--; }
+    if (err) {   // çağrı yığını, çağrının yapıldığı yere geri sarılır
+      while (R.stack.length > depth) { const f = R.stack.pop(); Object.assign(R, { pid: f.pid, vars: f.vars, loops: f.loops, changed: f.changed, cur: f.cur, lastEdge: f.lastEdge }); }
+      throw flErr(err);
     }
-    if (err) throw flErr(err);
+    R.changed = C0;
+  }
+  /* Alt programda (ya da onun çağırdıklarında) Giriş var mı: varsa adım adım içine girilir, soru orada sorulur */
+  function flSubHasInput(ch, seen) {
+    const R = flRun, memo = R.inMemo || (R.inMemo = new Map());
+    if (memo.has(ch.id)) return memo.get(ch.id);
+    seen = seen || new Set();
+    if (seen.has(ch.id)) return false;
+    seen.add(ch.id);
+    const nodes = projectFlowNodes(activeProject, ch.id);
+    const has = nodes.some(x => x.kind === 'input') || nodes.some(x => { if (x.kind !== 'sub') return false; const c = flParseCall(x.text.trim()); return c.ch && flSubHasInput(c.ch, seen); });
+    memo.set(ch.id, has);
+    return has;
+  }
+  function flCallSubNode(n, t) {
+    const R = flRun, c = flParseCall(t);
+    if (!c.ch) throw flErr('“' + c.name + '” adında bir akış şeması yok. Alt program, bu projedeki başka bir şemanın (sekmenin) adıdır.');
+    const sig = flChartSig(c.ch);
+    flCheckSig(c.ch, sig, c.args.length);
+    const vals = c.args.map(a => flEval(a, R.vars));
+    const depth = R.stack ? R.stack.length : 0;
+    const into = (R.stepInto && !R.headless) || flSubHasInput(c.ch);
+    flPushFrame(c.ch, sig, vals, { local: sig.params.length > 0 || sig.ret || !!c.target, target: c.target, node: n.id });
+    if (into) { R.stepInto = false; return 'ok'; }   // içine gir: alt programın Başla'sında durulur (Giriş varsa her zaman)
+    flRunToDepth(depth, c.ch.name);
+    return 'ok';
+  }
+  /* Şu anki değişkenler kimin: ana şema ('') ya da kendi değişkenleriyle çalışan alt program */
+  function flVarScope() {
+    const st = (flRun && flRun.stack) || [];
+    for (let i = st.length - 1; i >= 0; i--) if (st[i].local) return st[i].name;
+    return '';
+  }
+  /* İfadedeki çağrı: Faktoriyel(5) → alt program kendi değişkenleriyle çalışır, döndürdüğü değer kullanılır */
+  function flCallFunc(ch, vals) {
+    const R = flRun, sig = flChartSig(ch);
+    flCheckSig(ch, sig, vals.length);
+    if (!sig.ret) throw flErr('“' + ch.name + '” bir değer döndürmüyor; ifadede kullanmak için sonunu Bitir(sonuc) ya da "Döndür sonuc" yap.');
+    const depth = R.stack ? R.stack.length : 0;
+    flPushFrame(ch, sig, vals, { local: true, target: null, expr: true, node: R.cur });
+    flRunToDepth(depth, ch.name);
+    if (!R.ret || !R.ret.has) throw flErr('“' + ch.name + '” bu yoldan bir değer döndürmeden bitti.');
+    return R.ret.val;
+  }
+  /* Adım adım izlerken görünen şema, çalışan alt programı izler (çalıştırma paneli kapanmaz) */
+  function flFollowRun() {
+    const R = flRun;
+    if (!R || R.headless || R.pid === flKey() || !findChart(R.pid)) return;
+    flowSettings(activeProject).active = R.pid;
+    saveFlowSettings(activeProject);
+    flSel = null;
+    renderFlow();
+  }
+  /* İçine gir / dışarı çık */
+  function flStepInto() {
+    const R = flRun, n = R && findFlowNode(R.cur);
+    if (!R || !n || n.kind !== 'sub' || R.done || R.error || R.ask) return;
+    flStopRun();
+    R.stepInto = true;
+    flStepOnce();
+    R.stepInto = false;
+    renderFlRun();
+  }
+  function flStepOut() {
+    const R = flRun;
+    if (!R || !(R.stack && R.stack.length) || R.done || R.error || R.ask) return;
+    flStopRun();
+    const d = R.stack.length;
+    for (let k = 0; k < FL_MAX_STEPS && R.stack.length >= d && !R.done && !R.error && !R.ask; k++) flStepOnce();
+    renderFlRun();
   }
 
   /* Giriş sorusuna verilen cevabı işler */
@@ -15756,12 +17275,12 @@
   }
 
   /* Şemayı ekranda göstermeden baştan çalıştırır (testler, ödev çıktısı): girdiler sırayla verilir */
-  function flRunHeadless(inputs, maxSteps) {
+  function flRunHeadless(inputs, maxSteps, traceOn) {
     const saved = flRun, lim = maxSteps || 50000;
     const start = projectFlowNodes(activeProject).find(n => n.kind === 'start');
     flRun = { pid: flKey(), cur: start ? start.id : null, vars: new Map(), out: [], steps: 0, loops: {}, ask: null, done: false,
               error: start ? null : 'Başla şekli yok.', timer: null, playing: false, lastEdge: null, changed: new Set(),
-              hist: [], histSize: 0, trace: [], inputs: [], headless: true };
+              hist: [], histSize: 0, trace: [], inputs: [], headless: true, traceOn: !!traceOn };
     let k = 0, status = 'limit';
     try {
       for (let g = 0; g < lim; g++) {
@@ -15775,7 +17294,7 @@
         if (r === 'done' || r === 'error') { status = flRun.error ? 'error' : 'done'; break; }
       }
       return { status: status, out: flRun.out.filter(o => o.cls !== 'in').map(o => o.text), error: flRun.error, used: k, steps: flRun.steps,
-               ask: flRun.ask ? flTargetLabel(flRun.ask.names[flRun.ask.i]) : null };
+               ask: flRun.ask ? flTargetLabel(flRun.ask.names[flRun.ask.i]) : null, trace: traceOn ? flRun.trace : null };
     } finally { flRun = saved; }
   }
 
@@ -15882,8 +17401,16 @@
   function renderFlRun() {
     const R = flRun;
     if (!R) return;
+    flFollowRun();
     const st = el('flRunState');
     const n = R.cur ? findFlowNode(R.cur) : null;
+    const inSub = !!(R.stack && R.stack.length), live = !R.done && !R.error && !R.ask;
+    el('flRunInto').hidden = !(live && n && n.kind === 'sub');
+    el('flRunOut').hidden = !(live && inSub);
+    const root = R.stack && R.stack.length ? (findChart(R.stack[0].pid) || {}).name : '';
+    el('flCallStack').hidden = !inSub;
+    if (inSub) el('flCallStack').textContent = 'Çağrı yığını: ' + [root || 'Ana şema'].concat(R.stack.map(f => f.name)).join(' › ') + ' · ' +
+      (R.stack[R.stack.length - 1].local ? 'değişkenler alt programın kendi değişkenleri' : 'değişkenler ana şemayla ortak');
     st.className = 'fl-run-state' + (R.error ? ' err' : (R.done ? ' ok' : ''));
     if (R.error) st.textContent = '⚠ ' + R.error;
     else if (R.done) st.textContent = '✓ Bitti — ' + R.steps + ' adım çalıştı.';
@@ -15925,8 +17452,8 @@
     if (on) renderFlTrace();
   }
   /* Satırlar ve sütunlar (değişkenler ilk değer aldıkları sırayla). all: değişmeyen değerler de yazılır */
-  function flTraceMatrix(all) {
-    const R = flRun, rows = R && R.pid === flKey() && R.trace ? R.trace : [];
+  function flTraceMatrix(all, rowsIn) {
+    const R = flRun, rows = rowsIn || (R && R.pid === flKey() && R.trace ? R.trace : []);
     const cols = [], seen = new Set();
     rows.forEach(r => Object.keys(r.vals).forEach(k => { if (!seen.has(k)) { seen.add(k); cols.push({ key: k, name: r.names[k] || k }); } }));
     const st = rows.length ? flowStepNumbers(activeProject) : null, num = st && st.num;
@@ -15936,13 +17463,13 @@
     };
     const cur = {};
     const body = rows.map(r => ({
-      k: r.k, step: label(r.id), cond: r.cond || '', out: r.out.join(' / '), err: r.err,
+      k: r.k, id: r.id, step: label(r.id), cond: r.cond || '', out: r.out.join(' / '), err: r.err,
       cells: cols.map(c => {
         if (Object.prototype.hasOwnProperty.call(r.vals, c.key)) { cur[c.key] = r.vals[c.key]; return { v: r.vals[c.key], ch: true }; }
         return { v: all && Object.prototype.hasOwnProperty.call(cur, c.key) ? cur[c.key] : '', ch: false };
       })
     }));
-    return { head: ['Sıra', 'Adım'].concat(cols.map(c => c.name), ['Koşul', 'Ekran']), body: body };
+    return { head: ['Sıra', 'Adım'].concat(cols.map(c => c.name), ['Koşul', 'Ekran']), body: body, cols: cols };
   }
   function flTraceTableHTML(M, rows) {
     return '<table class="fl-trace-t"><thead><tr>' + M.head.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' +
@@ -15992,6 +17519,91 @@
     const q = v => { v = flCellSafe(v); return /[";\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     // Türkçe Excel noktalı virgülü ayraç sayar; BOM ile Türkçe harfler doğru açılır
     download('\ufeff' + rows.map(r => r.map(q).join(';')).join('\r\n') + '\r\n', flFileName('izleme-tablosu') + '.csv', 'text/csv');
+  }
+
+  /* ---------- İZLEME TABLOSU ALIŞTIRMASI ----------
+     Şema görünmeden (girdilerle) çalıştırılır; öğrenci her adımda değişen değeri, kararın sonucunu ve ekrana
+     yazılanı kendisi doldurur, "Kontrol et" hücre hücre karşılaştırır. Değişmeyen hücre boş bırakılabilir
+     (ya da o anki değer yazılabilir); "Her satıra bütün değerleri yazacağım" seçiliyse her hücre sayılır. */
+  const FL_EX_ROWS = 40;
+  let flEx = null;   // { M, rows, all }
+  const flExNorm = v => {
+    let t = flFold(String(v == null ? '' : v)).trim().replace(/\s+/g, ' ').replace(/^["'“”‘’](.*)["'“”‘’]$/, '$1').trim();
+    if (/^[-+]?(\d+([.,]\d*)?|[.,]\d+)$/.test(t)) return String(parseFloat(t.replace(',', '.')));   // 2,50 = 2.5
+    if (t === 'true') t = 'dogru'; else if (t === 'false') t = 'yanlis';
+    return t.replace(/\s*([,\[\]])\s*/g, '$1');   // [1, 2] = [1,2]
+  };
+  const flExCond = v => { const t = flFold(String(v || '')).trim(); return /^(evet|e|dogru|d|true|1|yes)$/.test(t) ? 'Evet' : /^(hayir|h|yanlis|false|0|no)$/.test(t) ? 'Hayır' : t ? '?' : ''; };
+  function openFlExercise() {
+    if (!activeChart() || !flLogicNodes(activeProject).length) { flToast('Önce bir akış şeması çiz.'); return; }
+    const used = flRun && flRun.pid === flKey() && flRun.inputs ? flRun.inputs : [];
+    if (!el('flExIn').value.trim() && used.length) el('flExIn').value = used.join('\n');
+    el('flExModal').classList.add('open');
+    flExMake();
+  }
+  function flExMake() {
+    const inputs = flLines(el('flExIn').value).map(x => x.trim()).filter((x, i, a) => x || i < a.length - 1);
+    const r = flRunHeadless(inputs, 5000, true);
+    const msg = el('flExMsg');
+    msg.className = 'er-msg';
+    msg.textContent = '';
+    if (r.status === 'noinput') { msg.className = 'er-msg err'; msg.textContent = 'Girdiler yetmedi: “' + (r.ask || '?') + '” için de bir değer yaz (her satıra bir değer).'; }
+    else if (r.status === 'error') { msg.className = 'er-msg err'; msg.textContent = 'Şema çalışırken hata verdi: ' + r.error; }
+    else if (r.status === 'limit') { msg.className = 'er-msg err'; msg.textContent = 'Şema 5000 adımda bitmedi (sonsuz döngü olabilir).'; }
+    // ilginç satırlar: bir değer değişen, karar verilen ya da ekrana yazan adımlar
+    const M = flTraceMatrix(true, r.trace || []);
+    const rows = M.body.filter(x => x.cells.some(c => c.ch) || x.cond || x.out || x.err);
+    flEx = { M: M, rows: rows.slice(0, FL_EX_ROWS), all: el('flExAll').checked, more: rows.length > FL_EX_ROWS };
+    if (flEx.more && !msg.textContent) msg.textContent = 'Uzun bir çalıştırma: tablo ilk ' + FL_EX_ROWS + ' satırı soruyor.';
+    renderFlExercise();
+  }
+  function renderFlExercise() {
+    const X = flEx, wrap = el('flExWrap');
+    el('flExScore').textContent = '';
+    el('flExScore').className = 'fl-ex-score';
+    if (!X || !X.rows.length) { wrap.innerHTML = '<div class="fl-trace-empty">Bu çalıştırmada doldurulacak adım yok.</div>'; return; }
+    const kindOf = id => { const n = findFlowNode(id); return n ? n.kind : ''; };
+    const cell = (r, c, ph) => '<td><input class="fl-ex-cell" data-r="' + r + '" data-c="' + c + '" autocomplete="off" spellcheck="false" aria-label="' + escAttr(ph) + '"></td>';
+    wrap.innerHTML = '<table class="fl-trace-t fl-ex-t"><thead><tr>' + X.M.head.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' +
+      X.rows.map((r, i) => {
+        const k = kindOf(r.id), dec = k === 'decision' || k === 'loop';
+        return '<tr><td class="no">' + (i + 1) + '</td><td class="step" title="' + escAttr(r.step) + '">' + esc(r.step) + '</td>' +
+          X.M.cols.map((c, j) => cell(i, j, (i + 1) + '. satır, ' + c.name)).join('') +
+          (dec ? cell(i, 'cond', (i + 1) + '. satır, koşul (Evet / Hayır)') : '<td class="old">–</td>') +
+          (k === 'output' || r.out ? cell(i, 'out', (i + 1) + '. satır, ekran') : '<td class="old">–</td>') + '</tr>';
+      }).join('') + '</tbody></table>';
+  }
+  function flExCheckClear() {
+    el('flExWrap').querySelectorAll('.fl-ex-cell').forEach(x => { x.classList.remove('ok', 'bad', 'shown'); x.title = ''; });
+    el('flExScore').textContent = '';
+  }
+  function flExCheck(show) {
+    const X = flEx;
+    if (!X || !X.rows.length) return;
+    let good = 0, total = 0;
+    el('flExWrap').querySelectorAll('.fl-ex-cell').forEach(inp => {
+      const r = X.rows[+inp.dataset.r], c = inp.dataset.c;
+      let want, ok, counted = true;
+      if (c === 'cond') { want = r.cond; ok = flExCond(inp.value) === want; }
+      else if (c === 'out') { want = r.out; ok = flExNorm(inp.value) === flExNorm(want); }
+      else {
+        const x = r.cells[+c];
+        want = x.v;
+        if (x.ch || X.all) ok = flExNorm(inp.value) === flExNorm(want);
+        else { counted = false; ok = !inp.value.trim() || flExNorm(inp.value) === flExNorm(want); }   // değişmedi: boş ya da o anki değer
+        if (!x.ch && !X.all) want = '';
+      }
+      if (show && !ok) inp.value = want;
+      inp.classList.toggle('ok', ok && (counted || !!inp.value.trim()));
+      inp.classList.toggle('bad', !ok);
+      inp.classList.toggle('shown', !!show && !ok);
+      inp.title = ok ? '' : (c !== 'cond' && c !== 'out' && !r.cells[+c].ch && !X.all ? 'Bu adımda bu değer değişmiyor' : 'Doğrusu: ' + (want === '' ? '(boş)' : want));
+      if (counted) { total++; if (ok) good++; }
+      else if (!ok) total++;
+    });
+    const sc = el('flExScore');
+    sc.textContent = show ? 'Cevaplar yazıldı (kırmızılar yanlıştı).' : good + ' / ' + total + ' doğru' + (good === total ? ' — tebrikler!' : '');
+    sc.className = 'fl-ex-score ' + (good === total && !show ? 'ok' : 'bad');
   }
 
   /* ---------- TEST SENARYOLARI ---------- */
@@ -16233,11 +17845,17 @@
         p++;
         if (isOp('(')) {
           p++;
-          const key = flFnKey(flFold(t.v)), fn = FL_FUNCS[key];
-          if (!fn || typeof fn === 'string') throw flErr('Bilinmeyen fonksiyon: ' + t.v);
+          const key = flFnKey(flFold(t.v)), fn0 = FL_FUNCS[key];
+          const ch0 = flSubChart(t.v), sig = ch0 && flChartSig(ch0), isFn = !!(sig && sig.start && !sig.bad && sig.ret);
+          const ch = isFn ? ch0 : null, fn = ch ? null : fn0;   // değer döndüren alt program, aynı adlı hazır fonksiyondan önce gelir
+          if ((!fn || typeof fn === 'string') && !ch) throw flErr('Bilinmeyen fonksiyon: ' + t.v);
           const args = [];
           if (!isOp(')')) { args.push(or()); while (isOp(',')) { p++; args.push(or()); } }
           take(')');
+          if (ch) {   // değer döndüren alt program (akış şeması): koda fonksiyon olarak yazılır
+            if (args.length !== sig.params.length) throw flErr(t.v + '( ) için değer sayısı yanlış.');
+            return { t: 'call', fn: '#sub', ch: ch.id, args: args };
+          }
           if (args.length < fn[0] || args.length > fn[2]) throw flErr(t.v + '( ) için değer sayısı yanlış.');
           if (key === 'ekle') throw flErr('ekle( ) ifade içinde kullanılmaz.');
           return { t: 'call', fn: key, args: args };
@@ -16270,7 +17888,20 @@
   function flAnalyzeNode(n) {
     const t = n.text.trim().replace(/\s*\n\s*/g, '; ');
     const desc = { kind: 'call', text: t || FL_KINDS[n.kind].name };
-    if (n.kind === 'sub') return { kind: 'call', text: flSubName(t) || FL_KINDS.sub.def, sub: true }; // doldurulacak metot (alt programın adıyla)
+    if (n.kind === 'sub') {
+      // Parametreli / değer döndüren alt program: gerçek metot çağrısı (gövdesi alt programın şemasından üretilir)
+      const c = flParseCall(t), sig = c.ch && flChartSig(c.ch);
+      if (sig && sig.start && !sig.bad && (sig.params.length || sig.ret) && (sig.ret || !c.target) && c.args.length === sig.params.length) {
+        const args = c.args.map(flTryExpr);
+        if (args.every(Boolean)) {
+          const call = { t: 'call', fn: '#sub', ch: c.ch.id, args: args };
+          if (!c.target) return { kind: 'subcall', ast: call, text: t };
+          const tg = flTargetAst(c.target);
+          if (tg) return { kind: 'assign', name: tg.name, idx: tg.idx || [], op: '', ast: call };
+        }
+      }
+      return { kind: 'call', text: flSubName(t) || FL_KINDS.sub.def, sub: true }; // doldurulacak metot (alt programın adıyla)
+    }
     if (n.kind === 'conn' || n.kind === 'note') return { kind: 'multi', stmts: [] }; // bağlantı noktası: komut yok
     if (n.kind === 'decision') {
       const c = flCondText(t);
@@ -16322,6 +17953,10 @@
         }
       }
       return stmts.length === 1 ? stmts[0] : { kind: 'multi', stmts: stmts };
+    }
+    if (n.kind === 'end') { // Bitir(sonuc) · Döndür sonuc: fonksiyonun döndürdüğü değer
+      const e = flEndExpr(t);
+      if (e != null) { const a = flTryExpr(e); return a ? { kind: 'ret', ast: a, text: e } : { kind: 'retbad', text: e }; }
     }
     return { kind: n.kind }; // start / end
   }
@@ -16434,6 +18069,20 @@
     const done = new Set(), gotoTargets = new Set();
     let jumps = false; // break / continue / goto var mı (sözde kod bunları yazamaz)
     const G = id => { gotoTargets.add(id); jumps = true; return { s: 'goto', node: id }; };
+    // Döngünün içinden çıkıp Bitir'le biten düz kuyruk (Yaz "bulundu" → Bitir, Döndür yanlış): atlama yerine
+    // olduğu yere yazılır (erken çıkış / return). Kuyruğa başka yerden gelinmemeli; Bitir'in kendisi paylaşılabilir.
+    const tailToEnd = n => {
+      const list = [];
+      for (let x = n, k = 0; x && k < 30; k++) {
+        const N = byId[x];
+        if (!N || loops[x]) return null;
+        if (N.kind === 'end') { list.push(x); return list; }
+        if (done.has(x) || flBranches(N) || succ[x].length !== 1 || pred[x].filter(p => reach.has(p)).length !== 1) return null;
+        list.push(x);
+        x = succ[x][0].to;
+      }
+      return null;
+    };
 
     function seq(n, stop, ctx, out, enteringHeader) {
       let guard = 0;
@@ -16446,10 +18095,13 @@
           }
         }
         if (ctx && !ctx.body.has(n)) {
-          if (n === ctx.exit) { out.push({ s: 'break' }); jumps = true; } else out.push(G(n));
+          if (n === ctx.exit) { out.push({ s: 'break' }); jumps = true; return; }
+          const tl = tailToEnd(n);
+          if (tl) { tl.forEach(x => { done.add(x); out.push(byId[x].kind === 'end' ? { s: 'end', node: x } : { s: 'stmt', node: x }); }); return; }
+          out.push(G(n));
           return;
         }
-        if (done.has(n)) { out.push(G(n)); return; }
+        if (done.has(n)) { out.push(byId[n].kind === 'end' ? { s: 'end', node: n } : G(n)); return; }   // Bitir'e birden çok yerden gelinebilir
         const L = loops[n];
         if (L && !(ctx && ctx.header === n)) { // yeni bir döngü başlıyor (kendi gövdesinin içindeysek sıradan şekildir)
           const body = [];
@@ -16514,10 +18166,11 @@
     seq(entry, null, null, tree);
     // En dıştaki son "Bitir" yazılmaz (program zaten biter)
     const last = tree[tree.length - 1];
-    if (last && last.s === 'end') tree.pop();
+    let lastEnd = null;   // fonksiyonda "Döndür sonuc" yazılsın diye saklanır
+    if (last && last.s === 'end') { tree.pop(); lastEnd = last.node; }
     const unreachable = nodes.filter(n => !reach.has(n.id));
     return { tree: tree, byId: byId, gotoTargets: gotoTargets, jumps: jumps, unreachable: unreachable,
-             entry: entry, reach: reach, branch: branch, next: next,
+             entry: entry, reach: reach, branch: branch, next: next, lastEnd: lastEnd,
              info: id => flAnalyzeNode(byId[id]) };
   }
 
@@ -16552,7 +18205,9 @@
   /* ---------- Tür çıkarımı (C#, Java, C, C++ bildirimleri; Python / JavaScript'te sayı / metin okumayı seçer) ----------
      Türler: 'double' · 'int' (döngü sayacı ve sadece tam sayı alan sıra numarası değişkenleri) · 'string' · 'bool'
      Diziler: 'double[]', 'string[]', 'double[][]' … (sayı dizileri her zaman double) */
-  function flInferTypes(S) {
+  function flInferTypes(S, opt) {
+    opt = opt || {};
+    const RT = opt.ret || null, PRM = opt.params || [], HINT = opt.hint || {};   // alt programların dönüş türleri · bu şemanın parametreleri · ön bilgi
     const key = v => flFold(v);
     const names = {}, note = v => { const k = key(v); if (!names[k]) names[k] = v; return k; };
     const types = {}, counters = new Set(), inputs = new Set(), grows = new Set(), declared = new Set();
@@ -16584,6 +18239,7 @@
         case 'arr': { let t = null; a.items.forEach(x => { t = unify(t, elemT(typeOf(x))); }); return (t || 'double') + '[]'; }
         case 'call': {
           const f = a.fn, A = a.args;
+          if (f === '#sub') { const r = RT && RT.get(a.ch); return r && r !== 'void' ? r : 'double'; }   // alt programın döndürdüğü tür
           if (['uzunluk', 'kod', 'bul', 'rastgele'].includes(f)) return 'int';
           if (['metin', 'buyukharf', 'kucukharf', 'parca', 'kirp', 'degistir', 'karakter'].includes(f)) return 'string';
           if (f === 'icerir') return 'bool';
@@ -16622,6 +18278,10 @@
       if (s.kind === 'for') { counters.add(note(s.v)); }
       if (s.kind === 'input') s.targets.forEach(t => { if (!t.idx.length) inputs.add(note(t.name)); });
     });
+    // parametreler: türü çağrılardan gelir (bilinmiyorsa metinle karşılaştırılıyorsa metin, değilse sayı)
+    const P = new Set();
+    PRM.forEach(p => { const k = note(p.name); P.add(k); declared.add(k); types[k] = flUnifyType(p.type, strCmp.has(k) ? 'string' : null) || 'double'; });
+    Object.keys(HINT).forEach(n => { const k = note(n); if (!types[k]) types[k] = HINT[n]; });
     for (let pass = 0; pass < 5; pass++) {
       stmts.forEach(s => {
         if (s.kind === 'assign') {
@@ -16659,7 +18319,7 @@
       if (s.kind === 'input') s.targets.forEach(t => t.idx.forEach(addIds));
     });
     for (let g = 0; g < 6; g++) [...cand].forEach(k => (asg[k] || []).forEach(s => addIds(s.ast)));
-    ints = new Set([...cand].filter(k => !counters.has(k) && !inputs.has(k) && !grows.has(k) && asg[k] && types[k] === 'double'));
+    ints = new Set([...cand].filter(k => !counters.has(k) && !inputs.has(k) && !grows.has(k) && !P.has(k) && asg[k] && types[k] === 'double'));
     for (let changed = true, g = 0; changed && g < 12; g++) {
       changed = false;
       for (const k of [...ints]) if (asg[k].some(s => s.op === '/' || typeOf(s.ast) !== 'int')) { ints.delete(k); changed = true; }
@@ -16679,7 +18339,7 @@
       cap[k] = cap[k] === undefined ? n : (n == null || cap[k] == null ? null : Math.max(cap[k], n));
     });
     return { types: types, counters: counters, ints: ints, grows: grows, declared: declared, undeclared: undeclared, names: names, typeOf: typeOf, key: key,
-             isArr: isArr, elemOf: elemOf, baseOf: baseOf, dimsOf: dimsOf, cap: cap };
+             isArr: isArr, elemOf: elemOf, baseOf: baseOf, dimsOf: dimsOf, cap: cap, params: P };
   }
 
   /* ---------- Dil yazıcıları ---------- */
@@ -16687,19 +18347,148 @@
   function flNumLit(v) { return Number.isInteger(v) ? String(v) : String(parseFloat(v.toPrecision(15))); }
   const FL_UNSUP = {};  // kod üretilemeyen yazım (o şekil "doldurulacak metot" olur)
 
-  function flCodeGen(pid, cid, lang) {
-    const S = flStructure(pid, cid);
+  /* ---------- Alt programlar → fonksiyonlar ----------
+     Başla(a, b) ile değer alan ya da Bitir(sonuc) / "Döndür sonuc" ile değer döndüren alt program, koda kendi
+     gövdesiyle fonksiyon olarak yazılır (parametresiz, değer döndürmeyen alt program eskisi gibi doldurulacak metot olur).
+     Ana şemadan başlanıp çağrılan bütün şemalar toplanır; parametre türleri çağrılardaki değerlerden, dönüş türü
+     Döndür ifadelerinden birkaç turda birlikte çıkarılır. */
+  const FL_FN_MAX = 30;
+  function flUnifyType(a, b) {
+    if (!a) return b; if (!b) return a; if (a === b) return a;
+    const arr = t => /\[\]$/.test(t);
+    if (arr(a) && arr(b)) return flUnifyType(a.slice(0, -2), b.slice(0, -2)) + '[]';
+    if (arr(a) || arr(b)) return arr(a) ? a : b;
+    if (a === 'string' || b === 'string') return 'string';
+    return 'double';
+  }
+  function flCallsIn(S) {   // şemadaki alt program çağrıları (ifade ağacındaki '#sub' düğümleri)
+    const out = [];
+    const walk = a => { if (!a || typeof a !== 'object') return; if (a.t === 'call' && a.fn === '#sub') out.push(a); ['a', 'b', 'i'].forEach(k => { if (a[k]) walk(a[k]); }); (a.args || []).forEach(walk); (a.items || []).forEach(walk); };
+    S.reach.forEach(id => {
+      const inf = S.info(id);
+      (inf.kind === 'multi' ? inf.stmts : [inf]).forEach(s => [s.ast, s.a, s.b, s.step].concat(s.parts || [], s.idx || [], (s.targets || []).reduce((l, t) => l.concat(t.idx), [])).forEach(walk));
+    });
+    return out;
+  }
+  /* Blok sonuna düşülebilir mi (değer döndüren fonksiyonun sonuna "return" gerekir mi: Java / C# denetimi gibi) */
+  function flCanFall(list) {
+    if (!list.length) return true;
+    const x = list[list.length - 1];
+    if (['end', 'goto', 'break', 'continue'].includes(x.s)) return false;
+    if (x.s === 'if') return !x.else.length || flCanFall(x.then) || flCanFall(x.else);
+    if (x.s === 'forever') return (function brk(l) { return l.some(y => y.s === 'break' || (y.s === 'if' && (brk(y.then) || brk(y.else)))); })(x.body);
+    return true;
+  }
+  function flFuncPlan(pid, cid, lang, mainS) {
+    const units = new Map(), order = [];
+    const F = { units: units, order: order, need: new Set(), stubs: new Map(), stubNames: new Set(), varNames: new Set(), fnNames: new Set(), selfFn: false, mainS: mainS, mainT: null };
+    const add = id => {
+      if (units.has(id) || units.size >= FL_FN_MAX) return;
+      const ch = findChart(id), S = ch && flStructure(pid, id);
+      if (!S) return;
+      units.set(id, { id: id, ch: ch, sig: flChartSig(ch), S: S });
+      order.push(id);
+    };
+    // Şemanın kendisi bir fonksiyonsa (Başla(n) … Döndür sonuc): ana program parametreleri okuyup sonucu yazar
+    const self = findChart(cid), selfSig = self && flChartSig(self);
+    if (selfSig && selfSig.start && !selfSig.bad && (selfSig.params.length || selfSig.ret)) { add(cid); F.selfFn = units.has(cid); }
+    if (!F.selfFn) flCallsIn(mainS).forEach(x => add(x.ch));
+    for (let i = 0; i < order.length; i++) flCallsIn(units.get(order[i]).S).forEach(x => add(x.ch));
+    if (!order.length) { F.mainT = flInferTypes(mainS); return F; }
+    // türler: birkaç tur (parametre türü çağrılardan, dönüş türü Döndür ifadelerinden)
+    const ret = new Map(), pt = new Map(), hints = new Map();   // hints: şema ('' = ana) → { değişken: 'string' }
+    order.forEach(id => pt.set(id, units.get(id).sig.params.map(() => null)));
+    const learn = (S, T, owner) => {
+      let ch = false;
+      flCallsIn(S).forEach(x => {
+        const a = pt.get(x.ch), cu = units.get(x.ch);
+        if (a) x.args.forEach((y, i) => {
+          if (i >= a.length) return;
+          const u = flUnifyType(a[i], T.typeOf(y));
+          if (u !== a[i]) { a[i] = u; ch = true; }
+          // metin parametresine verilen değişken (ör. okunan ad) de metindir
+          const want = cu && cu.T ? cu.T.types[cu.T.key(cu.sig.params[i])] : null;
+          if (want === 'string' && y.t === 'id' && T.typeOf(y) !== 'string') {
+            const h = hints.get(owner) || {};
+            if (h[y.name] !== 'string') { h[y.name] = 'string'; hints.set(owner, h); ch = true; }
+          }
+        });
+      });
+      return ch;
+    };
+    for (let pass = 0; pass < 6; pass++) {
+      let changed = false;
+      if (!F.selfFn) { F.mainT = flInferTypes(mainS, { ret: ret, hint: hints.get('') }); if (learn(mainS, F.mainT, '')) changed = true; }
+      order.forEach(id => {
+        const u = units.get(id);
+        u.T = flInferTypes(u.S, { ret: ret, hint: hints.get(id), params: u.sig.params.map((p, i) => ({ name: p, type: pt.get(id)[i] })) });
+        if (learn(u.S, u.T, id)) changed = true;
+        let rt = null;
+        u.S.reach.forEach(n => { const inf = u.S.byId[n].kind === 'end' ? u.S.info(n) : null; if (inf && inf.kind === 'ret') rt = flUnifyType(rt, u.T.typeOf(inf.ast)); });
+        rt = rt || (u.sig.ret ? 'double' : 'void');
+        if (ret.get(id) !== rt) { ret.set(id, rt); changed = true; }
+      });
+      if (!changed) break;
+    }
+    // adlar ve yazılamayan fonksiyonlar (C'de dizi parametresi / dönüşü; C# / Java'da büyüyen dizi = liste)
+    order.forEach(id => {
+      const u = units.get(id), T = u.T;
+      u.ptypes = u.sig.params.map(p => T.types[T.key(p)] || 'double');
+      u.retType = ret.get(id) || 'void';
+      // C: tek boyutlu dizi parametresi "double A[], int A_n" olur; dizi döndürmek, iki boyutlu ya da büyüyen dizi parametresi yazılamaz
+      const cBad = lang === 'c' && (T.isArr(u.retType) || u.sig.params.some((p, i) => T.isArr(u.ptypes[i]) && (T.dimsOf(u.ptypes[i]) > 1 || T.grows.has(T.key(p)))));
+      const growRet = [...u.S.reach].some(n => { const inf = u.S.byId[n].kind === 'end' ? u.S.info(n) : null; return inf && inf.kind === 'ret' && inf.ast.t === 'id' && T.grows.has(T.key(inf.ast.name)); });
+      u.bad = cBad || ((lang === 'csharp' || lang === 'java') && (growRet || u.sig.params.some(p => T.grows.has(T.key(p)))));
+      let base = String(u.ch.name).trim();
+      if (lang === 'c' || lang === 'cpp') base = flAscii(base).replace(/[^A-Za-z0-9_]+/g, '_');
+      base = base.replace(/[^\p{L}\p{N}_]+/gu, '_').replace(/^_+|_+$/g, '') || 'AltProgram';
+      if (/^\p{N}/u.test(base)) base = 'F' + base;
+      if (FL_RES[lang].has(base)) base += '_';
+      let name = base, k = 2;
+      while (F.fnNames.has(name) || FL_RES[lang].has(name)) name = base + '_' + (k++);
+      u.name = name;
+      F.fnNames.add(name);
+    });
+    if (F.selfFn && units.get(cid).bad) {   // şemanın kendisi yazılamıyor: eskisi gibi tek program
+      F.selfFn = false;
+      F.mainT = flInferTypes(mainS, { ret: ret, hint: hints.get('') });
+    }
+    if (F.selfFn) {   // ana program: parametreleri oku, çağır, sonucu yaz
+      const u = units.get(cid), call = { t: 'call', fn: '#sub', ch: cid, args: u.sig.params.map(p => ({ t: 'id', name: p })) };
+      const byId = {}, info = {}, tree = [], reach = new Set();
+      if (u.sig.params.length) {
+        byId.i = { id: 'i', kind: 'input', text: 'Oku ' + u.sig.params.join(', ') };
+        info.i = { kind: 'input', targets: u.sig.params.map(p => ({ name: p, idx: [] })), text: byId.i.text };
+        tree.push({ s: 'stmt', node: 'i' }); reach.add('i');
+      }
+      byId.o = { id: 'o', kind: u.sig.ret ? 'output' : 'sub', text: (u.sig.ret ? 'Yaz "Sonuç:", ' : '') + u.ch.name + '(' + u.sig.params.join(', ') + ')' };
+      info.o = u.sig.ret ? { kind: 'print', parts: [{ t: 'str', v: 'Sonuç:' }, call], text: byId.o.text } : { kind: 'subcall', ast: call, text: byId.o.text };
+      tree.push({ s: 'stmt', node: 'o' }); reach.add('o');
+      F.mainS = { tree: tree, byId: byId, gotoTargets: new Set(), jumps: false, unreachable: [], entry: tree[0].node, reach: reach,
+                  branch: () => [], next: () => null, lastEnd: null, info: id => info[id] };
+      const hint = {};
+      u.sig.params.forEach((p, i) => { hint[p] = u.ptypes[i]; });
+      F.mainT = flInferTypes(F.mainS, { ret: ret, hint: hint });
+    }
+    return F;
+  }
+
+  function flCodeGen(pid, cid, lang, F) {
+    const top = !F;   // F verilmişse: bu şema bir fonksiyonun gövdesi olarak yazılıyor
+    let S = top ? flStructure(pid, cid) : F.units.get(cid).S;
     const chart = findChart(cid);
     const py = lang === 'python', js = lang === 'js', cs = lang === 'csharp', java = lang === 'java', c = lang === 'c', cpp = lang === 'cpp';
     const CM = py ? '# ' : '// ';
     if (!S) return lang === 'pseudo' ? '' : CM + 'Şema boş.\n';
     if (lang === 'pseudo') return flPseudo(S, pid, cid);
-    const T = flInferTypes(S);
+    if (top) { F = flFuncPlan(pid, cid, lang, S); S = F.mainS; }
+    const U = top ? null : F.units.get(cid);
+    const T = top ? F.mainT : U.T;
     const IND = '    ';
-    const need = new Set();
-    const stubs = new Map();
+    const need = F.need;
+    const stubs = F.stubs;
     // ---- adlar ----
-    const nameMap = new Map(), takenNames = new Set();
+    const nameMap = new Map(), takenNames = new Set(F.fnNames);
     const varName = v => {
       const k = T.key(v);
       if (nameMap.has(k)) return nameMap.get(k);
@@ -16707,10 +18496,11 @@
       if (c || cpp) n = flAscii(n).replace(/[^A-Za-z0-9_]/g, '_');
       if (FL_RES[lang].has(n) || /^\d/.test(n)) n = n + '_';
       let m = n, i = 2;
-      while (takenNames.has(m)) m = n + '_' + (i++);
-      takenNames.add(m); nameMap.set(k, m);
+      while (takenNames.has(m) || F.stubNames.has(m)) m = n + '_' + (i++);
+      takenNames.add(m); nameMap.set(k, m); F.varNames.add(m);
       return m;
     };
+    if (U) U.sig.params.forEach(p => varName(p));   // parametreler adlarını önce alır
     const tyOf = a => T.typeOf(a);
     const vt = v => T.types[T.key(v)] || 'double';
     const isArrV = v => T.isArr(vt(v));
@@ -16719,9 +18509,9 @@
       const k = (isBool ? '?' : '') + text;
       if (!stubs.has(k)) {
         let base = flMethodName(text, py || c || cpp ? 'snake' : (java || js) ? 'camel' : 'pascal'), name = base, i = 2;
-        const taken = new Set([...stubs.values()].map(s => s.name));
-        while (taken.has(name) || takenNames.has(name) || FL_RES[lang].has(name)) name = base + (py || c || cpp ? '_' : '') + (i++);
+        while (F.stubNames.has(name) || takenNames.has(name) || F.varNames.has(name) || F.fnNames.has(name) || FL_RES[lang].has(name)) name = base + (py || c || cpp ? '_' : '') + (i++);
         stubs.set(k, { name: name, bool: isBool, text: text });
+        F.stubNames.add(name);
       }
       return stubs.get(k).name + '()';
     };
@@ -16913,6 +18703,7 @@
       if (STRFN[a.fn] && STRFN[a.fn].some(k => a.args[k] && !isStr(a.args[k]))) // sayı → metin
         a = Object.assign({}, a, { args: a.args.map((x, k) => (STRFN[a.fn].includes(k) && !isStr(x) ? { t: 'call', fn: 'metin', args: [x] } : x)) });
       if (a.fn === 'ters' && !T.isArr(tyOf(a.args[0])) && !isStr(a.args[0])) a = Object.assign({}, a, { args: [{ t: 'call', fn: 'metin', args: [a.args[0]] }] });
+      if (a.fn === '#sub') return subCallEx(a);
       const A = a.args.map(x => ex(x)), f = a.fn, x0 = a.args[0];
       const M = (pyF, jsF, csF, javaF, cF) => (py ? pyF : js ? jsF : cs ? csF : java ? javaF : cF);
       switch (f) {
@@ -17070,6 +18861,36 @@
       if (!fill && (el === 'double' || el === 'boolean')) return 'new ' + el + '[' + n + ']';
       need.add('jfill');
       return 'diziDoldur(' + n + ', ' + fillEx + ')';
+    }
+    // ---- alt program (fonksiyon) çağrısı, dönüş ----
+    const defOf = t => (T.isArr(t) ? (py || js ? '[]' : c ? 'NULL' : cpp ? typeName(t) + '()' : 'null') : t === 'string' ? '""' : t === 'bool' ? (py ? 'False' : 'false') : '0');
+    function toType(x, t) {   // değeri istenen türe çevirir (parametre, dönüş değeri)
+      const at = tyOf(x);
+      if (T.isArr(t) || T.isArr(at)) {
+        if (c) {   // C: dizi ve eleman sayısı birlikte verilir
+          if (x.t !== 'id' || !T.isArr(t) || !T.isArr(at) || T.dimsOf(at) > 1 || T.baseOf(at) !== T.baseOf(t)) throw FL_UNSUP;
+          const v = varName(x.name);
+          return v + ', ' + v + '_n';
+        }
+        if (typed && typeName(t) !== typeName(at, x.t === 'id' ? x.name : null)) throw FL_UNSUP;   // dizi / liste türü uyuşmuyor
+        return ex(x);
+      }
+      if (t === 'string' && at !== 'string') return c ? metinC(x) : conv(x);
+      if (!js && t !== 'string' && at === 'string') return callEx({ t: 'call', fn: 'sayi', args: [x] });
+      if (typed && t === 'int' && at !== 'int') return '(int)(' + ex(x) + ')';
+      if (typed && t === 'bool' && at !== 'bool') return '(' + ex(x) + ') != 0';
+      return ex(x);
+    }
+    function subCallEx(a) {
+      const u = F.units.get(a.ch);
+      if (!u || u.bad) throw FL_UNSUP;   // fonksiyon olarak yazılamıyor: o adım doldurulacak metot olur
+      return u.name + '(' + a.args.map((x, i) => toType(x, u.ptypes[i])).join(', ') + ')';
+    }
+    function retLine(id) {   // fonksiyonun Bitir'i
+      if (U.retType === 'void') return py ? 'return' : 'return;';
+      const inf = id ? S.info(id) : { kind: 'end' };
+      if (inf.kind === 'ret') { try { return 'return ' + toType(inf.ast, U.retType) + SEMI; } catch (e) { if (e !== FL_UNSUP) throw e; } }
+      return 'return ' + defOf(U.retType) + SEMI + (py ? '  # ' : ' // ') + 'TODO: ' + (inf.kind === 'ret' || inf.kind === 'retbad' ? cmt(inf.text) : 'bu yoldan bir değer döndürülmüyor');
     }
     function cond(id, neg) {
       const inf = S.info(id);
@@ -17238,6 +19059,7 @@
         if (inf.kind === 'multi') return inf.stmts.reduce((l, x) => l.concat(x.kind === 'append' ? appendLine(x) : assignLine(x)), []);
         if (inf.kind === 'print') return [printLine(inf.parts)];
         if (inf.kind === 'input') return inputLines(inf);
+        if (inf.kind === 'subcall') return [subCallEx(inf.ast) + SEMI];
       } catch (e) { if (e !== FL_UNSUP) throw e; }
       return [stub(inf.text || S.byId[id].text, false) + SEMI];
     }
@@ -17266,7 +19088,7 @@
       list.forEach(x => {
         switch (x.s) {
           case 'stmt': stmtLines(x.node).forEach(l => out.push(ind + l)); break;
-          case 'end': out.push(ind + (py ? 'return' : c || cpp ? 'return 0;' : 'return;')); break;
+          case 'end': out.push(ind + (U ? retLine(x.node) : py ? 'return' : c || cpp ? 'return 0;' : 'return;')); break;
           case 'break': out.push(ind + 'break' + SEMI); break;
           case 'continue': out.push(ind + 'continue' + SEMI); break;
           case 'goto': out.push(ind + (py ? 'pass  # Buradan "' + cmt(S.byId[x.node].text) + '" adımına gidilir' : 'goto ' + label(x.node) + ';')); break;
@@ -17332,6 +19154,8 @@
     // sayaç döngü dışında da kullanılıyorsa (ya da durum makinesindeyse) başta bildirilir
     const machine = S.gotoTargets.size > 0;
     const topCounters = new Set();
+    if (U) T.params.forEach(k => { if (T.counters.has(k)) topCounters.add(k); });   // sayaç olarak kullanılan parametre zaten bildirilmiş
+    if (U && !machine && S.lastEnd && U.retType !== 'void' && !S.endBack) { S.tree.push({ s: 'end', node: S.lastEnd }); S.endBack = true; }   // son "Döndür sonuc"
     if (machine) T.counters.forEach(k => topCounters.add(k));
     else {
       const usesIn = (a, k) => { let f = false; const w = x => { if (!x || typeof x !== 'object' || f) return; if (x.t === 'id' && T.key(x.name) === k) f = true; ['a', 'b', 'i'].forEach(q => x[q] && w(x[q])); (x.args || []).forEach(w); (x.items || []).forEach(w); }; w(a); return f; };
@@ -17344,7 +19168,7 @@
       (function scan(list, inside) {
         list.forEach(x => {
           if (x.s === 'for') { const inf = S.info(x.node); const k = inf.kind === 'for' ? T.key(inf.v) : null; scan(x.body, k ? new Set([...inside, k]) : inside); return; }
-          if (x.node && x.s !== 'end') T.counters.forEach(k => { if (!inside.has(k) && nodeUses(x.node, k)) topCounters.add(k); });
+          if (x.node && (x.s !== 'end' || S.info(x.node).kind === 'ret')) T.counters.forEach(k => { if (!inside.has(k) && nodeUses(x.node, k)) topCounters.add(k); });
           ['then', 'else', 'body'].forEach(f => { if (x[f]) scan(x[f], inside); });
         });
       })(S.tree, new Set());
@@ -17371,7 +19195,7 @@
       ids.forEach((id, i) => {
         const N = S.byId[id], body = [];
         if (N.kind === 'start') body.push(set(go(S.next(id))));
-        else if (N.kind === 'end') body.push(set(0));
+        else if (N.kind === 'end') body.push(U ? retLine(id) : set(0));
         else if (N.kind === 'decision' || (N.kind === 'loop' && S.info(id).kind !== 'for')) {
           const [y, h] = S.branch(id), cd = cond(id, false);
           body.push(py ? 'adim = ' + go(y) + ' if ' + cd + ' else ' + go(h) : 'adim = (' + cd + ') ? ' + go(y) + ' : ' + go(h) + ';');
@@ -17387,9 +19211,9 @@
             body.push('if (' + v + (neg ? ' >= ' : ' <= ') + ex(inf.b, 5) + ') adim = ' + go(y) + '; else { ' + f + ' = false; adim = ' + go(h) + '; }');
           }
         } else { stmtLines(id).forEach(l => body.push(l)); body.push(set(go(S.next(id)))); }
-        const note = cmt(N.text) || FL_KINDS[N.kind].name;
+        const note = cmt(N.text) || FL_KINDS[N.kind].name, isRet = U && N.kind === 'end';   // return'den sonra break yazılmaz (Java: ulaşılamayan kod)
         if (py) { L.push(ind + IND + (i ? 'elif' : 'if') + ' adim == ' + num[id] + ':  # ' + note); body.forEach(l => L.push(ind + IND + IND + l)); }
-        else { L.push(ind + IND + IND + 'case ' + num[id] + ': // ' + note); body.forEach(l => L.push(ind + IND + IND + IND + l)); L.push(ind + IND + IND + IND + 'break;'); }
+        else { L.push(ind + IND + IND + 'case ' + num[id] + ': // ' + note); body.forEach(l => L.push(ind + IND + IND + IND + l)); if (!isRet) L.push(ind + IND + IND + IND + 'break;'); }
       });
       if (py) L.push(ind + IND + 'else:', ind + IND + IND + 'adim = 0');
       else L.push(ind + IND + IND + 'default:', ind + IND + IND + IND + 'adim = 0;', ind + IND + IND + IND + 'break;', ind + IND + '}', ind + '}');
@@ -17398,11 +19222,13 @@
 
     const bodyLines = machine ? stateMachine(IND + IND) : [];
     if (!machine) block(S.tree, IND + IND, bodyLines);
+    if (U && U.retType !== 'void' && typed && (machine || flCanFall(S.tree))) bodyLines.push(IND + IND + 'return ' + defOf(U.retType) + '; // TODO: bu yoldan bir değer döndürülmüyor');
 
     // ---- bildirimler ----
     const decls = []; // [{ k, t }]
     Object.keys(T.types).forEach(k => {
       if (T.counters.has(k) && !topCounters.has(k)) return;
+      if (U && T.params.has(k)) return;   // parametre: imzada bildirilir
       decls.push({ k: k, t: T.types[k], todo: T.undeclared.includes(k) });
     });
     const defVal = (t, v) => {
@@ -17446,7 +19272,45 @@
       [...groups.entries()].reverse().forEach(([tn, l]) => declLines.unshift(tn + ' ' + l.join(', ') + ';'));
     }
 
+    // ---- fonksiyonun gövdesi olarak çağrıldıysa: parçaları döndür ----
+    if (U) {
+      const ps = U.sig.params.map((p, i) => {
+        const v = varName(p), t = U.ptypes[i];
+        if (py || js) return v;
+        if (c && T.isArr(t)) { const el = T.baseOf(t) === 'string' ? 'char *' : T.baseOf(t) === 'bool' ? 'bool ' : 'double '; return el + v + '[], int ' + v + '_n'; }
+        if (c) return typeName(t) + (t === 'string' ? '' : ' ') + v;
+        return typeName(t, p) + (cpp && T.isArr(t) ? '&' : '') + ' ' + v;
+      });
+      const rt = U.retType === 'void' ? 'void' : typeName(U.retType);
+      const head = py ? 'def ' + U.name + '(' + ps.join(', ') + '):' : js ? 'function ' + U.name + '(' + ps.join(', ') + ')'
+        : (cs || java ? 'static ' : '') + rt + (c && U.retType === 'string' ? '' : ' ') + U.name + '(' + (c && !ps.length ? 'void' : ps.join(', ')) + ')';
+      return { head: head, decl: declLines, body: bodyLines, notes: notes, name: cmt(U.ch.name) };
+    }
+
     // ---- program ----
+    if (F.selfFn) notes.unshift(CM + '"' + cmt(chart ? chart.name : '') + '" şeması bir alt program (fonksiyon): denemek için değerleri okuyup sonucu yazıyorum.');
+    const fns = F.order.filter(id => !F.units.get(id).bad).map(id => flCodeGen(pid, id, lang, F));   // alt programlar (fonksiyonlar)
+    const fnLines = [];
+    fns.forEach(f => {
+      const ind = cs || java ? IND : '';
+      fnLines.push('', ind + CM + 'Alt program: ' + f.name + ' (kendi akış şemasından)');
+      if (py) {
+        fnLines.push(f.head);
+        f.notes.forEach(n => fnLines.push(IND + n));
+        f.decl.forEach(l => fnLines.push(IND + l));
+        f.body.forEach(l => fnLines.push(l.slice(4)));
+        if (!f.body.length && !f.decl.length) fnLines.push(IND + 'pass');
+        return;
+      }
+      fnLines.push(ind + f.head + (js ? ' {' : ''));
+      if (!js) fnLines.push(ind + '{');
+      f.notes.forEach(n => fnLines.push(ind + IND + n));
+      f.decl.forEach(l => fnLines.push(ind + IND + l));
+      if (f.decl.length && f.body.length) fnLines.push('');
+      f.body.forEach(l => fnLines.push(cs || java ? l : l.slice(4)));
+      fnLines.push(ind + '}');
+    });
+    if ((c || cpp) && fns.length > 1) fnLines.unshift('', '// Alt programların bildirimleri (birbirini çağırabilsinler diye)', ...fns.map(f => f.head + ';'));
     const lines = [];
     const stubLines = [];
     if (!py) stubs.forEach(st => {
@@ -17465,6 +19329,7 @@
       if (need.has('math') || need.has('random')) lines.push('');
       helpers.forEach(l => lines.push(l));
       stubs.forEach(s => lines.push('', 'def ' + s.name + '():', IND + '# TODO: ' + cmt(s.text), IND + (s.bool ? 'return False' : 'pass')));
+      fnLines.forEach(l => lines.push(l));
       lines.push('', '', 'def main():');
       notes.forEach(n => lines.push(IND + n));
       declLines.forEach(l => lines.push(IND + l));
@@ -17477,6 +19342,7 @@
       lines.push('// ' + title, '// Tarayıcıda (konsolda) ya da Node.js ile çalışır: node dosya.js');
       helpers.forEach(l => lines.push(l));
       stubLines.forEach(l => lines.push(l));
+      fnLines.forEach(l => lines.push(l));
       lines.push('', 'function main() {');
       notes.forEach(n => lines.push(IND + n));
       declLines.forEach(l => lines.push(IND + l));
@@ -17501,6 +19367,7 @@
       if (need.has('pi')) lines.push('#ifndef M_PI', '#define M_PI 3.14159265358979323846', '#endif');
       helpers.forEach(l => lines.push(l));
       stubLines.forEach(l => lines.push(l));
+      fnLines.forEach(l => lines.push(l));
       lines.push('', 'int main()', '{');
       if (need.has('rnd')) lines.push(IND + 'srand((unsigned) time(NULL));');
       notes.forEach(n => lines.push(IND + n));
@@ -17520,6 +19387,7 @@
       if (declLines.length) lines.push('');
       bodyLines.forEach(l => lines.push(l));
       lines.push(IND + '}');
+      fnLines.forEach(l => lines.push(l));
       helpers.forEach(l => lines.push(l));
       stubLines.forEach(l => lines.push(l));
       lines.push('}');
@@ -17538,6 +19406,7 @@
     if (declLines.length) lines.push('');
     bodyLines.forEach(l => lines.push(l));
     lines.push(IND + '}');
+    fnLines.forEach(l => lines.push(l));
     helpers.forEach(l => lines.push(l));
     if (stubs.size) lines.push('', IND + '// ---- Doldurulacak adımlar (veritabanı, ekran vb.) ----');
     stubLines.forEach(l => lines.push(l));
@@ -17711,12 +19580,15 @@
       return neg ? 'değil (' + c + ')' : c;
     };
     const IND = '    ';
-    out.push('Başla');
+    // alt program: Başla(a, b) · Döndür sonuc (yazı ↔ şema gidip gelirken korunur)
+    const st = Object.values(S.byId).find(n => n.kind === 'start'), prm = st && /\(([^()]*)\)\s*$/.exec(st.text.trim());
+    const endTxt = id => { const e = id && S.byId[id] ? flEndExpr(S.byId[id].text) : null; return e != null ? 'Döndür ' + e.replace(/\s*\n\s*/g, ' ') : 'Bitir'; };
+    out.push(prm ? 'Başla(' + prm[1].trim() + ')' : 'Başla');
     function block(list, ind) {
       list.forEach(x => {
         switch (x.s) {
           case 'stmt': out.push(ind + txt(x.node)); break;
-          case 'end': out.push(ind + 'Bitir'); break;
+          case 'end': out.push(ind + endTxt(x.node)); break;
           case 'if': {
             let cur = x, first = true;
             for (;;) {
@@ -17749,7 +19621,7 @@
       if (z.s === 'if') return ends(z.then) && z.else.length > 0 && ends(z.else);
       return false;
     };
-    if (!ends(S.tree)) out.push('Bitir');
+    if (!ends(S.tree)) out.push(endTxt(S.lastEnd));
     return out.join('\n') + '\n';
   }
 
@@ -17975,6 +19847,8 @@
       if (el('flNodeModal').classList.contains('open')) closeFlNodeModal();
       else if (el('flTestModal').classList.contains('open')) closeFlTests();
       else if (el('flHwModal').classList.contains('open')) el('flHwModal').classList.remove('open');
+      else if (el('flExModal').classList.contains('open')) el('flExModal').classList.remove('open');
+      else if (el('flGifModal').classList.contains('open')) el('flGifModal').classList.remove('open');
       else if (el('flHelpModal').classList.contains('open')) closeFlHelp();
       else if (el('trashModal').classList.contains('open')) el('trashModal').classList.remove('open');
       else if (el('installModal').classList.contains('open')) el('installModal').classList.remove('open');
@@ -18333,20 +20207,21 @@
       (warns.length > 8 ? '\n• … ve ' + (warns.length - 8) + ' uyarı daha' : '') : '');
     if (flPyPrev != null) {
       const b = document.createElement('button');
-      b.type = 'button'; b.className = 'link-btn'; b.id = 'flPyUndo'; b.textContent = 'Python koduna dön';
+      b.type = 'button'; b.className = 'link-btn'; b.id = 'flPyUndo'; b.textContent = 'Koda geri dön';
       msg.append('\n', b);
     }
   }
   el('flPyBtn').addEventListener('click', () => {
     const src = el('flSource').value, msg = el('flParseMsg');
-    if (!src.trim()) { msg.className = 'er-msg err'; msg.textContent = 'Önce Python kodunu kutuya yapıştır.'; return; }
-    if (looksLikeTurkishAlgo(src)) { msg.className = 'er-msg info'; msg.textContent = 'Kutudaki yazı zaten Türkçe algoritma; çevrilecek Python kodu yok.'; return; }
-    const r = pythonToAlgo(src);
-    if (r.failed || !r.text) { msg.className = 'er-msg err'; msg.textContent = r.warn[0] || 'Python kodu çevrilemedi.'; return; }
+    if (!src.trim()) { msg.className = 'er-msg err'; msg.textContent = 'Önce Python, C#, Java, C ya da C++ kodunu kutuya yapıştır.'; return; }
+    if (looksLikeTurkishAlgo(src)) { msg.className = 'er-msg info'; msg.textContent = 'Kutudaki yazı zaten Türkçe algoritma; çevrilecek kod yok.'; return; }
+    const cl = looksLikeCLike(src), r = cl ? clikeToAlgo(src) : pythonToAlgo(src);
+    if (r.failed || !r.text) { msg.className = 'er-msg err'; msg.textContent = r.warn[0] || 'Kod çevrilemedi.'; return; }
     flPyPrev = src;
     el('flSource').value = r.text;
     el('flSource').dispatchEvent(new Event('input'));
-    flShowPyMsg('Python kodu Türkçe algoritmaya çevrildi. Kontrol et, sonra "' + el('flParseBtn').textContent + '" düğmesine bas.', r.warn);
+    flShowPyMsg((cl ? 'Kod' : 'Python kodu') + ' Türkçe algoritmaya çevrildi' + (r.charts > 1 ? ' (ana program + ' + (r.charts - 1) + ' alt program; "# Alt program:" satırlarından sonrası ayrı şema olur)' : '') +
+      '. Kontrol et, sonra "' + el('flParseBtn').textContent + '" düğmesine bas.', r.warn);
   });
   el('flParseMsg').addEventListener('click', e => {
     if (!e.target.closest('#flPyUndo') || flPyPrev == null) return;
@@ -18356,29 +20231,51 @@
     el('flParseMsg').className = 'er-msg info';
     el('flParseMsg').textContent = 'Python kodu geri getirildi.';
   });
+  /* Alt program bölümleri: aynı adlı şema varsa (sorulup) yerine yazılır, yoksa yeni şema açılır; sonunda ana şemaya dönülür */
+  async function flApplySections(secs, mainCh) {
+    const warns = [];
+    for (const sec of secs) {
+      const r = parseAlgorithm(sec.text);
+      if (r.nodes.length < 2) { warns.push('“' + sec.name + '” alt programında adım yok; atlandı.'); continue; }
+      const ex = projectCharts(activeProject).find(c => c !== mainCh && flFold(c.name.trim()) === flFold(sec.name.trim()));
+      if (ex) {
+        if (!confirm('“' + ex.name + '” adlı akış şeması zaten var. Koddaki hâliyle değiştirilsin mi?')) { warns.push('“' + sec.name + '” şeması değiştirilmedi.'); continue; }
+        await flSwitchChart(ex.id);
+        await flApplyParsed(r, 'replace', sec.name);
+      } else await flApplyParsed(r, 'new', sec.name);
+      const c = activeChart();
+      if (c) { c.source = sec.text; await saveFlowChart(c); }
+      r.warn.forEach(w => warns.push(sec.name + ': ' + w));
+    }
+    if (mainCh && secs.length) await flSwitchChart(mainCh.id);
+    return warns;
+  }
   el('flParseBtn').addEventListener('click', async () => {
     const src = el('flSource').value;
     const msg = el('flParseMsg');
     if (!src.trim()) { msg.className = 'er-msg err'; msg.textContent = 'Önce algoritmayı yaz (ya da bir örnek seç).'; return; }
-    // Python kodu yapıştırıldıysa önce Türkçe algoritmaya çevrilir; şemanın kaynağı olarak Python kodu saklanır
-    const py = looksLikePython(src) ? pythonToAlgo(src) : null;
-    if (py && (py.failed || !py.text)) { msg.className = 'er-msg err'; msg.textContent = py.warn[0] || 'Python kodu çevrilemedi.'; return; }
-    const res = parseAlgorithm(py ? py.text : src);
-    if (res.nodes.length < 2) { msg.className = 'er-msg err'; msg.textContent = py ? 'Python kodunda akış şemasına çevrilecek komut bulunamadı.' : 'Algoritmada adım bulunamadı.'; return; }
+    // Python / C# / Java / C / C++ kodu yapıştırıldıysa önce Türkçe algoritmaya çevrilir; şemanın kaynağı olarak kod saklanır
+    const cl = looksLikeCLike(src), py = cl ? clikeToAlgo(src) : looksLikePython(src) ? pythonToAlgo(src) : null;
+    if (py && (py.failed || !py.text)) { msg.className = 'er-msg err'; msg.textContent = py.warn[0] || 'Kod çevrilemedi.'; return; }
+    // "# Alt program: Ad" satırlarından sonrası ayrı şema (alt program) olur
+    const secs = flSplitSections(py ? py.text : src);
+    const res = parseAlgorithm(secs[0].text);
+    if (res.nodes.length < 2) { msg.className = 'er-msg err'; msg.textContent = py ? 'Kodda akış şemasına çevrilecek komut bulunamadı.' : 'Algoritmada adım bulunamadı.'; return; }
     const mode = (document.querySelector('input[name="flMode"]:checked') || {}).value || 'replace';
-    const name = el('flNewName').value.trim() || flNameFromSource(src) || nextChartName(activeProject);
+    const name = el('flNewName').value.trim() || flNameFromSource(py ? py.text : secs[0].text) || nextChartName(activeProject);
     await flApplyParsed(res, mode, name);
     const ch = activeChart();
-    if (ch) { ch.source = src; await saveFlowChart(ch); }
-    const warns = (py ? py.warn : []).concat(res.warn);
+    if (ch) { ch.source = secs.length > 1 && !py ? secs[0].text : src; await saveFlowChart(ch); }
+    const subWarn = await flApplySections(secs.slice(1), ch);
+    const warns = (py ? py.warn : []).concat(res.warn, subWarn);
     if (py && warns.length) { // uyarılar okunabilsin diye pencere açık kalır
       flPyPrev = null;
       if (mode === 'new') { document.querySelector('input[name="flMode"][value="replace"]').checked = true; updateFlModeUI(); }
-      flShowPyMsg('✓ Python kodundan akış şeması oluşturuldu: ' + res.nodes.length + ' adım, ' + res.edges.length + ' ok. Pencereyi kapatıp şemaya bakabilirsin.', warns);
+      flShowPyMsg('✓ Koddan akış şeması oluşturuldu: ' + res.nodes.length + ' adım, ' + res.edges.length + ' ok' + (secs.length > 1 ? ' + ' + (secs.length - 1) + ' alt program şeması' : '') + '. Pencereyi kapatıp şemaya bakabilirsin.', warns);
       return;
     }
     el('flAlgoModal').classList.remove('open');
-    flToast((py ? 'Python kodundan a' : 'A') + 'kış şeması oluşturuldu: ' + res.nodes.length + ' adım, ' + res.edges.length + ' ok.' +
+    flToast((py ? 'Koddan a' : 'A') + 'kış şeması oluşturuldu: ' + res.nodes.length + ' adım, ' + res.edges.length + ' ok' + (secs.length > 1 ? ' + ' + (secs.length - 1) + ' alt program' : '') + '.' +
             (res.warn.length ? ' ⚠ ' + res.warn[0] + (res.warn.length > 1 ? ' (+' + (res.warn.length - 1) + ' uyarı)' : '') : ' (Geri almak için Ctrl+Z.)'), res.warn.length ? 8000 : 4500);
   });
 
@@ -18429,6 +20326,8 @@
   /* ---- ÇALIŞTIRMA PANELİ olayları ---- */
   el('flRunPlay').addEventListener('click', flPlay);
   el('flRunStep').addEventListener('click', flStepBtn);
+  el('flRunInto').addEventListener('click', flStepInto);
+  el('flRunOut').addEventListener('click', flStepOut);
   el('flRunReset').addEventListener('click', flResetRun);
   el('flRunClose').addEventListener('click', flCloseRun);
   el('flAskBtn').addEventListener('click', () => flAnswer(el('flAskIn').value));
@@ -18469,7 +20368,25 @@
   el('flTraceAll').addEventListener('change', renderFlTrace);
   el('flTraceCopy').addEventListener('click', flTraceCopy);
   el('flTraceCsv').addEventListener('click', flTraceCsv);
+  el('flTraceEx').addEventListener('click', openFlExercise);
+  el('flExClose').addEventListener('click', () => el('flExModal').classList.remove('open'));
+  el('flExModal').addEventListener('click', e => { if (e.target === el('flExModal')) el('flExModal').classList.remove('open'); });
+  el('flExMake').addEventListener('click', flExMake);
+  el('flExAll').addEventListener('change', () => { if (flEx) { flEx.all = el('flExAll').checked; flExCheckClear(); } });
+  el('flExCheck').addEventListener('click', () => flExCheck(false));
+  el('flExShow').addEventListener('click', () => flExCheck(true));
+  el('flExWrap').addEventListener('keydown', e => {   // Enter: aşağıdaki hücreye
+    if (e.key !== 'Enter' || !e.target.classList.contains('fl-ex-cell')) return;
+    e.preventDefault();
+    const all = [...el('flExWrap').querySelectorAll('.fl-ex-cell')], k = all.indexOf(e.target);
+    const below = all.find((x, i) => i > k && x.dataset.c === e.target.dataset.c) || all[k + 1];
+    if (below) below.focus();
+  });
   el('flRunTests').addEventListener('click', openFlTests);
+  el('flRunGif').addEventListener('click', openFlGif);
+  el('flGifClose').addEventListener('click', () => el('flGifModal').classList.remove('open'));
+  el('flGifModal').addEventListener('click', e => { if (e.target === el('flGifModal')) el('flGifModal').classList.remove('open'); });
+  el('flGifGo').addEventListener('click', flGifMake);
   el('flTestClose').addEventListener('click', closeFlTests);
   el('flTestModal').addEventListener('click', e => { if (e.target === el('flTestModal')) closeFlTests(); });
   el('flTestAdd').addEventListener('click', () => flAddTest(null));
