@@ -42,6 +42,16 @@ baştan öyle çizilir.
 Bütün temalarda yerleşim ve yazı boyutları aynıdır; sadece renkler değişir. Koyu temalarda seçili
 sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant çizilmez, yazı her zaman okunur).
 
+### Yazı boyutu ve yüksek karşıtlık
+
+Aynı menünün altında:
+- **Yazı boyutu:** Küçük · Normal · Büyük · Çok büyük — bütün arayüz (menüler, kartlar, pencereler) birlikte
+  büyür
+- **Yüksek karşıtlık:** soluk yazılar ve çizgiler her temada belirginleşir, klavyeyle gezerken odak
+  çerçevesi kalınlaşır, bağlantıların altı çizilir. Seçilmemişse cihazın "daha fazla karşıtlık" ayarına uyar
+
+İkisi de o cihazda hatırlanır, açık sekmelerin hepsine hemen uygulanır ve tema gibi JSON yedeğine de yazılır.
+
 ## Görünümler
 
 ### Liste
@@ -67,6 +77,11 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
 - **Şablonlar:** ekleme kutusundaki *Şablon* menüsünde hazır şablonlar (ders notu, toplantı notu,
   ödev planı, sınav hazırlığı…; `{tarih}` ve `{gün}` bugünle dolar). Kendi şablonun için kartı aç →
   *Şablon olarak kaydet*
+- **Sesle yazma:** ekleme kutusunun ve kart penceresinin biçimlendirme çubuğundaki **mikrofon** düğmesine
+  bas, konuş: söylediklerin (Türkçe) imlecin olduğu yere yazılır, tekrar basınca durur. Chrome, Edge ve
+  Safari'de çalışır (Firefox'ta düğme görünmez). Chrome / Edge sesi tanımak için kendi sunucularına gönderir;
+  ilk kullanımda bu söylenir ve onay istenir. Yazılan metin yine yalnız cihazda kalır
+- **Paylaş:** kart penceresindeki **Paylaş** telefonun paylaş menüsünü açar (mesaj, e-posta…; başlık ve düz metin)
 - **Notlar arası bağlantı:** içerikte `[[Not adı]]` yaz; tıklayınca o not açılır, yoksa oluşturulması önerilir.
   `[[` yazınca başlıklar önerilir; kart penceresinin altında "Bu nota bağlananlar" görünür;
   bir notun adı değişince ona giden bağlantılar da güncellenir
@@ -334,6 +349,19 @@ açar: bütün projelerdeki notlar, görevler, şema tabloları ve alanları, ak
 birlikte aranır. Ok tuşlarıyla seçip Enter'a basınca ilgili proje ve görünüm açılır, adım ya da
 tablo işaretlenir.
 
+### Komut paleti
+
+Aramada `>` ile başlarsan (ya da `Ctrl+Shift+P`) komutlar listelenir; birkaç harf yazıp Enter'a basınca
+çalışır: görünüme geç, yeni not / proje, başka projeye geç, tema, yazı boyutu, yüksek karşıtlık, klavye
+kısayolları, çöp kutusu, JSON yedeği indir / yükle, .ics yükle, uygulama olarak yükle; Akış'ta çalıştır,
+koddan oluştur, koda çevir, testler, izleme tablosu alıştırması, GIF, ödev çıktısı; Şema'da SQL, konsol,
+veri sözlüğü; Takvim'de ders programı ve gün görünümü. Telefonda büyüteçle açılan aramaya `>` yazmak yeter.
+
+### Klavye kısayolları penceresi
+
+`Ctrl+/` (Mac'te ⌘/) ya da `?` bütün kısayolları görünüm görünüm listeler (Akış'ta `?` şekillerin
+yardımını açar; orada `Ctrl+/` kullan).
+
 ## Çöp kutusu
 
 Silinen not, görev, akış şeması ve projeler **30 gün** çöp kutusunda durur. Silince altta çıkan
@@ -345,6 +373,10 @@ ve boşaltma da yapılır.
 Dışa / İçe aktar → **Telefona / bilgisayara yükle**. Chrome ve Edge doğrudan yükler; iPhone'da
 Safari'nin Paylaş → **Ana Ekrana Ekle** adımı gösterilir. Yüklenen uygulama kendi simgesiyle,
 tarayıcı çubukları olmadan açılır ve internetsiz çalışır (`sw.js`).
+
+**Paylaş hedefi:** Android'de uygulama yüklüyse başka bir uygulamada (tarayıcı, YouTube, mesajlar…)
+Paylaş → **White Note** seçilebilir: başlık, metin ve bağlantı ekleme kutusuna gelir, **Ekle** ile not olur
+(kaydetmeden önce görüp düzeltebilirsin).
 
 ## Ekip ile çalışma
 
@@ -501,6 +533,8 @@ kayıtların artık o depoya gider. Bağlantıyı tanımadığın birinden aldı
 | Kısayol | Nerede | İş |
 | --- | --- | --- |
 | Ctrl+K (Mac'te ⌘K) ya da / | Her yerde | Tüm projelerde ara |
+| Ctrl+Shift+P ya da aramada `>` | Her yerde | Komut paleti |
+| Ctrl+/ ya da ? | Her yerde (Akış'ta yalnız Ctrl+/) | Klavye kısayolları penceresi |
 | 1 – 5 | Her yerde (yazmıyorken) | Liste / Pano / Şema / Akış / Takvim |
 | N | Her yerde (yazmıyorken) | Yeni not ya da görev (ekleme kutusuna geçer) |
 | Ctrl+Enter | Ekleme kutusu | Not/görev ekle |
