@@ -128,7 +128,25 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
 - İndeksler (artan/azalan), istersen yabancı anahtarlara otomatik indeks
 - SQLite'ın çalışırken vereceği hataları önceden gösteren kontrol
   (ör. "foreign key mismatch", `INT PRIMARY KEY` tuzağı)
+- **Tasarım ipuçları (normalizasyon):** durum satırındaki "N ipucu" düğmesi ve SQL penceresi. Tekrar eden alan
+  grupları (`telefon1`, `telefon2` → 1NF), çok değerli metin alanları (`etiketler`), bileşik anahtarın bir
+  parçasına bağlı alanlar (2NF), bağlı tablodaki bilgiyi kopyalayan alanlar (`siparisler.musteri_adi` → 3NF),
+  hesaplanabilen veriler (yaş ↔ doğum tarihi, toplam ↔ adet × fiyat), çizilmemiş ilişkiler (`musteri_id`
+  var ama bağ yok), sayı türünde tutulan telefon / TC, farklı türlerdeki aynı adlı alanlar. İpucuna
+  tıklayınca o tabloya gidilir
 - **SQL çıktısı:** SQLite, MySQL, PostgreSQL, SQL Server
+- **Değişiklik (göç) SQL'i — ALTER:** SQL penceresinde *Değişiklikler (ALTER)*. Şemanın bir hâlini **sürüm
+  olarak kaydet**; sonra yaptığın değişiklikler (yeni / silinen tablo ve alan, ad değişikliği, tür ve kısıt
+  değişikliği, yeni ilişki, indeks) o sürümdeki bir veritabanını verileriyle bugünkü şemaya getiren SQL olarak
+  çıkar. Ad değişikliği silip yeniden eklemek değil `RENAME` olur. SQLite'ın ALTER'ı kısıtlı olduğu için tür /
+  kısıt / ilişki değişikliğinde tablo yeniden kurulur ve veriler kopyalanır; MySQL'de `MODIFY COLUMN`,
+  PostgreSQL'de `ALTER COLUMN … TYPE`, SQL Server'da `sp_rename` / `ALTER COLUMN` kullanılır.
+  **Göçü SQLite'ta dene:** kayıtlı sürümden veritabanı kurulur, örnek veri eklenir, değişiklikler uygulanır ve
+  sonuç bugünkü şemayla karşılaştırılır. Sürüm projeyle birlikte saklanır (yedek, ekip, GitHub)
+- **Ödev çıktısı / veri sözlüğü:** *Dosya → Ödev çıktısı (PDF)*: ad, sınıf, tarih; varlık-ilişki diyagramı,
+  veri sözlüğü (her tablo için alan, tür, anahtar, boş olabilir mi, varsayılan, kural, ilişkiler, indeksler),
+  istenirse tasarım değerlendirmesi, seçilen türde SQL ve kayıtlı sorgular sonuçlarıyla. *Dosya → Veri sözlüğü
+  (.md)* aynı sözlüğü Markdown olarak indirir
 - **Gerçek SQLite motoru** (tarayıcıda, [sql.js](https://sql.js.org)):
   - "SQLite'ta dene" ile şemayı doğrulama
   - Konsol: veri ekle, sorgu yaz, sonuçları tablo olarak gör. Komutlar tek tek çalışır; biri hata verirse
@@ -147,6 +165,14 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
     kısıtlarına göre üretilir; yabancı anahtarlar gerçek satırlara bağlanır, UNIQUE alanlar tekrar etmez.
     **Verileri şemaya kaydet** ile konsolda eklenen satırlar şemanın "Ek SQL" kısmına `INSERT` olarak
     yazılır (önce denenir; böylece `.db` indirince ve "SQLite'ta dene"de de gelir)
+  - **Sorgu oluşturucu:** SQL yazmadan sorgu: tablo seç, ilişkili tabloları ekle (yabancı anahtarlardan JOIN
+    ya da LEFT JOIN), sütunları işaretle (istenirse say / topla / ortalama / en küçük / en büyük; GROUP BY
+    kendiliğinden), koşul ekle (=, ≠, >, içerir, ile başlar, listede, boş…; VE / VEYA), sırala, satır
+    sınırı koy. SQL konsolun seçili türünde yazılır (SQL Server'da `TOP`); editöre yazılır ya da çalıştırılır
+  - **Geçmiş:** çalıştırılan son 30 sorgu (bu cihazda, projeye göre). **Kayıtlı sorgular:** adıyla kaydedilen
+    sorgular projeyle birlikte saklanır (yedek, ekip, GitHub) ve ödev çıktısına sonuçlarıyla eklenebilir
+  - **CSV indir:** her sonuç tablosu Excel'in doğrudan açtığı CSV olarak indirilir (`;` ayırıcı, virgüllü
+    ondalık, Türkçe harfler için UTF-8 BOM; `=`, `+`, `-`, `@` ile başlayan metinler formül olarak çalışmaz)
   - `.db` / `.sqlite` dosyası indirme
   - Var olan `.db` / `.sqlite` / `.sql` dosyasını içe aktarma
 - Geri al / yinele (Ctrl+Z / Ctrl+Y), ekrana sığdır, tabloya git
