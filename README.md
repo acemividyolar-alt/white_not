@@ -395,6 +395,17 @@ bilgisayardan aynı anda kullanılır.
 - Telefonda kart sürüklerken gelen değişiklikler kartı bırakana kadar bekletilir.
 - İnternet kesilirse çalışmaya devam edersin; değişiklikler bağlantı gelince gönderilir.
 - **Kişisel projelerimi bu ekibe kopyala** ile bu cihazdaki projeler ekibe eklenir.
+- **Kişi atama:** kart penceresindeki **Atananlar**'dan karta bir ya da birkaç kişi atanır; kartta
+  rozetleri görünür, atanan kişiye bildirim gider. Listedeki kişi süzgeci (ya da arama kutusuna `@ben`,
+  `@atanmamis`, `@kullanıcıadı`) **bana atananları** gösterir; panoda da çalışır.
+- **Yorumlar ve @bahsetme:** kartlara, SQL tablolarına ve akış adımlarına **Yorumlar** düğmesiyle yorum
+  yazılır. `@` yazınca üyeler önerilir; bahsedilen kişiye bildirim gider. Yorum sayısı kartta, tablo
+  başlığında ve akış adımının köşesinde görünür. Ekip penceresindeki **Senden bahsedenler** hepsini
+  listeler. Herkes kendi yorumunu düzenler ya da siler.
+- **Not geçmişi:** kart penceresindeki **Geçmiş**, kartın önceki hâllerini gösterir. Bir sürüm seçince
+  şu anki hâlle farkı görünür (silinen satırlar kırmızı, eklenenler yeşil); **Bu hâline dön** ile geri
+  dönülür. Aynı kişinin 2 dakika içindeki art arda değişiklikleri tek sürüm sayılır. Kendi sunucunda
+  geçmiş sunucuda tutulur (kart başına 50 sürüm); kişisel alanda ve Firebase ekibinde bu cihazda (30 sürüm).
 
 Ekip alanı iki yoldan biriyle çalışır:
 
@@ -428,6 +439,9 @@ Sayfa White Note sunucusundan açıldığında Ekip penceresi kendiliğinden sun
 
   Okur bir şeyi değiştirmeye çalışırsa kaydedilmez, ekran ekibin hâline döner.
 - **Canlı:** değişiklikler ve kimin çevrimiçi olduğu sunucudan anında gelir (Firebase'deki gibi).
+- **Etkinlik geçmişi:** Ekip penceresindeki **Etkinlik geçmişi** kimin neyi ne zaman eklediğini,
+  değiştirdiğini ya da sildiğini gösterir (son 180 gün). Aynı kişinin aynı karttaki 10 dakika içindeki
+  değişiklikleri tek satırdır. Satıra basınca o kart, tablo ya da akış adımı açılır.
 - **Sunucuya ulaşılamazsa** (internet ya da Pi kapalı): ekip bu cihazda daha önce açıldıysa cihazdaki
   kopyasıyla açılır; değişiklikler sırada bekler ve bağlantı gelince gönderilir. Durum satırı
   "Sunucuya ulaşılamıyor" der.

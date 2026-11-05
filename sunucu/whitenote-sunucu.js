@@ -31,6 +31,7 @@
      WN_VEKIL=cloudflare   gerçek ziyaretçi adresini CF-Connecting-IP başlığından al (yalnız tünel arkasında)
      WN_ADRES=https://whitenote.com.tr   sitenin adresi (Origin denetimi ve güvenli çerez için)
      WN_KOTA_MB=300, WN_KOTA_ADET=100000  bir ekibin depolama sınırı
+     WN_GECMIS_MB=150      bir ekibin eski sürümleri (not geçmişi) için en fazla yer
    ===================================================================== */
 'use strict';
 const http = require('node:http');
@@ -56,7 +57,11 @@ const KAYIT_MAX = 1000000;                    // bir kayıt en fazla ~1 MB (uygu
 const ISTEK_MAX = 8 * 1024 * 1024;            // bir istek gövdesi en fazla 8 MB
 const KOTA_BOYUT = (+process.env.WN_KOTA_MB || 300) * 1024 * 1024;   // bir ekibin kayıtları toplam en fazla 300 MB
 const KOTA_ADET = +process.env.WN_KOTA_ADET || 100000;                // ve en fazla 100 000 kayıt
-const ANAHTAR = /^(proj|col|item|tbl|rel|sch|flc|fln|fle|fls|trash):[A-Za-z0-9_-]{1,80}$/;
+const ANAHTAR = /^(proj|col|item|tbl|rel|sch|flc|fln|fle|fls|trash|yor):[A-Za-z0-9_-]{1,80}$/;
+const GECMISLI = /^(proj|item|tbl):/;                    // eski sürümleri saklanan kayıtlar (not geçmişi)
+const OLAYLI = /^(proj|col|item|tbl|flc|fln|yor):/;      // etkinlik geçmişinde görünen kayıtlar
+const SURUM_MAX = 50;                                     // bir kaydın en fazla kaç eski sürümü saklanır
+const GECMIS_BOYUT = (+process.env.WN_GECMIS_MB || 150) * 1024 * 1024;   // bir ekibin eski sürümleri toplam
 const ROLLER = ['sahip', 'yonetici', 'uye', 'okur'];
 const AD_RE = /^[a-z0-9][a-z0-9._-]{2,31}$/;  // kullanıcı adı: küçük harf, rakam, . _ -
 const DAVET_RE = /^[A-Za-z0-9_-]{20,40}$/;
@@ -99,6 +104,15 @@ function veritabaniAc() {
     CREATE INDEX IF NOT EXISTS kayit_sira ON kayit (ekip, sira);
     CREATE TABLE IF NOT EXISTS gunluk (zaman INTEGER NOT NULL, olay TEXT NOT NULL, kim TEXT, ip TEXT, ayrinti TEXT);
     CREATE TABLE IF NOT EXISTS ayar (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS onceki (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, ekip TEXT NOT NULL REFERENCES ekip(id) ON DELETE CASCADE,
+      k TEXT NOT NULL, d TEXT NOT NULL, t INTEGER NOT NULL, u TEXT NOT NULL, b INTEGER NOT NULL DEFAULT 0);
+    CREATE INDEX IF NOT EXISTS onceki_k ON onceki (ekip, k, id);
+    CREATE TABLE IF NOT EXISTS olay (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, ekip TEXT NOT NULL REFERENCES ekip(id) ON DELETE CASCADE,
+      k TEXT NOT NULL, u TEXT NOT NULL, t INTEGER NOT NULL, tur TEXT NOT NULL, baslik TEXT NOT NULL DEFAULT '');
+    CREATE INDEX IF NOT EXISTS olay_ekip ON olay (ekip, id);
+    CREATE INDEX IF NOT EXISTS olay_k ON olay (ekip, k, id);
   `);
   // eski sürümün veritabanında olmayan sütunlar
   const kolonlar = t => db.prepare('PRAGMA table_info(' + t + ')').all().map(x => x.name);
@@ -106,6 +120,7 @@ function veritabaniAc() {
   if (!ek.includes('temiz')) db.exec('ALTER TABLE ekip ADD COLUMN temiz INTEGER NOT NULL DEFAULT 0');
   if (!ek.includes('boyut')) db.exec('ALTER TABLE ekip ADD COLUMN boyut INTEGER NOT NULL DEFAULT 0');
   if (!ek.includes('adet')) db.exec('ALTER TABLE ekip ADD COLUMN adet INTEGER NOT NULL DEFAULT 0');
+  if (!ek.includes('gboyut')) db.exec('ALTER TABLE ekip ADD COLUMN gboyut INTEGER NOT NULL DEFAULT 0');
   if (!kolonlar('kayit').includes('b')) db.exec('ALTER TABLE kayit ADD COLUMN b INTEGER NOT NULL DEFAULT 0');
 }
 veritabaniAc();
@@ -145,6 +160,12 @@ function sifreUygun(s) {
 }
 /* Görünen ad / ekip adı: kontrol ve yön değiştirme karakterleri (adı başka biri gibi göstermeye yarar) atılır */
 const metin = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2066-\u2069\ufeff]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+/* Etkinlik geçmişinde görünen ad: kartın başlığı, projenin / tablonun / şemanın adı, şeklin ya da yorumun metni */
+function kayitBasligi(o) {
+  if (!o || typeof o !== 'object') return '';
+  for (const a of ['title', 'name', 'text', 'label']) if (typeof o[a] === 'string' && o[a].trim()) return metin(o[a], 80);
+  return '';
+}
 const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 function b32(buf) { let bits = '', out = ''; for (const b of buf) bits += b.toString(2).padStart(8, '0'); for (let i = 0; i + 5 <= bits.length; i += 5) out += B32[parseInt(bits.slice(i, i + 5), 2)]; return out; }
 function b32coz(s) { let bits = ''; for (const c of String(s).replace(/=+$/, '').toUpperCase()) { const v = B32.indexOf(c); if (v < 0) throw new Error('b32'); bits += v.toString(2).padStart(5, '0'); } const out = []; for (let i = 0; i + 8 <= bits.length; i += 8) out.push(parseInt(bits.slice(i, i + 8), 2)); return Buffer.from(out); }
@@ -559,26 +580,60 @@ yol('POST', new RegExp('^/api/ekip/' + EKIP + '/yaz$'), (req, res, p, b, k, rol)
     if (!x || typeof x.k !== 'string' || !ANAHTAR.test(x.k) || gorulen.has(x.k)) return hata(res, 400, 'Geçersiz kayıt anahtarı.');
     gorulen.add(x.k);
     if (x.d !== null && (typeof x.d !== 'string' || x.d.length > KAYIT_MAX)) return hata(res, 400, 'Kayıt çok büyük ya da bozuk.');
-    if (x.d !== null) { try { const o = JSON.parse(x.d); if (!o || typeof o !== 'object' || Array.isArray(o)) throw 0; } catch (e) { return hata(res, 400, 'Kayıt bozuk (JSON nesnesi değil).'); } }
+    if (x.d !== null) { try { const o = JSON.parse(x.d); if (!o || typeof o !== 'object' || Array.isArray(o)) throw 0; x.o = o; } catch (e) { return hata(res, 400, 'Kayıt bozuk (JSON nesnesi değil).'); } }
   }
   const s = Date.now();
   let sonuc;
   try {
     sonuc = tx(() => {
-      const e = Q('SELECT sira, boyut, adet FROM ekip WHERE id = ?').get(p[1]);
-      let n = e.sira, boyut = e.boyut, adet = e.adet;
-      const eski = Q('SELECT b, d IS NOT NULL var FROM kayit WHERE ekip = ? AND k = ?');
+      const e = Q('SELECT sira, boyut, adet, gboyut FROM ekip WHERE id = ?').get(p[1]);
+      let n = e.sira, boyut = e.boyut, adet = e.adet, gboyut = e.gboyut;
+      const eski = Q('SELECT b, d, t, u FROM kayit WHERE ekip = ? AND k = ?');
       const ekle = Q('INSERT INTO kayit (ekip, k, d, t, u, sira, b) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (ekip, k) DO UPDATE SET d = excluded.d, t = excluded.t, u = excluded.u, sira = excluded.sira, b = excluded.b');
+      const surumEkle = Q('INSERT INTO onceki (ekip, k, d, t, u, b) VALUES (?, ?, ?, ?, ?, ?)');
+      const surumFazla = Q('SELECT id, b FROM onceki WHERE ekip = ? AND k = ? ORDER BY id DESC LIMIT -1 OFFSET ' + SURUM_MAX);
+      const surumSil = Q('DELETE FROM onceki WHERE id = ?');
+      const sonOlay = Q('SELECT id, u, t, tur FROM olay WHERE ekip = ? AND k = ? ORDER BY id DESC LIMIT 1');
+      const olayEkle = Q('INSERT INTO olay (ekip, k, u, t, tur, baslik) VALUES (?, ?, ?, ?, ?, ?)');
+      const olayTazele = Q('UPDATE olay SET t = ?, baslik = ? WHERE id = ?');
       const ilk = n + 1;
       for (const x of L) {
-        const o = eski.get(p[1], x.k), yb = x.d === null ? 0 : Buffer.byteLength(x.d);
+        const o = eski.get(p[1], x.k), yb = x.d === null ? 0 : Buffer.byteLength(x.d), eskiVar = !!(o && o.d !== null);
         boyut += yb - (o ? o.b : 0);
-        adet += (x.d === null ? 0 : 1) - (o && o.var ? 1 : 0);
+        adet += (x.d === null ? 0 : 1) - (eskiVar ? 1 : 0);
+        // Not geçmişi: önceki hâl saklanır. Aynı kişinin art arda yazmaları (2 dakika içinde) tek sürüm sayılır;
+        // silinen kaydın son hâli her zaman saklanır (geri getirilebilsin).
+        if (eskiVar && GECMISLI.test(x.k) && o.d !== x.d && (x.d === null || o.u !== k.id || s - o.t > 120000)) {
+          surumEkle.run(p[1], x.k, o.d, o.t, o.u, o.b);
+          gboyut += o.b;
+          for (const f of surumFazla.all(p[1], x.k)) { surumSil.run(f.id); gboyut -= f.b; }
+        }
+        // Etkinlik geçmişi: aynı kişinin aynı kayıttaki 10 dakika içindeki değişiklikleri tek satır olur
+        if (OLAYLI.test(x.k) && (eskiVar || x.d !== null)) {
+          const tur = !eskiVar ? 'ekle' : x.d === null ? 'sil' : 'degistir';
+          if (tur !== 'degistir' || o.d !== x.d) {
+            let baslik = '';
+            if (x.d !== null) baslik = kayitBasligi(x.o);
+            else { try { baslik = kayitBasligi(JSON.parse(o.d)); } catch (er) {} }
+            const son = tur === 'degistir' ? sonOlay.get(p[1], x.k) : null;
+            if (son && son.u === k.id && son.tur !== 'sil' && s - son.t < 600000) olayTazele.run(s, baslik, son.id);
+            else olayEkle.run(p[1], x.k, k.id, s, tur, baslik);
+          }
+        }
         ekle.run(p[1], x.k, x.d, s, k.id, ++n, yb);
       }
       const kucultuyor = boyut <= e.boyut && adet <= e.adet;   // silme / küçültme her zaman yapılabilir
       if (!kucultuyor && (boyut > KOTA_BOYUT || adet > KOTA_ADET)) throw Object.assign(new Error('kota'), { kota: true });
-      Q('UPDATE ekip SET sira = ?, boyut = ?, adet = ? WHERE id = ?').run(n, Math.max(0, boyut), Math.max(0, adet), p[1]);
+      // Eski sürümler de sınırlı: aşılırsa en eskiler silinir
+      if (gboyut > GECMIS_BOYUT) {
+        const enEski = Q('SELECT id, b FROM onceki WHERE ekip = ? ORDER BY id LIMIT 200');
+        while (gboyut > GECMIS_BOYUT * 0.9) {
+          const L2 = enEski.all(p[1]);
+          if (!L2.length) { gboyut = 0; break; }
+          for (const f of L2) { surumSil.run(f.id); gboyut -= f.b; }
+        }
+      }
+      Q('UPDATE ekip SET sira = ?, boyut = ?, adet = ?, gboyut = ? WHERE id = ?').run(n, Math.max(0, boyut), Math.max(0, adet), Math.max(0, gboyut), p[1]);
       return { ilk, sira: n };
     })();
   } catch (e) {
@@ -587,6 +642,22 @@ yol('POST', new RegExp('^/api/ekip/' + EKIP + '/yaz$'), (req, res, p, b, k, rol)
   }
   yayinla(p[1], 'kayit', { sira: sonuc.sira, kim: k.id });
   json(res, 200, sonuc);
+}, { ekip: true });
+
+/* Etkinlik geçmişi: kim neyi ne zaman ekledi / değiştirdi / sildi (en yeniden eskiye, 100'er) */
+yol('GET', new RegExp('^/api/ekip/' + EKIP + '/etkinlik$'), (req, res, p, b, k, rol, url) => {
+  const once = Math.max(0, parseInt(url.searchParams.get('once') || '0', 10) || 0);
+  const L = once ? Q('SELECT id, k, u, t, tur, baslik FROM olay WHERE ekip = ? AND id < ? ORDER BY id DESC LIMIT 101').all(p[1], once)
+                 : Q('SELECT id, k, u, t, tur, baslik FROM olay WHERE ekip = ? ORDER BY id DESC LIMIT 101').all(p[1]);
+  json(res, 200, { olaylar: L.slice(0, 100), dahaVar: L.length > 100 });
+}, { ekip: true });
+
+/* Bir kaydın eski sürümleri (en yeniden eskiye) */
+yol('GET', new RegExp('^/api/ekip/' + EKIP + '/surumler$'), (req, res, p, b, k, rol, url) => {
+  const key = url.searchParams.get('k') || '';
+  if (!ANAHTAR.test(key) || !GECMISLI.test(key)) return hata(res, 400, 'Bu kaydın geçmişi tutulmuyor.');
+  const L = Q('SELECT id, d, t, u FROM onceki WHERE ekip = ? AND k = ? ORDER BY id DESC LIMIT ' + SURUM_MAX).all(p[1], key);
+  json(res, 200, { surumler: L });
 }, { ekip: true });
 
 yol('GET', new RegExp('^/api/ekip/' + EKIP + '/akis$'), (req, res, p, b, k) => {
@@ -725,6 +796,10 @@ function yedekAl() {
   Q('DELETE FROM oturum WHERE bitis < ?').run(s);
   Q('DELETE FROM davet WHERE bitis < ? OR kalan < 1').run(s);
   Q('DELETE FROM gunluk WHERE zaman < ?').run(s - 180 * GUN);
+  // 180 günden eski etkinlik ve eski sürümler; ekiplerin eski sürüm boyutu yeniden hesaplanır
+  Q('DELETE FROM olay WHERE t < ?').run(s - 180 * GUN);
+  Q('DELETE FROM onceki WHERE t < ?').run(s - 180 * GUN);
+  Q('UPDATE ekip SET gboyut = COALESCE((SELECT SUM(b) FROM onceki WHERE onceki.ekip = ekip.id), 0)').run();
   return hedef;
 }
 function geceYedegi() {

@@ -1962,6 +1962,77 @@
   .tm-on.on::before { background: var(--green); }
   .tm-rm { height: 30px; padding: 0 0.6rem; font-size: 0.8rem; }
   .team-row-acts { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.8rem; }
+  /* Kişi atama, yorumlar, etkinlik ve not geçmişi */
+  .er-head-icon .ico { width: 12px; height: 12px; vertical-align: -2px; margin-right: 1px; }
+  .fl-cmt circle { fill: var(--accent); }
+  .fl-cmt text { fill: #fff; font-size: 10px; font-weight: 700; text-anchor: middle; pointer-events: none; }
+  .chip-cmt { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.72rem; color: var(--muted); }
+  .chip-cmt .ico { width: 13px; height: 13px; }
+  .chip-asg { display: inline-flex; }
+  .chip-asg .av { margin-left: -5px; box-shadow: 0 0 0 1.5px var(--paper); }
+  .chip-asg .av:first-child { margin-left: 0; }
+  .assign-row { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+  .asg-chip { display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid var(--line-2); border-radius: 999px; padding: 0.15rem 0.3rem 0.15rem 0.2rem; font-size: 0.82rem; }
+  .asg-chip button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 0.2rem; }
+  .asg-chip button:hover { color: var(--danger, #c0392b); }
+  .asg-add { height: 32px; font-size: 0.82rem; max-width: 220px; }
+  .asg-none { font-size: 0.82rem; color: var(--muted); }
+  #modalCmt .ico, #tblCmt .ico, #flNodeCmt .ico { width: 15px; height: 15px; margin-right: 0.3rem; vertical-align: -2px; }
+  .cmt-modal { max-width: 560px; }
+  .cmt-target { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.6rem; overflow-wrap: anywhere; }
+  .cmt-list { display: grid; gap: 0.7rem; max-height: min(52vh, 460px); overflow: auto; padding: 0.1rem 0.1rem 0.4rem; }
+  .cmt { display: flex; gap: 0.6rem; align-items: flex-start; }
+  .cmt > .av { width: 30px; height: 30px; font-size: 0.72rem; flex-shrink: 0; }
+  .cmt-main { flex: 1; min-width: 0; background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 0.45rem 0.65rem; }
+  .cmt.me .cmt-main { border-color: var(--accent); }
+  .cmt-head { display: flex; gap: 0.5rem; align-items: baseline; font-size: 0.82rem; }
+  .cmt-head span { color: var(--muted); font-size: 0.75rem; }
+  .cmt-text { font-size: 0.9rem; line-height: 1.5; overflow-wrap: anywhere; margin-top: 0.15rem; }
+  .cmt-at { color: var(--accent); font-weight: 650; }
+  .cmt-acts { display: flex; gap: 0.8rem; margin-top: 0.25rem; font-size: 0.78rem; }
+  .cmt-new { position: relative; margin-top: 0.6rem; }
+  .cmt-input, .cmt-edit { min-height: 70px; }
+  .cmt-hint { font-size: 0.75rem; color: var(--muted); }
+  @media (hover: none) { .cmt-hint { visibility: hidden; } }
+  .cmt-suggest { position: absolute; left: 0; right: 0; bottom: 100%; margin-bottom: 0.25rem; }
+  .cmt-suggest .wl-opt { display: flex; gap: 0.45rem; align-items: center; width: 100%; }
+  .cmt-suggest small { color: var(--muted); margin-left: auto; }
+  .act-modal { max-width: 600px; }
+  .act-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.7rem; flex-wrap: wrap; }
+  .act-tabs button { border: 1px solid var(--line-2); background: var(--paper); color: var(--ink-2); border-radius: 999px; padding: 0.3rem 0.8rem; font: inherit; font-size: 0.85rem; cursor: pointer; }
+  .act-tabs button[aria-selected="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); font-weight: 650; }
+  .act-list { display: grid; gap: 0.15rem; max-height: min(60vh, 520px); overflow: auto; }
+  .act-day { font-size: 0.75rem; font-weight: 680; color: var(--muted); margin: 0.6rem 0 0.2rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .act-day:first-child { margin-top: 0; }
+  .act-row { display: flex; gap: 0.55rem; align-items: flex-start; text-align: left; border: 0; background: none; color: var(--ink); font: inherit; font-size: 0.86rem; padding: 0.4rem 0.45rem; border-radius: var(--r); cursor: pointer; width: 100%; }
+  .act-row:hover, .act-row:focus-visible { background: var(--paper-2); }
+  .act-row > .av { flex-shrink: 0; margin-top: 2px; }
+  .act-txt { flex: 1; min-width: 0; line-height: 1.45; overflow-wrap: anywhere; }
+  .act-t { color: var(--ink-2); }
+  .act-q { display: block; color: var(--muted); font-size: 0.82rem; margin-top: 0.1rem; }
+  .act-time { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+  .hist-modal { max-width: 860px; }
+  .hist-wrap { display: grid; grid-template-columns: 210px 1fr; gap: 0.8rem; min-height: 260px; }
+  .hist-list { display: grid; gap: 0.25rem; align-content: start; max-height: 56vh; overflow: auto; }
+  .hist-row { display: grid; text-align: left; border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: var(--r); padding: 0.4rem 0.6rem; font: inherit; font-size: 0.84rem; cursor: pointer; }
+  .hist-row small { color: var(--muted); font-size: 0.75rem; }
+  .hist-row.on { border-color: var(--accent); background: var(--accent-soft); }
+  .hist-view { min-width: 0; max-height: 56vh; overflow: auto; }
+  .hist-fields { display: grid; gap: 0.3rem; margin-bottom: 0.6rem; }
+  .hist-f { display: grid; grid-template-columns: 90px 1fr 1fr; gap: 0.5rem; font-size: 0.84rem; align-items: start; }
+  .hist-f span { color: var(--muted); }
+  .hist-f del, .hd.del { background: color-mix(in srgb, #e5484d 16%, transparent); text-decoration: none; }
+  .hist-f ins, .hd.ins { background: color-mix(in srgb, #30a46c 18%, transparent); text-decoration: none; }
+  .hist-f del, .hist-f ins { border-radius: 4px; padding: 0 0.3rem; overflow-wrap: anywhere; }
+  .hist-diff { font-family: var(--font-mono); font-variation-settings: "MONO" 1; font-size: 0.78rem; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+  .hd { display: flex; gap: 0.4rem; padding: 0.05rem 0.5rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .hd span { width: 0.8rem; flex-shrink: 0; color: var(--muted); }
+  @media (max-width: 640px) {
+    .hist-wrap { grid-template-columns: 1fr; }
+    .hist-list { max-height: 30vh; }
+    .hist-f { grid-template-columns: 70px 1fr; }
+    .hist-f ins { grid-column: 2; }
+  }
   /* Sunucu (Raspberry Pi) ekip penceresi: davet seçenekleri, açık davetler, roller, iki adımlı doğrulama */
   .team-invite-opts { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
   .team-invite-opts select, .tm-role { height: 38px; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--paper); color: var(--ink); padding: 0 0.45rem; font: inherit; font-size: 0.85rem; max-width: 100%; }
@@ -2432,6 +2503,7 @@
               <option value="3">Düşük öncelik</option>
               <option value="0">Önceliksiz</option>
             </select>
+            <select class="modal-select lt-sel" id="listAsg" aria-label="Atanan kişi süzgeci" title="Kime atanmış (arama kutusunda @ben de yazılabilir)" hidden></select>
             <button class="er-btn tgl" id="listSelBtn" type="button" aria-pressed="false" title="Birden çok kartı seçip hepsine aynı işlemi uygula">Seç</button>
             <button class="er-btn" id="viewSave" type="button" title="Şu anki arama, süzgeç ve sıralamayı kaydet" style="display:none">&#9734; Görünümü kaydet</button>
             <div class="view-chips" id="viewChips"></div>
@@ -2743,6 +2815,12 @@
         </select>
       </div>
 
+      <!-- Ekip alanında: karta atanan kişiler -->
+      <div id="modalAssignWrap" hidden>
+        <div class="modal-section-label">Atananlar</div>
+        <div class="assign-row" id="modalAssign"></div>
+      </div>
+
       <div id="modalSubsWrap">
         <div class="modal-section-label">Alt görevler <span class="sub-prog" id="modalSubsProg"></span></div>
         <div class="subs" id="modalSubs"></div>
@@ -2787,6 +2865,8 @@
           <button class="modal-btn danger" id="modalDelete">Kartı sil</button>
           <button class="modal-btn" id="modalShare" type="button" title="Başlığı ve içeriği başka bir uygulamayla paylaş (mesaj, e-posta…)" hidden>Paylaş</button>
           <button class="modal-btn" id="modalTplSave" type="button" title="Bu kartın başlığı, içeriği, etiketleri ve alt görevleri şablon olarak saklansın">Şablon olarak kaydet</button>
+          <button class="modal-btn" id="modalCmt" type="button" title="Bu kart hakkında ekiple yazış (@ ile birinden bahset)" hidden>Yorumlar</button>
+          <button class="modal-btn" id="modalHist" type="button" title="Kartın önceki hâlleri: farkları gör, eski bir hâline dön" hidden>Geçmiş</button>
         </div>
         <button class="modal-btn primary" id="modalDone">Bitti</button>
       </div>
@@ -2825,6 +2905,7 @@
 
       <div class="modal-actions">
         <button class="modal-btn danger" id="tblDelete">Tabloyu sil</button>
+        <button class="modal-btn" id="tblCmt" type="button" hidden>Yorumlar</button>
         <button class="modal-btn primary" id="tblDone">Bitti</button>
       </div>
     </div>
@@ -2994,6 +3075,7 @@
       <div class="fl-help" id="flNodeHelp"></div>
       <div class="modal-actions">
         <button class="modal-btn danger" id="flNodeDelete">Adımı sil</button>
+        <button class="modal-btn" id="flNodeCmt" type="button" hidden>Yorumlar</button>
         <button class="modal-btn primary" id="flNodeDone">Bitti</button>
       </div>
     </div>
@@ -3159,6 +3241,56 @@
      EKİP: kurulum, giriş, ekip kurma / katılma, davet bağlantısı, üyeler.
      İçeriği JS çizer (renderTeamPanel).
      =================================================================== -->
+<!-- Yorumlar (ekip alanı): kart, tablo ya da akış adımı hakkında; @ ile bahsetme -->
+<div class="modal-overlay" id="cmtModal">
+  <div class="modal cmt-modal" role="dialog" aria-modal="true" aria-labelledby="cmtTitle">
+    <div class="modal-head">
+      <div class="modal-heading" id="cmtTitle">Yorumlar</div>
+      <button class="modal-close" id="cmtClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="cmt-target" id="cmtTarget"></div>
+      <div class="cmt-list" id="cmtList" aria-live="polite"></div>
+      <p class="modal-note" id="cmtRo" hidden>Bu ekipte yalnız okuma iznin var; yorum yazamazsın.</p>
+      <div class="cmt-new" id="cmtNew">
+        <textarea class="modal-desc cmt-input" id="cmtInput" rows="3" maxlength="4000" placeholder="Yorum yaz… (@ yazıp birinden bahset)" aria-label="Yorum"></textarea>
+        <div class="wl-suggest cmt-suggest" id="cmtSuggest" hidden></div>
+        <div class="modal-actions"><span class="cmt-hint">Ctrl+Enter ile gönder</span><button class="modal-btn primary" id="cmtSend" type="button">Gönder</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Etkinlik geçmişi (sunucu) ve senden bahsedenler -->
+<div class="modal-overlay" id="actModal">
+  <div class="modal act-modal" role="dialog" aria-modal="true" aria-labelledby="actTitle">
+    <div class="modal-head">
+      <div class="modal-heading" id="actTitle">Etkinlik geçmişi</div>
+      <button class="modal-close" id="actClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="act-tabs" id="actTabs" role="tablist"></div>
+      <div class="act-list" id="actList"></div>
+      <div class="modal-actions"><button class="modal-btn" id="actMore" type="button" hidden>Daha eski</button><button class="modal-btn primary" id="actDone" type="button">Kapat</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Not geçmişi: kartın önceki hâlleri, fark ve geri dönme -->
+<div class="modal-overlay" id="histModal">
+  <div class="modal wide hist-modal" role="dialog" aria-modal="true" aria-labelledby="histTitle">
+    <div class="modal-head">
+      <div class="modal-heading" id="histTitle">Geçmiş</div>
+      <button class="modal-close" id="histClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-note" id="histNote"></p>
+      <div class="hist-wrap"><div class="hist-list" id="histList"></div><div class="hist-view" id="histView"></div></div>
+      <div class="modal-actions"><span></span><button class="modal-btn" id="histDone" type="button">Kapat</button><button class="modal-btn primary" id="histRestore" type="button" disabled>Bu hâline dön</button></div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="teamModal">
   <div class="modal team-modal" role="dialog" aria-modal="true" aria-labelledby="teamTitle">
     <div class="modal-head">
@@ -3600,6 +3732,7 @@
   async function sSet(k,v){
     if (ghHook && !isLocalKey(k)) ghHook.write();
     if (cloud.on && !isLocalKey(k)) return cloudSet(k, v);
+    if (k.indexOf('item:') === 0) { try { const old = localStorage.getItem(STORE_PREFIX + k); if (old !== null && old !== v) lhArchive(k, old); } catch (e) {} }
     try { localStorage.setItem(STORE_PREFIX + k, v); return true; }
     catch(e){
       // Depo dolu (çoğunlukla büyük kapak resimleri yüzünden). Sadece BU kayıt yapılamadı;
@@ -3641,6 +3774,7 @@
   async function sDel(k){
     if (ghHook && !isLocalKey(k)) ghHook.write();
     if (cloud.on && !isLocalKey(k)) { cloudDel(k); return; }
+    if (k.indexOf('item:') === 0) { try { const old = localStorage.getItem(STORE_PREFIX + k); if (old !== null) lhArchive(k, old, true); } catch (e) {} }
     try { localStorage.removeItem(STORE_PREFIX + k); } catch(e){}
   }
   async function sList(p){
@@ -3741,6 +3875,7 @@
         flowEdges = normalizeFlowEdges(await readAll('fle:'), flowNodes);
         flowCharts = normalizeFlowCharts(await readAll('flc:'));
         (await readAll('fls:')).forEach(s => { if (s && s.projectId) flSettings[s.projectId] = s; });
+        comments = cloud.on ? normalizeComments(await readAll('yor:')) : []; cmtIdx = null;   // ekipte yorumlar
         await migrateFlowCharts();
 
         // 'trash:' = çöp kutusu; 30 günden eskiler silinir
@@ -4050,6 +4185,11 @@
     add('Takvim: Ders programı', cal('tt'), '', 'ders saat okul');
     add('Takvim: Gün görünümü', cal('day'), '', 'bugün saat');
     add('Her yerde ara (not, görev, tablo, akış)', () => openGs(''), IS_MAC ? '⌘K' : 'Ctrl+K', 'arama bul');
+    if (cloud.on && cloud.ready) {
+      add('Ekip: Bana atananlar', async () => { if (currentView !== 'list' && currentView !== 'board') await setView('list'); el('search').value = '@ben'; renderMain(); renderBoard(); }, '', 'atama görev kişi ben');
+      add('Ekip: Senden bahsedenler', () => openActivity('ment'), '', 'yorum bahsetme mention');
+      if (cloud.prov === 'srv') add('Ekip: Etkinlik geçmişi', () => openActivity('act'), '', 'kim değiştirdi kayıt günlük');
+    }
     return C;
   }
   function gsSearch(q) {
@@ -4723,6 +4863,7 @@
       name: (a, b) => (a.title || a.body || '').localeCompare(b.title || b.body || '', 'tr', { sensitivity: 'base' }) || byNew(a, b) }[el('listSort').value] || byNew;
     mine.sort((a, b) => (b.pinned - a.pinned) || sortBy(a, b));
     renderViews();
+    renderAsgSelect();
     listVisible = mine.map(i => i.id);
     renderBulkBar();
 
@@ -4747,6 +4888,8 @@
     const q = el('search').value.trim();
     if (!q) return null;
     const fold = t => flFold(String(t || ''));
+    const af = assigneeFilter(q);   // ekipte: @ben, @atanmamis, @kullanıcıadı
+    if (af) return af;
     if (/^#[^\s#]+$/.test(q)) {
       const t = fold(q.slice(1));
       const exact = items.some(i => (i.tags || []).some(x => fold(x) === t));
@@ -4781,7 +4924,7 @@
       '<h3>' + esc(i.title) + '</h3>' +
       (i.body ? '<div class="md" data-mditem="' + i.id + '">' + mdToHTML(i.body, true) + '</div>' : '') +
       tagsHTML(i.tags) +
-      '<div class="meta"><span class="meta-left"><span class="date">' + fmtDate(i.created) + '</span>' + prioChip(i) + dueChip(i) + mdProgress(i.body) + subsChip(i) + '</span>' +
+      '<div class="meta"><span class="meta-left"><span class="date">' + fmtDate(i.created) + '</span>' + prioChip(i) + dueChip(i) + mdProgress(i.body) + subsChip(i) + teamChips(i) + '</span>' +
       '<div class="actions">' +
       '<button data-pin="' + i.id + '">' + (i.pinned?'Sabit ✓':'Sabitle') + '</button>' +
       '<button data-del="' + i.id + '">Sil</button></div></div></div>';
@@ -4800,7 +4943,7 @@
       '<div class="task-text">' + esc(i.title || i.body) + '</div>' +
       (i.title && i.body ? '<div class="md" data-mditem="' + i.id + '">' + mdToHTML(i.body, true) + '</div>' : '') +
       subsListHTML(i) + tagsHTML(i.tags) +
-      '<div class="meta"><span class="meta-left"><span class="date">' + fmtDate(i.created) + '</span>' + prioChip(i) + dueChip(i) + mdProgress(i.body) + subsChip(i) + '</span>' +
+      '<div class="meta"><span class="meta-left"><span class="date">' + fmtDate(i.created) + '</span>' + prioChip(i) + dueChip(i) + mdProgress(i.body) + subsChip(i) + teamChips(i) + '</span>' +
       '<div class="actions">' +
       '<button data-pin="' + i.id + '">' + (i.pinned?'Sabit ✓':'Sabitle') + '</button>' +
       '<button data-del="' + i.id + '">Sil</button></div></div></div></div>';
@@ -4850,11 +4993,12 @@
     const tags = i.tags && i.tags.length
       ? '<div class="card-tags">' + i.tags.map(t => '<span class="card-tag">#' + esc(t) + '</span>').join('') + '</div>'
       : '';
+    const tc = teamChips(i);
     return '<div class="card ' + (i.done?'done':'') + '" data-card="' + i.id + '">' +
       cover +
       '<div class="card-pad">' +
         '<div class="card-row">' + check + '<div class="card-title">' + title + '</div></div>' +
-        bodyPrev + tags + ((i.due || i.prio || (i.subs && i.subs.length) || mdChecks(i.body).total) ? '<div class="card-meta-row">' + prioChip(i) + dueChip(i) + mdProgress(i.body) + subsChip(i) + '</div>' : '') +
+        bodyPrev + tags + ((i.due || i.prio || (i.subs && i.subs.length) || mdChecks(i.body).total || tc) ? '<div class="card-meta-row">' + prioChip(i) + dueChip(i) + mdProgress(i.body) + subsChip(i) + tc + '</div>' : '') +
       '</div>' +
     '</div>';
   }
@@ -5675,6 +5819,7 @@
     updateModalCheckVisibility(i.type, i.done);
     // Kapak resmini göster/gizle
     updateModalCover(i.cover);
+    updateCardTeamUI(i);   // ekip: atananlar, yorumlar; geçmiş
 
     el('cardModal').classList.add('open');
   }
@@ -5775,6 +5920,7 @@
     } else { delete i.repeat; delete i.repeatDay; }
     // Sütun değiştiyse kart yeni sütunun sonuna gitsin (eskiden rastgele bir sıraya düşüyordu)
     placeInColumn(i, el('modalColumn').value);
+    if (cloud.on) { const a = modalAsg.filter(u => SAFE_UID.test(u)); if (a.length) i.assignees = a; else delete i.assignees; }
     // Not: kapak (cover) resim seç/kaldır anında doğrudan i.cover'a yazılır.
 
     if (!i.title && !i.body) i.title = '(başlıksız)'; // tamamen boş kalmasın
@@ -7197,6 +7343,8 @@
       icon = '<span class="er-head-icon ' + (errs.length ? 'err' : 'warn') + '" title="' + escAttr(tip) + '">!</span>';
     }
     if (t.indexes.length) icon += '<span class="er-head-icon" title="' + t.indexes.length + ' indeks">idx ' + t.indexes.length + '</span>';
+    const nc = cmtCount('tbl:' + t.id);
+    if (nc) icon += '<span class="er-head-icon" title="' + nc + ' yorum">' + ICO_CMT + nc + '</span>';
 
     return '<div class="er-table' + (errs.length ? ' has-err' : '') + '" data-tbl="' + t.id + '" style="left:' + t.x + 'px; top:' + t.y + 'px">' +
       '<div class="er-table-head" style="background:' + safeColor(t.color) + '" title="' + escAttr((t.note ? t.note + '\n\n' : '') + 'Taşımak için sürükle · düzenlemek için çift tıkla') + '">' +
@@ -7865,6 +8013,7 @@
     openTableId = tid;
     tableModalTouched = false;
     el('tableModal').classList.add('open');
+    updateCmtButton(el('tblCmt'), 'tbl:' + tid);
     el('tblName').value = t.name;
     el('tblNote').value = t.note || '';
     renderTableModal(focusFieldId);
@@ -12243,6 +12392,9 @@
       s += '<circle class="fl-badge' + (err ? '' : ' warn') + '" cx="' + bx + '" cy="' + by + '" r="8"/><text class="fl-badge-t" x="' + bx + '" y="' + (by + 4) + '">!</text>';
     }
     if (flStepNum && flStepNum[n.id]) s += flStepBadgeSVG(n, g, flStepNum[n.id]);
+    const nc = cmtCount('fln:' + n.id);
+    if (nc) { const cx = n.kind === 'decision' ? -g.w / 4 - 8 : -g.w / 2 + 9, cy = n.kind === 'decision' ? -g.h / 4 - 8 : -g.h / 2 + 9;
+      s += '<g class="fl-cmt"><title>' + nc + ' yorum</title><circle cx="' + cx + '" cy="' + cy + '" r="8"/><text x="' + cx + '" y="' + (cy + 3.5) + '">' + nc + '</text></g>'; }
     if (flBps().has(n.id)) s += '<g class="fl-bp" data-bp="1"><title>Kesme noktası: Oynat bu adıma gelince durur (kaldırmak için tıkla ya da F9)</title><circle cx="' + (-g.w / 2 - 12) + '" cy="0" r="6.5"/></g>';
     if (n.kind !== 'note') FL_SIDES.forEach(side => {
       const p = flPort(n, side);
@@ -13132,6 +13284,7 @@
     flNodeTouched = false;
     el('flNodeText').value = n.text;
     renderFlNodeModal();
+    updateCmtButton(el('flNodeCmt'), 'fln:' + id);
     el('flNodeModal').classList.add('open');
     const ta = el('flNodeText');
     setTimeout(() => { ta.focus(); ta.select(); }, 30);
@@ -20791,6 +20944,10 @@
       if (!i.due || !(typeof i.time === 'string' && TIME_RE.test(i.time))) delete i.time;      // saat: 'SS:DD' (yalnız tarihliyse)
       if (!i.time || !(Number.isInteger(i.dur) && i.dur >= 5 && i.dur <= 1440)) delete i.dur;  // süre (dakika)
       if (!(typeof i.icsUid === 'string' && i.icsUid.length <= 200)) delete i.icsUid;         // takvimden gelenin kimliği
+      if (Array.isArray(i.assignees)) {                                                       // ekipte atanan kişiler
+        const a = [...new Set(i.assignees.filter(x => typeof x === 'string' && SAFE_UID.test(x)))].slice(0, 20);
+        if (a.length) i.assignees = a; else delete i.assignees;
+      } else delete i.assignees;
       i.created = +i.created || Date.now();
       return i;
     });
@@ -21894,7 +22051,7 @@
      =================================================================== */
   const FB_VERSION = '12.19.0';
   const FB_URL = name => 'https://www.gstatic.com/firebasejs/' + FB_VERSION + '/firebase-' + name + '.js';
-  const REC_PREFIXES = ['proj:', 'col:', 'item:', 'tbl:', 'rel:', 'sch:', 'flc:', 'fln:', 'fle:', 'fls:', 'trash:'];
+  const REC_PREFIXES = ['proj:', 'col:', 'item:', 'tbl:', 'rel:', 'sch:', 'flc:', 'fln:', 'fle:', 'fls:', 'trash:', 'yor:'];
   const SAFE_UID = /^[A-Za-z0-9_-]{1,128}$/;
   const VIEWS = ['list', 'board', 'schema', 'flow', 'calendar'];
   const VIEW_NAMES = { list: 'Liste', board: 'Pano', schema: 'Şema', flow: 'Akış', calendar: 'Takvim' };
@@ -22173,6 +22330,7 @@ service cloud.firestore {
       case 'sch:': return o.projectId === id ? o : null;
       case 'fls:': return o.projectId === id && ok('flSettings', [o]) ? o : null;
       case 'trash:': return o.id === id && TRASH_KINDS[o.kind] && o.data && typeof o.data === 'object' && +o.deleted > 0 && trashIdsOk(o) ? o : null;
+      case 'yor:': return o.id === id && normalizeComments([o]).length ? o : null;
     }
     return null;
   }
@@ -22188,6 +22346,7 @@ service cloud.firestore {
       alert('Bu kayıt ekip alanı için çok büyük (' + Math.round(v.length / 1024) + ' KB; en fazla yaklaşık 950 KB). Büyük bir kapak resmi varsa daha küçük bir resim seç.');
       return false;
     }
+    if (cloud.prov !== 'srv' && k.indexOf('item:') === 0) { const old = cloud.mirror.get(k); if (old != null && old !== v) lhArchive(k, old); }   // Firebase ekibi: geçmiş bu cihazda
     cloud.mirror.set(k, v);
     cloud.meta.set(k, { u: cloud.user ? cloud.user.uid : '', t: Date.now() });
     cloud.queue.set(k, v);
@@ -22197,6 +22356,7 @@ service cloud.firestore {
   }
   function cloudDel(k) {
     if (cloud.prov === 'srv' && cloud.role === 'okur') { srvReadonly(); return; }
+    if (cloud.prov !== 'srv' && k.indexOf('item:') === 0 && cloud.mirror.has(k)) lhArchive(k, cloud.mirror.get(k), true);
     cloud.mirror.delete(k);
     cloud.meta.delete(k);
     cloud.queue.set(k, null);
@@ -22316,7 +22476,7 @@ service cloud.firestore {
 
   let cardGhost = null; // açık kart başkası tarafından silindiyse son hali (kaydedince geri gelir)
   function applyRemoteChanges(changes) {
-    const T = { items: new Set(), charts: new Set(), schemaPids: new Set(), flow: false, trash: false, removedOpen: null };
+    const T = { items: new Set(), charts: new Set(), schemaPids: new Set(), flow: false, trash: false, removedOpen: null, comments: false, newComments: [], assigned: [] };
     const order = k => REC_PREFIXES.indexOf(prefixOf(k));
     const keys = [...changes.keys()].sort((a, b) => order(a) - order(b));
     const edgeObjs = [];
@@ -22333,7 +22493,12 @@ service cloud.firestore {
         } else removeIn(columns, id);
       } else if (pre === 'item:') {
         T.items.add(id);
-        if (obj) { const n = normalizeItems([obj])[0]; if (n) upsertIn(items, n); }
+        if (obj) {
+          const was = items.find(x => x.id === id), me = cloud.user && cloud.user.uid;
+          const n = normalizeItems([obj])[0];
+          if (n && me && (n.assignees || []).includes(me) && !(was && (was.assignees || []).includes(me))) T.assigned.push(n);   // bana atandı
+          if (n) upsertIn(items, n);
+        }
         else { const gone = removeIn(items, id); if (gone && id === openCardId) T.removedOpen = gone; }
       } else if (pre === 'tbl:') {
         const old = findTable(id);
@@ -22370,6 +22535,11 @@ service cloud.firestore {
       } else if (pre === 'trash:') {
         T.trash = true;
         if (obj) upsertIn(trash, obj); else removeIn(trash, id);
+      } else if (pre === 'yor:') {
+        T.comments = true;
+        const n = obj && normalizeComments([obj])[0];
+        if (n) { if (!comments.some(c => c.id === n.id)) T.newComments.push(n); upsertIn(comments, n); }
+        else if (!obj) removeIn(comments, id);
       }
     }
     if (T.flow) {
@@ -22412,6 +22582,7 @@ service cloud.firestore {
     T.schemaPids.forEach(pid => { delete erHistory[pid]; });
     if (flRun && T.charts.has(flRun.pid)) { flCloseRun(); flToast('Akış şeması başka biri tarafından değiştirildi; çalıştırma durduruldu.', 5000); }
     if (T.trash) { updateTrashBtn(); if (el('trashModal').classList.contains('open')) renderTrash(); }
+    cmtIdx = null;
 
     renderProjects();
     renderMain();
@@ -22419,6 +22590,8 @@ service cloud.firestore {
     if (currentView === 'schema') renderSchema();
     if (currentView === 'flow') renderFlow();
     try { updateUndoButtons(); updateFlUndoButtons(); } catch (e) {}
+    try { teamAfterRemote(T.newComments, T.assigned); actLiveRefresh(); } catch (e) { console.error(e); }
+    if (T.comments && openCardId && items.some(i => i.id === openCardId)) updateCmtButton(el('modalCmt'), 'item:' + openCardId);
     // Değişen kartlar kısa bir an parlasın (kimin neyi değiştirdiği gözden kaçmasın)
     T.items.forEach(id => {
       document.querySelectorAll('[data-item="' + id + '"], [data-card="' + id + '"]').forEach(n => {
@@ -23023,7 +23196,7 @@ service cloud.firestore {
             (owner && uid !== u.uid ? '<button class="modal-btn danger tm-rm" type="button" data-rm="' + uid + '" title="Ekipten çıkar">Çıkar</button>' : '') +
           '</div>';
         }).join('') + '</div>';
-      h += '<div class="team-row-acts"><button class="modal-btn" type="button" data-tact="copy-personal">Kişisel projelerimi bu ekibe kopyala…</button>' +
+      h += '<div class="team-row-acts"><button class="modal-btn" type="button" data-tact="mentions">Senden bahsedenler</button><button class="modal-btn" type="button" data-tact="copy-personal">Kişisel projelerimi bu ekibe kopyala…</button>' +
         (owner ? '<button class="modal-btn" type="button" data-tact="rename">Ekibin adını değiştir</button>' : '<button class="modal-btn danger" type="button" data-tact="leave">Ekipten ayrıl</button>') + '</div>';
     }
 
@@ -23166,6 +23339,7 @@ service cloud.firestore {
         } catch (e) { lostShown = false; fail(e); }
         return;
       case 'copy-personal': copyPersonalToTeam(); return;
+      case 'mentions': closeTeamPanel(); openActivity('ment'); return;
     }
   }
   async function teamSignedIn() {
@@ -23425,7 +23599,7 @@ service cloud.firestore {
   const SRV_ROLE_NAMES = { sahip: 'Ekip sahibi', yonetici: 'Yönetici', uye: 'Üye', okur: 'Okur (yalnız okur)' };
   const SRV_ROLE_SHORT = { yonetici: 'Yönetici', uye: 'Üye', okur: 'Okur' };
   const srvRole = r => SRV_ROLE_IDS.includes(r) ? r : 'uye';
-  const SRV_KEY_RE = /^(proj|col|item|tbl|rel|sch|flc|fln|fle|fls|trash):[A-Za-z0-9_-]{1,80}$/;
+  const SRV_KEY_RE = /^(proj|col|item|tbl|rel|sch|flc|fln|fle|fls|trash|yor):[A-Za-z0-9_-]{1,80}$/;
   const SRV_ID_RE = /^[A-Za-z0-9]{6,20}$/;
   const SRV_CODE_RE = /^[A-Za-z0-9_-]{20,40}$/;
   const SRV = {
@@ -24110,6 +24284,8 @@ service cloud.firestore {
         '</div>';
       }).join('') + '</div>';
     h += '<div class="team-row-acts">' +
+      '<button class="modal-btn" type="button" data-tact="srv-activity">Etkinlik geçmişi</button>' +
+      '<button class="modal-btn" type="button" data-tact="srv-mentions">Senden bahsedenler</button>' +
       (my !== 'okur' ? '<button class="modal-btn" type="button" data-tact="copy-personal">Kişisel projelerimi bu ekibe kopyala…</button>' : '') +
       (my === 'sahip' ? '<button class="modal-btn" type="button" data-tact="srv-rename">Ekibin adını değiştir</button>'
                       : '<button class="modal-btn danger" type="button" data-tact="srv-leave">Ekipten ayrıl</button>') + '</div>';
@@ -24294,6 +24470,8 @@ service cloud.firestore {
       case 'srv-home': sp.view = 'home'; sp.totp = null; tp.msg = ''; renderTeamPanel(); return;
       case 'invite-cancel': tp.invite = null; tp.pendingTeam = null; tp.msg = ''; if (!sp.me) sp.view = 'home'; renderTeamPanel(); return;
       case 'copy-personal': copyPersonalToTeam(); return;
+      case 'srv-activity': closeTeamPanel(); openActivity('act'); return;
+      case 'srv-mentions': closeTeamPanel(); openActivity('ment'); return;
       case 'srv-signout': {
         const n = tid ? cloud.queue.size + SRV.inflight.size : 0;
         if (n && !confirm('Ekibe henüz gönderilmemiş ' + n + ' değişiklik var. Çıkış yaparsan bu cihazdan silinir. Yine de çıkılsın mı?')) return;
@@ -24415,6 +24593,538 @@ service cloud.firestore {
       showSnack('Davet iptal edildi.');
     } catch (e) { srvFail(e); }
   }
+
+  /* ===================================================================
+     EKİP: KİŞİ ATAMA, YORUMLAR VE @BAHSETME, ETKİNLİK GEÇMİŞİ, NOT GEÇMİŞİ
+     • Kişi atama ve yorumlar ekip alanında (sunucu ya da Firebase) görünür. Yorumlar ekibin
+       deposunda "yor:ID" kayıtlarıdır: { id, projectId, target: 'item:ID' | 'tbl:ID' | 'fln:ID', text, author, created, edited }.
+       Yazarı, deponun kendisinin yazdığı "son değiştiren"den alınır (başkası adına yorum yazılamaz).
+     • Etkinlik geçmişi (kim neyi ne zaman değiştirdi) sunucudan gelir.
+     • Not geçmişi: sunucuda tutulur; kişisel alanda ve Firebase ekibinde bu cihazda (IndexedDB "wn-gecmis").
+     =================================================================== */
+  const ICO_CMT = '<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7.5h-6.2l-3.3 2.5V11H2.5z"/></svg>';
+  const CMT_TARGET_RE = /^(item|tbl|fln):[A-Za-z0-9_-]{1,80}$/;
+  const CMT_MAX = 4000;
+  let comments = [];
+  let cmtIdx = null;   // hedef -> yorum sayısı (yorumlar ya da hedefler değişince yeniden kurulur)
+  function normalizeComments(list) {
+    return list.filter(c => c && typeof c === 'object' && typeof c.id === 'string' && SAFE_ID.test(c.id) &&
+        typeof c.projectId === 'string' && SAFE_ID.test(c.projectId) && typeof c.target === 'string' && CMT_TARGET_RE.test(c.target) &&
+        typeof c.text === 'string' && c.text.trim())
+      .map(c => ({ id: c.id, projectId: c.projectId, target: c.target, text: c.text.slice(0, CMT_MAX),
+        author: typeof c.author === 'string' && SAFE_UID.test(c.author) ? c.author : '', created: +c.created || 0, edited: +c.edited || 0 }));
+  }
+  function cmtTargetObj(target) {
+    const pre = target.slice(0, target.indexOf(':')), id = target.slice(target.indexOf(':') + 1);
+    if (pre === 'item') return items.find(i => i.id === id) || null;
+    if (pre === 'tbl') return findTable(id) || null;
+    if (pre === 'fln') return findFlowNode(id) || null;
+    return null;
+  }
+  function cmtTargetName(target) {
+    const o = cmtTargetObj(target), pre = target.slice(0, target.indexOf(':'));
+    if (!o) return '(silinmiş)';
+    if (pre === 'item') return (o.title || mdPlain(o.body || '') || '(başlıksız)').slice(0, 80) + (o.type === 'task' ? ' (görev)' : ' (not)');
+    if (pre === 'tbl') return (o.name || '(adsız)') + ' (tablo)';
+    return (o.text || FL_KINDS[o.kind].name).replace(/\s+/g, ' ').slice(0, 80) + ' (akış adımı)';
+  }
+  function cmtCount(target) {
+    if (!cloud.on) return 0;
+    if (!cmtIdx) {
+      cmtIdx = new Map();
+      comments.forEach(c => { cmtIdx.set(c.target, (cmtIdx.get(c.target) || 0) + 1); });
+    }
+    return cmtIdx.get(target) || 0;
+  }
+  const cmtAuthor = c => (cloud.meta.get('yor:' + c.id) || {}).u || c.author;
+  async function saveComment(c) { if (storageOK) await sSet('yor:' + c.id, JSON.stringify(c)); }
+
+  /* ---------- Üyelerin kısa adları (@bahsetme) ---------- */
+  function memberHandle(uid) {
+    const m = cloud.members.get(uid);
+    const h = m ? (m.ad || String(m.email || '').split('@')[0]) : (cloud.user && uid === cloud.user.uid ? cloud.user.ad || '' : '');
+    return String(h || '').toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 40);
+  }
+  const myHandle = () => cloud.user ? memberHandle(cloud.user.uid) : '';
+  const MENTION_RE = /(^|[^A-Za-z0-9._@&-])@([A-Za-z0-9._-]{2,40})/g;
+  function mentionsOf(text) {
+    const out = new Set();
+    String(text || '').replace(MENTION_RE, (m, a, h) => { out.add(h.toLowerCase().replace(/[.]+$/, '')); return m; });
+    return out;
+  }
+  const mentionsMe = text => { const h = myHandle(); return !!h && mentionsOf(text).has(h); };
+  function cmtTextHTML(text) {
+    const handles = new Set([...cloud.members.keys()].map(memberHandle).filter(Boolean));
+    return esc(text).replace(MENTION_RE, (m, a, h) => {
+      const hh = h.toLowerCase().replace(/[.]+$/, '');
+      if (!handles.has(hh)) return m;
+      return a + '<b class="cmt-at">@' + esc(h.slice(0, hh.length)) + '</b>' + esc(h.slice(hh.length));
+    }).replace(/\n/g, '<br>');
+  }
+
+  /* ---------- Kartlarda: yorum sayısı ve atanan kişiler ---------- */
+  function teamChips(i) {
+    if (!cloud.on) return '';
+    const n = cmtCount('item:' + i.id);
+    const a = (i.assignees || []).filter(u => cloud.members.has(u));
+    let h = '';
+    if (n) h += '<span class="chip-cmt" title="' + n + ' yorum">' + ICO_CMT + n + '</span>';
+    if (a.length) h += '<span class="chip-asg" title="' + escAttr('Atanan: ' + a.map(memberName).join(', ')) + '">' +
+      a.slice(0, 3).map(u => avatarHTML(u, 'sm')).join('') + (a.length > 3 ? '<span class="av sm more">+' + (a.length - 3) + '</span>' : '') + '</span>';
+    return h;
+  }
+
+  /* ---------- Kart penceresi: atananlar, Yorumlar ve Geçmiş düğmeleri ---------- */
+  let modalAsg = [];
+  function renderModalAssign() {
+    const wrap = el('modalAssignWrap');
+    if (!cloud.on || !cloud.ready) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+    const ro = cloud.prov === 'srv' && cloud.role === 'okur';
+    const rest = [...cloud.members.keys()].filter(u => !modalAsg.includes(u));
+    rest.sort((a, b) => (a === (cloud.user && cloud.user.uid) ? -1 : 0) - (b === (cloud.user && cloud.user.uid) ? -1 : 0) || memberName(a).localeCompare(memberName(b), 'tr'));
+    el('modalAssign').innerHTML = modalAsg.map(u => '<span class="asg-chip">' + avatarHTML(u, 'sm') + '<span>' + esc(memberName(u)) + '</span>' +
+        (ro ? '' : '<button type="button" data-asgdel="' + u + '" title="Atamayı kaldır" aria-label="' + escAttr(memberName(u) + ' atamasını kaldır') + '">&times;</button>') + '</span>').join('') +
+      (ro || !rest.length ? (modalAsg.length ? '' : '<span class="asg-none">Kimse atanmadı</span>')
+        : '<select class="modal-select asg-add" id="modalAsgAdd" aria-label="Kişi ata"><option value="">+ Kişi ata</option>' +
+          rest.map(u => '<option value="' + u + '">' + esc(cloud.user && u === cloud.user.uid ? 'Kendime ata' : memberName(u)) + '</option>').join('') + '</select>');
+  }
+  function updateCardTeamUI(i) {
+    modalAsg = cloud.on ? (i.assignees || []).filter(u => cloud.members.has(u) || modalAsg.includes(u)) : [];
+    renderModalAssign();
+    const n = cmtCount('item:' + i.id);
+    el('modalCmt').hidden = !cloud.on || !cloud.ready;
+    el('modalCmt').innerHTML = ICO_CMT + 'Yorumlar' + (n ? ' <b>' + n + '</b>' : '');
+    el('modalHist').hidden = !(SRV_HIST_OK() || lhOk());
+  }
+  el('modalAssign').addEventListener('click', e => {
+    const b = e.target.closest('[data-asgdel]');
+    if (!b) return;
+    modalAsg = modalAsg.filter(u => u !== b.dataset.asgdel);
+    renderModalAssign();
+  });
+  el('modalAssign').addEventListener('change', e => {
+    if (e.target.id !== 'modalAsgAdd' || !e.target.value) return;
+    const u = e.target.value;
+    if (SAFE_UID.test(u) && !modalAsg.includes(u) && modalAsg.length < 20) modalAsg.push(u);
+    renderModalAssign();
+  });
+  el('modalCmt').addEventListener('click', () => { if (openCardId) openComments('item:' + openCardId); });
+  el('modalHist').addEventListener('click', () => { if (openCardId) openHistory(openCardId); });
+  el('tblCmt').addEventListener('click', () => { if (openTableId) openComments('tbl:' + openTableId); });
+  el('flNodeCmt').addEventListener('click', () => { if (flOpenNode) openComments('fln:' + flOpenNode); });
+  function updateCmtButton(btn, target) {
+    const n = cmtCount(target);
+    btn.hidden = !cloud.on || !cloud.ready;
+    btn.innerHTML = ICO_CMT + 'Yorumlar' + (n ? ' <b>' + n + '</b>' : '');
+  }
+
+  /* ---------- "Bana atananlar": arama kutusunda @ben, @atanmamis, @kullanıcıadı ---------- */
+  function assigneeFilter(q) {
+    if (!cloud.on || !/^@[^\s@]+$/.test(q)) return null;
+    const h = flFold(q.slice(1));
+    const me = cloud.user && cloud.user.uid;
+    if (h === 'ben') return { tag: null, asg: true, test: i => !!me && (i.assignees || []).includes(me) };
+    if (h === 'atanmamis' || h === 'kimse') return { tag: null, asg: true, test: i => !(i.assignees || []).length };
+    const uids = [...cloud.members.keys()].filter(u => memberHandle(u).startsWith(h) || flFold(memberName(u)).startsWith(h));
+    return { tag: null, asg: true, test: i => (i.assignees || []).some(u => uids.includes(u)) };
+  }
+  function renderAsgSelect() {
+    const s = el('listAsg');
+    if (!cloud.on || !cloud.ready || !cloud.members.size) { s.hidden = true; return; }
+    s.hidden = false;
+    const opts = [['', 'Herkes'], ['@ben', 'Bana atananlar'], ['@atanmamis', 'Atanmamış']]
+      .concat([...cloud.members.keys()].filter(u => !(cloud.user && u === cloud.user.uid) && memberHandle(u)).map(u => ['@' + memberHandle(u), memberName(u) + '’e atananlar']));
+    const sig = JSON.stringify(opts);
+    if (s.dataset.sig !== sig) { s.innerHTML = opts.map(o => '<option value="' + escAttr(o[0]) + '">' + esc(o[1]) + '</option>').join(''); s.dataset.sig = sig; }
+    const q = el('search').value.trim();
+    s.value = opts.some(o => o[0] === q) ? q : '';
+  }
+  el('listAsg').addEventListener('change', () => { el('search').value = el('listAsg').value; renderMain(); renderBoard(); });
+
+  /* ---------- Yorum penceresi ---------- */
+  let cmtTarget = null, cmtEditing = null;
+  function openComments(target) {
+    if (!cloud.on || !CMT_TARGET_RE.test(target)) return;
+    cmtTarget = target; cmtEditing = null;
+    el('cmtInput').value = '';
+    el('cmtSuggest').hidden = true;
+    el('cmtModal').classList.add('open');
+    renderComments();
+    const ro = cloud.prov === 'srv' && cloud.role === 'okur';
+    el('cmtNew').hidden = ro;
+    el('cmtRo').hidden = !ro;
+    if (!ro && !('ontouchstart' in window)) setTimeout(() => el('cmtInput').focus(), 30);
+  }
+  function closeComments() {
+    el('cmtModal').classList.remove('open');
+    cmtTarget = null; cmtEditing = null;
+    if (openCardId && items.some(i => i.id === openCardId)) updateCmtButton(el('modalCmt'), 'item:' + openCardId);
+    if (openTableId) updateCmtButton(el('tblCmt'), 'tbl:' + openTableId);
+    if (flOpenNode) updateCmtButton(el('flNodeCmt'), 'fln:' + flOpenNode);
+  }
+  function renderComments() {
+    if (!cmtTarget) return;
+    el('cmtTarget').textContent = cmtTargetName(cmtTarget);
+    const me = cloud.user && cloud.user.uid, mod = cloud.prov === 'srv' && (cloud.role === 'sahip' || cloud.role === 'yonetici');
+    const list = comments.filter(c => c.target === cmtTarget).sort((a, b) => a.created - b.created);
+    el('cmtList').innerHTML = list.length ? list.map(c => {
+      const au = cmtAuthor(c), own = au && au === me;
+      const body = cmtEditing === c.id
+        ? '<textarea class="modal-desc cmt-edit" id="cmtEditBox" rows="3" maxlength="' + CMT_MAX + '">' + esc(c.text) + '</textarea>' +
+          '<div class="cmt-acts"><button class="link-btn" type="button" data-cmtsave="' + c.id + '">Kaydet</button><button class="link-btn" type="button" data-cmtcancel>Vazgeç</button></div>'
+        : '<div class="cmt-text">' + cmtTextHTML(c.text) + '</div>' +
+          (own || mod ? '<div class="cmt-acts">' + (own ? '<button class="link-btn" type="button" data-cmtedit="' + c.id + '">Düzenle</button>' : '') +
+            '<button class="link-btn" type="button" data-cmtdel="' + c.id + '">Sil</button></div>' : '');
+      return '<div class="cmt' + (mentionsMe(c.text) && !own ? ' me' : '') + '" data-cmt="' + c.id + '">' + (au ? avatarHTML(au) : '<span class="av" aria-hidden="true">?</span>') +
+        '<div class="cmt-main"><div class="cmt-head"><b>' + esc(au ? memberName(au) : 'Bir ekip üyesi') + '</b><span>' + esc(agoText(c.created)) + (c.edited ? ' · düzenlendi' : '') + '</span></div>' + body + '</div></div>';
+    }).join('') : '<p class="modal-note cmt-empty">Henüz yorum yok. İlk yorumu sen yaz; birinden bahsetmek için @ ile adını yaz.</p>';
+    const box = el('cmtEditBox');
+    if (box) box.focus();
+  }
+  async function sendComment() {
+    const text = el('cmtInput').value.trim();
+    if (!text || !cmtTarget || !cloud.on) return;
+    const t = cmtTargetObj(cmtTarget);
+    if (!t) { showSnack('Yorum yazılan şey silinmiş.'); closeComments(); return; }
+    const c = { id: uid(), projectId: t.projectId || activeProject, target: cmtTarget, text: text.slice(0, CMT_MAX), author: cloud.user ? cloud.user.uid : '', created: Date.now() };
+    if (cloud.prov === 'srv' && cloud.role === 'okur') { srvReadonly(); return; }
+    comments.push(c); cmtIdx = null;
+    el('cmtInput').value = '';
+    el('cmtSuggest').hidden = true;
+    await saveComment(c);
+    renderComments(); refreshTeamBadges();
+    const list = el('cmtList'); list.scrollTop = list.scrollHeight;
+  }
+  el('cmtSend').addEventListener('click', sendComment);
+  el('cmtClose').addEventListener('click', closeComments);
+  el('cmtModal').addEventListener('click', e => { if (e.target === el('cmtModal')) closeComments(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && el('cmtModal').classList.contains('open')) { e.stopPropagation(); if (!el('cmtSuggest').hidden) el('cmtSuggest').hidden = true; else closeComments(); } }, true);
+  el('cmtList').addEventListener('click', async e => {
+    const ed = e.target.closest('[data-cmtedit]'), del = e.target.closest('[data-cmtdel]'), sv = e.target.closest('[data-cmtsave]'), cn = e.target.closest('[data-cmtcancel]');
+    if (ed) { cmtEditing = ed.dataset.cmtedit; renderComments(); return; }
+    if (cn) { cmtEditing = null; renderComments(); return; }
+    if (sv) {
+      const c = comments.find(x => x.id === sv.dataset.cmtsave), v = (el('cmtEditBox') || {}).value || '';
+      if (!c || !v.trim()) return;
+      c.text = v.trim().slice(0, CMT_MAX); c.edited = Date.now();
+      cmtEditing = null;
+      await saveComment(c);
+      renderComments();
+      return;
+    }
+    if (del) {
+      const c = comments.find(x => x.id === del.dataset.cmtdel);
+      if (!c || !confirm('Bu yorum silinsin mi?')) return;
+      removeIn(comments, c.id); cmtIdx = null;
+      await sDel('yor:' + c.id);
+      renderComments(); refreshTeamBadges();
+    }
+  });
+  /* @ yazınca üye önerisi */
+  let cmtSugg = [], cmtSuggSel = 0;
+  function cmtSuggestUpdate() {
+    const ta = el('cmtInput'), pos = ta.selectionStart, before = ta.value.slice(0, pos);
+    const m = /(^|[^A-Za-z0-9._@&-])@([A-Za-z0-9._-]{0,40})$/.exec(before);
+    if (!m) { el('cmtSuggest').hidden = true; cmtSugg = []; return; }
+    const part = m[2].toLowerCase(), pf = flFold(part);
+    cmtSugg = [...cloud.members.keys()].filter(u => memberHandle(u) && !(cloud.user && u === cloud.user.uid) &&
+      (memberHandle(u).startsWith(part) || flFold(memberName(u)).split(/\s+/).some(w => w.startsWith(pf)))).slice(0, 6);
+    if (!cmtSugg.length) { el('cmtSuggest').hidden = true; return; }
+    cmtSuggSel = Math.min(cmtSuggSel, cmtSugg.length - 1);
+    el('cmtSuggest').innerHTML = cmtSugg.map((u, k) => '<button type="button" class="wl-opt' + (k === cmtSuggSel ? ' on' : '') + '" data-mention="' + u + '">' + avatarHTML(u, 'sm') +
+      '<span>' + esc(memberName(u)) + '</span><small>@' + esc(memberHandle(u)) + '</small></button>').join('');
+    el('cmtSuggest').hidden = false;
+  }
+  function cmtInsertMention(u) {
+    const ta = el('cmtInput'), pos = ta.selectionStart, before = ta.value.slice(0, pos), after = ta.value.slice(pos);
+    const nb = before.replace(/@([A-Za-z0-9._-]{0,40})$/, '@' + memberHandle(u) + ' ');
+    ta.value = nb + after;
+    ta.selectionStart = ta.selectionEnd = nb.length;
+    el('cmtSuggest').hidden = true; cmtSugg = [];
+    ta.focus();
+  }
+  el('cmtInput').addEventListener('input', () => { cmtSuggSel = 0; cmtSuggestUpdate(); });
+  el('cmtInput').addEventListener('click', cmtSuggestUpdate);
+  el('cmtInput').addEventListener('keydown', e => {
+    if (!el('cmtSuggest').hidden && cmtSugg.length) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); cmtSuggSel = (cmtSuggSel + (e.key === 'ArrowDown' ? 1 : -1) + cmtSugg.length) % cmtSugg.length; cmtSuggestUpdate(); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); cmtInsertMention(cmtSugg[cmtSuggSel]); return; }
+    }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendComment(); }
+  });
+  el('cmtSuggest').addEventListener('mousedown', e => { const b = e.target.closest('[data-mention]'); if (b) { e.preventDefault(); cmtInsertMention(b.dataset.mention); } });
+
+  /* Yorum / atama değişince ekrandaki rozetler */
+  function refreshTeamBadges() {
+    cmtIdx = null;
+    renderMain();
+    if (currentView === 'board') renderBoard();
+    if (currentView === 'schema') renderSchema();
+    if (currentView === 'flow') renderFlow();
+  }
+
+  /* ---------- Bildirim: senden bahsedildi, sana kart atandı ---------- */
+  const teamNoticeSeen = new Set();
+  function teamNotify(key, msg, open) {
+    if (teamNoticeSeen.has(key)) return;
+    teamNoticeSeen.add(key);
+    showSnack(msg, open || null, open ? 'Aç' : undefined);
+    if (document.visibilityState === 'hidden' && 'Notification' in window && Notification.permission === 'granted') showNotice('White Note · ' + (cloud.team ? cloud.team.name : 'Ekip'), msg, key);
+  }
+  function teamAfterRemote(newComments, assigned) {
+    const me = cloud.user && cloud.user.uid;
+    if (!me) return;
+    newComments.forEach(c => {
+      const au = cmtAuthor(c);
+      if (au === me || Date.now() - c.created > 10 * 60000 || !mentionsMe(c.text)) return;
+      teamNotify('cmt:' + c.id, memberName(au) + ' senden bahsetti: “' + c.text.replace(/\s+/g, ' ').slice(0, 80) + '”', () => openCommentTarget(c));
+    });
+    assigned.forEach(i => {
+      const au = (cloud.meta.get('item:' + i.id) || {}).u;
+      if (!au || au === me) return;
+      teamNotify('asg:' + i.id + ':' + Date.now().toString().slice(0, -5), memberName(au) + ' sana bir kart atadı: “' + (i.title || mdPlain(i.body || '')).slice(0, 80) + '”',
+        () => gsOpen({ kind: 'item', pid: i.projectId, id: i.id }));
+    });
+    if (el('cmtModal').classList.contains('open')) renderComments();
+    if (el('actModal').classList.contains('open') && actTab === 'ment') renderMentions();
+  }
+  async function openCommentTarget(c) {
+    const pre = c.target.slice(0, c.target.indexOf(':')), id = c.target.slice(c.target.indexOf(':') + 1), o = cmtTargetObj(c.target);
+    if (!o) { showSnack('Yorum yazılan şey artık yok (silinmiş olabilir).'); return; }
+    if (pre === 'item') await gsOpen({ kind: 'item', pid: o.projectId, id: id });
+    else if (pre === 'tbl') await gsOpen({ kind: 'table', pid: o.projectId, id: id });
+    else await gsOpen({ kind: 'node', pid: o.projectId, id: id, cid: o.chartId });
+    openComments(c.target);
+  }
+
+  /* ---------- Etkinlik penceresi: etkinlik geçmişi (sunucu) ve senden bahsedenler ---------- */
+  let actTab = 'act', actRows = [], actMore = false, actBusy = false;
+  const ACT_KIND = { proj: 'projesini', col: 'sütununu', item: 'kartını', tbl: 'tablosunu', flc: 'akış şemasını', fln: 'akış adımını' };
+  const ACT_VERB = { ekle: 'ekledi', degistir: 'değiştirdi', sil: 'sildi' };
+  function openActivity(tab) {
+    if (!cloud.on) return;
+    actTab = cloud.prov === 'srv' && tab !== 'ment' ? 'act' : 'ment';
+    el('actModal').classList.add('open');
+    actRender();
+  }
+  function closeActivity() { el('actModal').classList.remove('open'); }
+  function actRender() {
+    const srv = cloud.prov === 'srv';
+    el('actTabs').innerHTML = (srv ? '<button type="button" role="tab" data-acttab="act" aria-selected="' + (actTab === 'act') + '">Etkinlik geçmişi</button>' : '') +
+      '<button type="button" role="tab" data-acttab="ment" aria-selected="' + (actTab === 'ment') + '">Senden bahsedenler</button>';
+    el('actTitle').textContent = actTab === 'act' ? 'Etkinlik geçmişi' : 'Senden bahsedenler';
+    if (actTab === 'act') { actRows = []; actMore = false; el('actList').innerHTML = '<div class="team-loading"><span class="team-spin" aria-hidden="true"></span>Yükleniyor…</div>'; actLoad(); }
+    else renderMentions();
+  }
+  async function actLoad(older) {
+    if (actBusy || !cloud.on || cloud.prov !== 'srv' || !cloud.team) return;
+    actBusy = true;
+    try {
+      const once = older && actRows.length ? actRows[actRows.length - 1].id : 0;
+      const r = await srvApi('GET', 'ekip/' + cloud.team.id + '/etkinlik' + (once ? '?once=' + once : ''), null, 15000);
+      const rows = (Array.isArray(r.olaylar) ? r.olaylar : []).filter(x => x && Number.isInteger(x.id) && typeof x.k === 'string' && /^[a-z]{2,5}:[A-Za-z0-9_-]{1,80}$/.test(x.k) &&
+        SAFE_UID.test(x.u || '') && ACT_VERB[x.tur]);
+      actRows = older ? actRows.concat(rows) : rows;
+      actMore = !!r.dahaVar;
+    } catch (e) {
+      if (!older) el('actList').innerHTML = '<p class="modal-note">' + esc(e.msg || 'Etkinlik geçmişi alınamadı.') + '</p>';
+      actBusy = false; return;
+    }
+    actBusy = false;
+    if (actTab === 'act' && el('actModal').classList.contains('open')) renderActivity();
+  }
+  function actText(x) {
+    const pre = x.k.slice(0, x.k.indexOf(':'));
+    const who = '<b>' + esc(memberName(x.u)) + '</b>', title = x.baslik ? ' <span class="act-t">“' + esc(x.baslik) + '”</span>' : '';
+    if (pre === 'yor') return who + ' ' + { ekle: 'yorum yazdı', degistir: 'yorumunu düzenledi', sil: 'yorumunu sildi' }[x.tur] + title;
+    return who + title + ' ' + (ACT_KIND[pre] || 'kaydını') + ' ' + ACT_VERB[x.tur];
+  }
+  function renderActivity() {
+    if (!actRows.length) { el('actList').innerHTML = '<p class="modal-note">Henüz etkinlik yok.</p>'; el('actMore').hidden = true; return; }
+    let day = '', h = '';
+    actRows.forEach((x, k) => {
+      const d = new Date(x.t).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+      if (d !== day) { day = d; h += '<div class="act-day">' + esc(d) + '</div>'; }
+      h += '<button type="button" class="act-row" data-act="' + k + '">' + avatarHTML(x.u, 'sm') + '<span class="act-txt">' + actText(x) + '</span>' +
+        '<span class="act-time">' + esc(new Date(x.t).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })) + '</span></button>';
+    });
+    el('actList').innerHTML = h;
+    el('actMore').hidden = !actMore;
+  }
+  function renderMentions() {
+    const me = cloud.user && cloud.user.uid;
+    const list = comments.filter(c => mentionsMe(c.text) && cmtAuthor(c) !== me).sort((a, b) => b.created - a.created).slice(0, 100);
+    el('actMore').hidden = true;
+    el('actList').innerHTML = list.length ? list.map(c => '<button type="button" class="act-row" data-ment="' + c.id + '">' + avatarHTML(cmtAuthor(c), 'sm') +
+      '<span class="act-txt"><b>' + esc(memberName(cmtAuthor(c))) + '</b> · ' + esc(cmtTargetName(c.target)) + '<span class="act-q">' + cmtTextHTML(c.text.slice(0, 300)) + '</span></span>' +
+      '<span class="act-time">' + esc(agoText(c.created)) + '</span></button>').join('')
+      : '<p class="modal-note">Henüz kimse yorumda senden bahsetmedi. Bahsetmek için yorumda @' + esc(myHandle() || 'kullanıcıadı') + ' yazılır.</p>';
+  }
+  async function actOpen(x) {
+    const pre = x.k.slice(0, x.k.indexOf(':')), id = x.k.slice(x.k.indexOf(':') + 1);
+    const gone = () => showSnack('Bu kayıt artık yok (silinmiş olabilir; çöp kutusuna bak).');
+    closeActivity();
+    if (pre === 'item') { const i = items.find(v => v.id === id); if (!i) return gone(); return gsOpen({ kind: 'item', pid: i.projectId, id: id }); }
+    if (pre === 'proj') { if (!projects.some(p => p.id === id)) return gone(); return gsOpen({ kind: 'project', pid: id }); }
+    if (pre === 'col') { const c = columns.find(v => v.id === id); if (!c) return gone(); switchProject(c.projectId); return setView('board'); }
+    if (pre === 'tbl') { const t = findTable(id); if (!t) return gone(); return gsOpen({ kind: 'table', pid: t.projectId, id: id }); }
+    if (pre === 'flc') { const c = flowCharts.find(v => v.id === id); if (!c) return gone(); return gsOpen({ kind: 'chart', pid: c.projectId, cid: id }); }
+    if (pre === 'fln') { const n = findFlowNode(id); if (!n) return gone(); return gsOpen({ kind: 'node', pid: n.projectId, id: id, cid: n.chartId }); }
+    if (pre === 'yor') { const c = comments.find(v => v.id === id); if (!c) return gone(); return openCommentTarget(c); }
+  }
+  el('actTabs').addEventListener('click', e => { const b = e.target.closest('[data-acttab]'); if (b) { actTab = b.dataset.acttab; actRender(); } });
+  el('actList').addEventListener('click', e => {
+    const a = e.target.closest('[data-act]'), m = e.target.closest('[data-ment]');
+    if (a) actOpen(actRows[+a.dataset.act]);
+    if (m) { const c = comments.find(v => v.id === m.dataset.ment); if (c) { closeActivity(); openCommentTarget(c); } }
+  });
+  el('actMore').addEventListener('click', () => actLoad(true));
+  el('actClose').addEventListener('click', closeActivity);
+  el('actDone').addEventListener('click', closeActivity);
+  el('actModal').addEventListener('click', e => { if (e.target === el('actModal')) closeActivity(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && el('actModal').classList.contains('open')) { e.stopPropagation(); closeActivity(); } }, true);
+  let actRefreshT = null;
+  function actLiveRefresh() {   // pencere açıkken yeni değişiklikler gelince ilk sayfa tazelenir
+    if (!el('actModal').classList.contains('open') || actTab !== 'act') return;
+    clearTimeout(actRefreshT);
+    actRefreshT = setTimeout(() => { if (!actBusy) actLoad(); }, 1200);
+  }
+
+  /* ---------- Not geçmişi ----------
+     Sunucuda: her kaydın önceki hâlleri sunucuda (api/ekip/ID/surumler). Kişisel alanda ve Firebase
+     ekibinde: bu cihazda IndexedDB'de; aynı kartın 2 dakika içindeki art arda kayıtları tek sürüm sayılır. */
+  const SRV_HIST_OK = () => cloud.on && cloud.prov === 'srv' && cloud.ready;
+  const lhOk = () => typeof indexedDB !== 'undefined' && !(cloud.on && cloud.prov === 'srv') && /^https?:$|^file:$/.test(location.protocol);
+  const lhLast = new Map();   // anahtar -> bu oturumda son yazma zamanı
+  let lhDbP = null;
+  function lhDb() {
+    if (!lhDbP) {
+      lhDbP = new Promise((ok, no) => {
+        let r;
+        try { r = indexedDB.open('wn-gecmis', 1); } catch (e) { no(e); return; }
+        r.onupgradeneeded = () => { const s = r.result.createObjectStore('surum', { keyPath: 'id', autoIncrement: true }); s.createIndex('k', ['ws', 'k']); };
+        r.onsuccess = () => { const d = r.result; d.onversionchange = () => { try { d.close(); } catch (e) {} lhDbP = null; }; ok(d); };
+        r.onerror = () => no(r.error);
+        r.onblocked = () => no(new Error('IndexedDB kilitli'));
+      });
+      lhDbP.catch(() => { lhDbP = null; });
+    }
+    return lhDbP;
+  }
+  const lhWs = () => cloud.on && cloud.team ? cloud.team.id : '';
+  /* Bir kartın yazılmadan / silinmeden önceki hâli saklanır */
+  function lhArchive(k, old, deleting) {
+    if (!/^item:/.test(k) || typeof old !== 'string' || !lhOk()) return;
+    const now = Date.now(), last = lhLast.get(k) || 0;
+    lhLast.set(k, now);
+    if (!deleting && now - last < 120000) return;   // art arda kayıtlar: tek sürüm
+    const ws = lhWs(), u = cloud.on && cloud.meta.get(k) ? cloud.meta.get(k).u || '' : '';
+    lhDb().then(d => {
+      const t = d.transaction('surum', 'readwrite'), s = t.objectStore('surum');
+      s.add({ ws: ws, k: k, d: old, t: now, u: u });
+      const q = s.index('k').getAllKeys(IDBKeyRange.only([ws, k]));
+      q.onsuccess = () => { const ids = q.result || []; ids.slice(0, Math.max(0, ids.length - 30)).forEach(id => s.delete(id)); };
+    }).catch(() => {});
+  }
+  async function lhList(k) {
+    const d = await lhDb(), t = d.transaction('surum', 'readonly');
+    const rows = await new Promise((ok, no) => { const q = t.objectStore('surum').index('k').getAll(IDBKeyRange.only([lhWs(), k])); q.onsuccess = () => ok(q.result || []); q.onerror = () => no(q.error); });
+    return rows.sort((a, b) => b.id - a.id).map(r => ({ d: r.d, t: r.t, u: r.u || '', local: true }));
+  }
+
+  let histItem = null, histVers = [], histSel = -1;
+  async function openHistory(id) {
+    const i = items.find(x => x.id === id);
+    if (!i) return;
+    histItem = id; histVers = []; histSel = -1;
+    el('histTitle').textContent = 'Geçmiş: ' + (i.title || '(başlıksız)').slice(0, 60);
+    el('histNote').textContent = SRV_HIST_OK() ? 'Kartın sunucuda saklanan önceki hâlleri (en fazla 50; aynı kişinin 2 dakika içindeki değişiklikleri tek sürüm sayılır).'
+      : 'Kartın bu cihazda saklanan önceki hâlleri (en fazla 30; 2 dakika içindeki art arda değişiklikler tek sürüm sayılır).';
+    el('histList').innerHTML = '<div class="team-loading"><span class="team-spin" aria-hidden="true"></span>Yükleniyor…</div>';
+    el('histView').innerHTML = '';
+    el('histRestore').disabled = true;
+    el('histModal').classList.add('open');
+    try {
+      if (SRV_HIST_OK()) {
+        const r = await srvApi('GET', 'ekip/' + cloud.team.id + '/surumler?k=' + encodeURIComponent('item:' + id), null, 15000);
+        histVers = (Array.isArray(r.surumler) ? r.surumler : []).filter(v => v && typeof v.d === 'string').map(v => ({ d: v.d, t: +v.t || 0, u: SAFE_UID.test(v.u || '') ? v.u : '' }));
+      } else histVers = await lhList('item:' + id);
+    } catch (e) { el('histList').innerHTML = '<p class="modal-note">' + esc(e.msg || 'Geçmiş okunamadı.') + '</p>'; return; }
+    histVers = histVers.map(v => { const o = cloudParse('item:' + id, v.d); const n = o && normalizeItems([o])[0]; return n ? Object.assign(v, { item: n }) : null; }).filter(Boolean);
+    renderHistory();
+  }
+  function renderHistory() {
+    const cur = items.find(x => x.id === histItem);
+    if (!cur) { closeHistory(); return; }
+    el('histList').innerHTML = '<button type="button" class="hist-row cur' + (histSel === -1 ? ' on' : '') + '" data-hist="-1"><b>Şu anki hâl</b><small>' + esc(cloud.on ? memberName((cloud.meta.get('item:' + histItem) || {}).u) || '' : '') + '</small></button>' +
+      (histVers.length ? histVers.map((v, k) => '<button type="button" class="hist-row' + (histSel === k ? ' on' : '') + '" data-hist="' + k + '"><b>' + esc(new Date(v.t).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) + '</b>' +
+        '<small>' + esc(v.u && cloud.on ? memberName(v.u) : v.local ? 'bu cihaz' : '') + '</small></button>').join('')
+        : '<p class="modal-note hist-none">Henüz önceki bir hâl yok. Kart değiştirildikçe burada birikir.</p>');
+    const v = histSel >= 0 ? histVers[histSel] : null;
+    el('histRestore').disabled = !v || (cloud.prov === 'srv' && cloud.role === 'okur');
+    el('histView').innerHTML = v ? histDiffHTML(v.item, cur) : '<p class="modal-note">Soldan bir sürüm seç: şu anki hâlle farkı burada görünür (kırmızı: o sürümde olup şimdi olmayan, yeşil: şimdi eklenmiş).</p>';
+  }
+  /* İki metnin satır satır farkı (en uzun ortak alt dizi) */
+  function lineDiff(a, b) {
+    const A = String(a).split('\n'), B = String(b).split('\n');
+    if (A.length * B.length > 400000) return A.map(x => ['-', x]).concat(B.map(x => ['+', x]));
+    const L = Array.from({ length: A.length + 1 }, () => new Uint16Array(B.length + 1));
+    for (let i = A.length - 1; i >= 0; i--) for (let j = B.length - 1; j >= 0; j--) L[i][j] = A[i] === B[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+    const out = [];
+    let i = 0, j = 0;
+    while (i < A.length && j < B.length) {
+      if (A[i] === B[j]) { out.push([' ', A[i]]); i++; j++; }
+      else if (L[i + 1][j] >= L[i][j + 1]) out.push(['-', A[i++]]);
+      else out.push(['+', B[j++]]);
+    }
+    while (i < A.length) out.push(['-', A[i++]]);
+    while (j < B.length) out.push(['+', B[j++]]);
+    return out;
+  }
+  function histDiffHTML(old, cur) {
+    const row = (label, a, b) => a === b ? '' : '<div class="hist-f"><span>' + label + '</span><del>' + esc(a || '—') + '</del><ins>' + esc(b || '—') + '</ins></div>';
+    const prio = p => ({ 1: 'Yüksek', 2: 'Orta', 3: 'Düşük' })[p] || '';
+    const colName = cid => (columns.find(c => c.id === cid) || {}).name || '';
+    let h = '<div class="hist-fields">' +
+      row('Başlık', old.title, cur.title) + row('Tür', old.type === 'task' ? 'Görev' : 'Not', cur.type === 'task' ? 'Görev' : 'Not') +
+      row('Durum', old.type === 'task' ? (old.done ? 'Tamamlandı' : 'Açık') : '', cur.type === 'task' ? (cur.done ? 'Tamamlandı' : 'Açık') : '') +
+      row('Etiketler', (old.tags || []).join(', '), (cur.tags || []).join(', ')) + row('Öncelik', prio(old.prio), prio(cur.prio)) +
+      row('Son tarih', [old.due, old.time].filter(Boolean).join(' '), [cur.due, cur.time].filter(Boolean).join(' ')) +
+      row('Sütun', colName(old.columnId), colName(cur.columnId)) +
+      row('Alt görevler', (old.subs || []).map(s => (s.d ? '✓ ' : '') + s.t).join(' · '), (cur.subs || []).map(s => (s.d ? '✓ ' : '') + s.t).join(' · ')) +
+      row('Atananlar', (old.assignees || []).map(memberName).join(', '), (cur.assignees || []).map(memberName).join(', ')) + '</div>';
+    if (h === '<div class="hist-fields"></div>') h = '';
+    if ((old.body || '') === (cur.body || '')) h += '<p class="modal-note">Açıklama aynı.</p>';
+    else h += '<div class="hist-diff" aria-label="Açıklamadaki fark">' + lineDiff(old.body || '', cur.body || '').map(([s, t]) =>
+      '<div class="hd' + (s === '-' ? ' del' : s === '+' ? ' ins' : '') + '"><span aria-hidden="true">' + (s === ' ' ? '' : s === '-' ? '−' : '+') + '</span>' + (esc(t) || '&nbsp;') + '</div>').join('') + '</div>';
+    return h || '<p class="modal-note">Bu sürüm şu anki hâlle aynı.</p>';
+  }
+  async function restoreHistory() {
+    const v = histVers[histSel], cur = items.find(x => x.id === histItem);
+    if (!v || !cur) return;
+    if (!confirm('Kart bu sürüme dönsün mü? Şu anki hâli de geçmişte kalır, istersen ona da dönebilirsin.')) return;
+    const keep = { id: cur.id, projectId: cur.projectId, created: cur.created };
+    const n = Object.assign({}, v.item, keep);
+    if (!columns.some(c => c.id === n.columnId && c.projectId === n.projectId)) n.columnId = cur.columnId;
+    if (cloud.on) n.assignees = (n.assignees || []).filter(u => cloud.members.has(u));
+    if (!n.assignees || !n.assignees.length) delete n.assignees;
+    Object.keys(cur).forEach(k => { if (!(k in n)) delete cur[k]; });
+    Object.assign(cur, n);
+    const ok = await saveItem(cur);
+    if (ok === false) return;
+    closeHistory();
+    if (openCardId === cur.id) openCard(cur.id);
+    renderMain(); renderBoard();
+    showSnack('Kart seçilen sürüme döndü.');
+  }
+  function closeHistory() { el('histModal').classList.remove('open'); histItem = null; histVers = []; }
+  el('histList').addEventListener('click', e => { const b = e.target.closest('[data-hist]'); if (b) { histSel = +b.dataset.hist; renderHistory(); } });
+  el('histRestore').addEventListener('click', restoreHistory);
+  el('histClose').addEventListener('click', closeHistory);
+  el('histDone').addEventListener('click', closeHistory);
+  el('histModal').addEventListener('click', e => { if (e.target === el('histModal')) closeHistory(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && el('histModal').classList.contains('open')) { e.stopPropagation(); closeHistory(); } }, true);
 
   /* Bu cihazdaki kişisel projeleri ekibe kopyala: yedek yükleme penceresi "ekle" kipinde açılır */
   function readPersonalData() {

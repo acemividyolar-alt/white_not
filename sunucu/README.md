@@ -142,6 +142,7 @@ sudo -u whitenote env WN_VERI=/var/lib/whitenote node /opt/whitenote/white_not/s
 | `WN_VERI` | `/var/lib/whitenote` | Veritabanı ve yedekler (uygulama klasörünün dışında olmalı) |
 | `WN_VEKIL` | `cloudflare` | Gerçek ziyaretçi adresi Cloudflare'in başlığından alınır (deneme sınırları için) |
 | `WN_KOTA_MB` / `WN_KOTA_ADET` | `300` / `100000` | Bir ekibin kayıtları için depolama sınırı |
+| `WN_GECMIS_MB` | `150` | Bir ekibin eski sürümleri (not geçmişi) için en fazla yer; aşılınca en eskiler silinir |
 
 ## Güncelleme
 
@@ -166,6 +167,8 @@ sudo systemctl stop whitenote
 sudo -u whitenote env WN_VERI=/var/lib/whitenote node /opt/whitenote/white_not/sunucu/whitenote-sunucu.js geri-yukle /var/lib/whitenote/yedek/whitenote-2026-11-05.db
 sudo systemctl start whitenote
 ```
+
+Etkinlik geçmişi ve kartların eski sürümleri 180 gün tutulur; gece yedeğiyle birlikte temizlenir.
 
 Geri yüklemeden sonra herkesin uygulaması ekibin verilerini baştan alır. Yedekten sonra yapılan
 değişiklikler kaybolur; cihazlarda gönderilmeyi bekleyen değişiklikler ise gönderilir.
