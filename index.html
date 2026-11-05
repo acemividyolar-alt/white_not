@@ -21787,11 +21787,11 @@
   /* Tema menüsü */
   function themeMenuOpen() { return el('themeMenu').classList.contains('open'); }
   function renderThemeMenu() {
-    el('themeMenu').innerHTML = '<div class="menu-group-label">Görünüm</div>' + THEMES.map(t =>
+    el('themeMenu').innerHTML = '<div class="menu-group-label">Görünüm</div><div role="group" aria-label="Tema">' + THEMES.map(t =>
       '<button type="button" role="menuitemradio" aria-checked="' + (themePref === t.id) + '" data-theme-id="' + t.id + '">' +
         '<span class="th-sw" aria-hidden="true">' + t.sw.map(c => '<i style="background:' + c + '"></i>').join('') + '</span>' +
         '<span class="th-txt"><b>' + t.name + '</b><small>' + t.note + '</small></span>' + ICO_CHECK +
-      '</button>').join('') +
+      '</button>').join('') + '</div>' +
       '<div class="sep"></div><div class="menu-group-label">Yazı boyutu</div><div class="fs-row" role="group" aria-label="Yazı boyutu">' +
       FONT_SIZES.map(f => '<button type="button" role="menuitemradio" aria-checked="' + (fontPref === f.id) + '" data-fs="' + f.id + '" aria-label="Yazı boyutu: ' + f.name + '">' +
         '<b style="font-size:' + (f.pct / 100) + 'rem">A</b><small>' + f.name + '</small></button>').join('') + '</div>' +
@@ -21824,12 +21824,19 @@
     closeThemeMenu();
     el('themeBtn').focus();
   });
-  // Klavye: yukarı / aşağı ok ile gez, Esc ile kapat
+  // Klavye: yukarı / aşağı ok ile gez (yazı boyutu sırasında sağ / sol ok da), Home / End uçlara, Esc ile kapat
   el('themeMenu').addEventListener('keydown', e => {
     const bs = [...el('themeMenu').querySelectorAll('button')], i = bs.indexOf(document.activeElement);
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    const inRow = !!(document.activeElement && document.activeElement.closest('.fs-row'));
+    const step = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1
+      : inRow && e.key === 'ArrowRight' ? 1 : inRow && e.key === 'ArrowLeft' ? -1 : 0;
+    if (step) {
       e.preventDefault();
-      const n = bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length];
+      const n = bs[(i + step + bs.length) % bs.length];
+      if (n) n.focus();
+    } else if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault();
+      const n = e.key === 'Home' ? bs[0] : bs[bs.length - 1];
       if (n) n.focus();
     } else if (e.key === 'Escape') {
       e.preventDefault(); e.stopPropagation();
