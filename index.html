@@ -241,6 +241,15 @@
      TEMEL
      =================================================================== */
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  /* Yüksek karşıtlık (Görünüm menüsü ya da cihazın "daha fazla karşıtlık" ayarı): soluk yazılar ve
+     çizgiler belirginleşir, odak çerçevesi kalınlaşır, bağlantıların altı çizilir */
+  body.hc { --ink-2: var(--ink); --muted: #2B3652; --line: #8792AA; --line-2: #56627D; }
+  body.hc.dark { --muted: #D5DEEE; --line: #5D7196; --line-2: #8EA2C6; }
+  body.hc[data-theme="sepia"] { --muted: #3D3125; --line: #A5937A; --line-2: #786752; }
+  body.hc[data-theme="black"] { --muted: #D7D9DE; --line: #6A6E77; --line-2: #9A9EA8; }
+  body.hc[data-theme="chalk"] { --muted: #D9E7DE; --line: #5D7E6D; --line-2: #8FB3A0; }
+  body.hc :focus-visible { outline: 3px solid var(--accent) !important; outline-offset: 2px; }
+  body.hc .md a, body.hc .gs-item mark { text-decoration: underline; }
   html, body { height: 100%; }
   body {
     font-family: var(--font-sans);
@@ -489,6 +498,13 @@
   .theme-wrap { position: relative; flex-shrink: 0; }
   .theme-menu { width: 290px; max-width: calc(100vw - 1.5rem); }
   .theme-menu button { gap: 0.65rem; min-height: 46px; padding: 0.3rem 0.6rem; }
+  /* Görünüm menüsü: yazı boyutu ve yüksek karşıtlık */
+  .theme-menu .fs-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem; padding: 0.15rem 0.5rem 0.4rem; }
+  .theme-menu .fs-row button { flex-direction: column; justify-content: center; gap: 0.05rem; min-height: 50px; padding: 0.25rem 0.15rem; border: 1px solid var(--line); border-radius: var(--r-sm); }
+  .theme-menu .fs-row button[aria-checked="true"] { border-color: var(--accent); }
+  .theme-menu .fs-row b { line-height: 1.1; color: var(--ink); }
+  .theme-menu .fs-row small { font-size: 0.66rem; color: var(--muted); white-space: nowrap; }
+  .theme-menu .hc-btn .th-txt small { white-space: normal; }
   .theme-menu button[aria-checked="true"] { background: var(--accent-soft); }
   .th-sw {
     width: 34px; height: 24px; flex-shrink: 0; border-radius: 6px; overflow: hidden;
@@ -1704,6 +1720,18 @@
   }
   .md-prog.full { color: var(--green); background: var(--green-soft); }
   .md-tools { display: flex; gap: 2px; flex-wrap: wrap; }
+  /* Sesle yazma düğmesi (yalnız destekleyen tarayıcıda görünür) */
+  .md-tools .md-mic[hidden] { display: none; }
+  .md-tools .md-mic.on { color: var(--danger); border-color: var(--danger); background: var(--danger-soft); animation: mic-pulse 1.2s ease-in-out infinite; }
+  @keyframes mic-pulse { 50% { opacity: 0.55; } }
+  @media (prefers-reduced-motion: reduce) { .md-tools .md-mic.on { animation: none; } }
+  /* Klavye kısayolları penceresi */
+  .kbd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1rem 1.6rem; }
+  .kbd-grid h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 0.3rem; }
+  .kbd-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.8rem; padding: 0.3rem 0; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
+  .kbd-row .k { white-space: nowrap; }
+  .kbd-row .d { text-align: right; color: var(--ink-2); }
+  .kbd-row kbd { margin: 0 0.1rem; }
   .md-tools button {
     font-size: 0.8125rem; min-width: 30px; height: 28px; padding: 0 0.4rem; cursor: pointer;
     background: transparent; border: 1px solid transparent; border-radius: var(--r-sm); color: var(--muted);
@@ -2358,6 +2386,7 @@
               <button type="button" data-md="ul" title="Madde (- )">&bull;</button>
               <button type="button" data-md="check" title="Yapılacak maddesi (- [ ] )">&#9744;</button>
               <button type="button" data-md="code" title="Kod (`metin`)">&lt;/&gt;</button>
+              <button type="button" class="md-mic" title="Sesle yaz (dikte): konuş, söylediklerin yazılsın" aria-label="Sesle yaz" aria-pressed="false" hidden><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.75" y="1.75" width="4.5" height="8" rx="2.25"/><path d="M3.5 7.5a4.5 4.5 0 0 0 9 0M8 12v2.25"/></svg></button>
             </div>
             <input class="c-tags" id="cTags" type="text" placeholder="Etiketler (virgülle): tasarım, acil">
             <div class="c-row">
@@ -2672,6 +2701,7 @@
           <button type="button" data-md="ul" title="Madde (- )">&bull;</button>
           <button type="button" data-md="check" title="Yapılacak maddesi (- [ ] )">&#9744;</button>
           <button type="button" data-md="code" title="Kod (`metin`)">&lt;/&gt;</button>
+          <button type="button" class="md-mic" title="Sesle yaz (dikte): konuş, söylediklerin yazılsın" aria-label="Sesle yaz" aria-pressed="false" hidden><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.75" y="1.75" width="4.5" height="8" rx="2.25"/><path d="M3.5 7.5a4.5 4.5 0 0 0 9 0M8 12v2.25"/></svg></button>
           <button type="button" class="md-preview-btn" id="modalPreviewBtn" title="Önizleme ile düzenleme arasında geç">Önizle</button>
         </span>
       </div>
@@ -2740,6 +2770,7 @@
       <div class="modal-actions">
         <div class="modal-actions-left">
           <button class="modal-btn danger" id="modalDelete">Kartı sil</button>
+          <button class="modal-btn" id="modalShare" type="button" title="Başlığı ve içeriği başka bir uygulamayla paylaş (mesaj, e-posta…)" hidden>Paylaş</button>
           <button class="modal-btn" id="modalTplSave" type="button" title="Bu kartın başlığı, içeriği, etiketleri ve alt görevleri şablon olarak saklansın">Şablon olarak kaydet</button>
         </div>
         <button class="modal-btn primary" id="modalDone">Bitti</button>
@@ -3069,7 +3100,21 @@
       <button class="gs-esc" id="gsClose" type="button" aria-label="Kapat">Esc</button>
     </div>
     <div class="gs-list" id="gsList" role="listbox" aria-label="Sonuçlar"></div>
-    <div class="gs-foot"><span><kbd>↑</kbd><kbd>↓</kbd> seç</span><span><kbd>Enter</kbd> aç</span><span class="gs-foot-k"><kbd>Ctrl</kbd>+<kbd>K</kbd> her yerden açar</span></div>
+    <div class="gs-foot"><span><kbd>↑</kbd><kbd>↓</kbd> seç</span><span><kbd>Enter</kbd> aç</span><span><kbd>&gt;</kbd> ile başla: komutlar</span><span class="gs-foot-k"><kbd>Ctrl</kbd>+<kbd>K</kbd> her yerden açar</span></div>
+  </div>
+</div>
+
+<!-- Klavye kısayolları (Ctrl+/ ya da ?) -->
+<div class="modal-overlay" id="kbdModal">
+  <div class="modal wide">
+    <div class="modal-head">
+      <div class="modal-heading">Klavye kısayolları</div>
+      <button class="modal-close" id="kbdClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="kbd-grid" id="kbdList"></div>
+      <p class="modal-note" style="margin-top:0.9rem">Kısayollar bir yazı kutusundayken (harf yazarken) çalışmaz. Aramada <kbd>&gt;</kbd> ile başlarsan komut paleti açılır: görünüm, tema, yazı boyutu, yedek, akış ve şema komutları.</p>
+    </div>
   </div>
 </div>
 
@@ -3922,7 +3967,8 @@
     task: 'M3 3h10v10H3zM5.5 8l2 2 3.5-4',
     table: 'M2.5 3h11v10h-11zM2.5 6.3h11M2.5 9.6h11M6.5 6.3V13',
     chart: 'M8 1.8l3.2 3.2L8 8.2 4.8 5zM8 8.2v2.6M5 10.8h6v3H5z',
-    node: 'M3 5h10v6H3z'
+    node: 'M3 5h10v6H3z',
+    cmd: 'M3.5 4.5 7 8l-3.5 3.5M8.5 11.5h4'
   };
   const gsIcon = k => '<svg viewBox="0 0 16 16"><path d="' + GS_ICON[k] + '" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function gsWords(q) { return flFold(q).split(/\s+/).filter(Boolean); }
@@ -3949,7 +3995,54 @@
     }
     return out + esc(text.slice(pos, end)) + (end < text.length ? '…' : '');
   }
+  /* ---------- KOMUT PALETİ: aramada ">" ile başla (ya da Ctrl+Shift+P) ----------
+     Görünüm, proje, tema, yazı boyutu, yedek, akış ve şema işleri yazarak bulunur; Enter ile çalışır. */
+  function paletteCommands() {
+    const C = [];
+    const add = (title, run, keys, kw) => C.push({ title: title, run: run, keys: keys || '', kw: kw || '' });
+    const go = v => () => setView(v);
+    [['list', 'Liste', '1'], ['board', 'Pano', '2'], ['schema', 'Şema', '3'], ['flow', 'Akış', '4'], ['calendar', 'Takvim', '5']]
+      .forEach(([v, n, k]) => add(n + ' görünümüne geç', go(v), k, 'görünüm git aç'));
+    add('Yeni not ya da görev', () => focusComposer(), 'N', 'ekle yaz kart');
+    if (SPEECH) add('Sesle not yaz (dikte)', () => dictateNew(), '', 'mikrofon konuşma ses söyle');
+    add('Yeni proje…', () => el('addProj').click(), '', 'proje ekle oluştur');
+    projects.filter(p => p.id !== activeProject).forEach(p => add('Projeye geç: ' + p.name, () => switchProject(p.id), '', 'proje aç'));
+    THEMES.forEach(t => add('Tema: ' + t.name, () => setThemePref(t.id), themePref === t.id ? 'seçili' : '', 'görünüm renk ' + t.note));
+    FONT_SIZES.forEach(f => add('Yazı boyutu: ' + f.name, () => setFontPref(f.id), fontPref === f.id ? 'seçili' : '', 'yazı büyüt küçült erişilebilirlik'));
+    add('Yüksek karşıtlık: ' + (hcOn() ? 'kapat' : 'aç'), () => setHcPref(!hcOn()), '', 'erişilebilirlik kontrast renk görme');
+    add('Klavye kısayolları', () => openKbd(), IS_MAC ? '⌘/' : 'Ctrl+/', 'yardım tuş');
+    add('Çöp kutusu', () => openTrash(), '', 'silinenler geri getir');
+    add('JSON yedeği indir', () => handleExportAction('json-export'), '', 'yedek dışa aktar kaydet');
+    add('JSON yedeği yükle…', () => handleExportAction('json-import'), '', 'yedek içe aktar geri yükle');
+    add('Takvim dosyası yükle (.ics)…', () => handleExportAction('ics-import'), '', 'takvim içe aktar google outlook');
+    if (!isInstalled()) add('Uygulama olarak yükle…', () => installApp(), '', 'telefon bilgisayar pwa');
+    const flow = f => async () => { await setView('flow'); f(); };
+    add('Akış: Çalıştır', flow(() => el('flRunBtn').click()), '', 'akış şeması çalıştır adım');
+    add('Akış: Yazılı algoritmadan ya da koddan oluştur…', flow(() => flFileAction('fromtext')), '', 'python c# java c c++ kod çevir algoritma');
+    add('Akış: Koda çevir…', flow(() => flFileAction('code')), '', 'kod c# java python javascript c++');
+    add('Akış: Yeni akış şeması', flow(() => flFileAction('newchart')), '', 'sekme');
+    add('Akış: Test senaryoları…', flow(() => flFileAction('tests')), '', 'test dene');
+    add('Akış: İzleme tablosu alıştırması…', flow(() => openFlExercise()), '', 'izleme tablo alıştırma trace');
+    add('Akış: GIF olarak kaydet…', flow(() => openFlGif()), '', 'hareketli resim çalıştırma kaydet');
+    add('Akış: Ödev çıktısı…', flow(() => flFileAction('homework')), '', 'yazdır pdf ödev');
+    const schema = f => async () => { await setView('schema'); f(); };
+    add('Şema: SQL…', schema(() => el('erSqlBtn').click()), '', 'sql create table veritabanı');
+    add('Şema: SQL konsolu…', schema(() => el('erConsoleBtn').click()), '', 'sorgu select sqlite');
+    add('Şema: Ödev çıktısı / veri sözlüğü…', schema(() => openErHw()), '', 'yazdır pdf sözlük');
+    const cal = m => async () => { await setView('calendar'); setCalMode(m); };
+    add('Takvim: Ders programı', cal('tt'), '', 'ders saat okul');
+    add('Takvim: Gün görünümü', cal('day'), '', 'bugün saat');
+    add('Her yerde ara (not, görev, tablo, akış)', () => openGs(''), IS_MAC ? '⌘K' : 'Ctrl+K', 'arama bul');
+    return C;
+  }
   function gsSearch(q) {
+    if (/^\s*>/.test(q)) {   // komut paleti
+      const cw = gsWords(q.replace(/^\s*>\s*/, ''));
+      const list = paletteCommands().filter(c => gsHas(c.title + ' ' + c.kw, cw))
+        .map((c, i) => ({ kind: 'cmd', run: c.run, icon: 'cmd', score: (cw.length && gsHas(c.title, cw) ? 100 : 0) - i / 1000, title: gsMark(c.title, cw), meta: c.keys }));
+      list.sort((a, b) => b.score - a.score);
+      return [{ key: 'cmd', label: 'Komutlar', max: 60, list: list }];
+    }
     const words = gsWords(q);
     const pname = id => (projects.find(p => p.id === id) || {}).name || '';
     const groups = [
@@ -4021,7 +4114,7 @@
       });
       if (g.list.length > g.max) html += '<div class="gs-more">+' + (g.list.length - g.max) + ' sonuç daha. Aramayı biraz daha belirginleştirin.</div>';
     });
-    el('gsList').innerHTML = html || '<div class="gs-empty">' + (q.trim() ? '"' + esc(q.trim()) + '" hiçbir projede bulunamadı.' : 'Henüz bir şey yok.') + '</div>';
+    el('gsList').innerHTML = html || '<div class="gs-empty">' + (/^\s*>/.test(q) ? 'Bu adla bir komut yok.' : q.trim() ? '"' + esc(q.trim()) + '" hiçbir projede bulunamadı.' : 'Henüz bir şey yok.') + '</div>';
     gsSel = 0;
     gsHighlight();
   }
@@ -4031,12 +4124,14 @@
     el('gsInput').setAttribute('aria-activedescendant', cur ? cur.id : '');
     if (cur && scroll) cur.scrollIntoView({ block: 'nearest' });
   }
-  function openGs() {
+  function openGs(prefill) {
     closeDrawer();
     el('gsModal').classList.add('open');
+    if (typeof prefill === 'string') el('gsInput').value = prefill;
     renderGs();
     el('gsInput').focus();
-    el('gsInput').select();
+    if (typeof prefill === 'string') { const n = el('gsInput').value.length; el('gsInput').setSelectionRange(n, n); }
+    else el('gsInput').select();
   }
   function closeGs() { el('gsModal').classList.remove('open'); }
   /* Projeye geç (kenar çubuğunda tıklamakla aynı) */
@@ -4050,6 +4145,7 @@
   async function gsOpen(r) {
     if (!r) return;
     closeGs();
+    if (r.kind === 'cmd') { await r.run(); return; }
     switchProject(r.pid);
     if (r.kind === 'item') {
       if (currentView === 'schema' || currentView === 'flow') await setView('list');
@@ -5913,6 +6009,7 @@
 
   /* Pencereyi kapatır (önce kaydeder). */
   async function closeCard() {
+    if (dict && dict.ta === el('modalDesc')) dictStop();
     await saveOpenCard();
     el('cardModal').classList.remove('open');
     openCardId = null;
@@ -20620,7 +20717,8 @@
   function exportJSON() {
     // Seçili tema (ör. "dark", "sepia" ya da cihaza göre: "auto")
     const theme = themePref;
-    const data = { version: 5, exported: Date.now(), theme: theme, projects: projects, columns: columns, items: items,
+    const data = { version: 5, exported: Date.now(), theme: theme, fontSize: fontPref, contrast: hcPref == null ? 'auto' : hcPref ? 'on' : 'off',
+                   projects: projects, columns: columns, items: items,
                    dbTables: dbTables, dbLinks: dbLinks, dbSettings: Object.values(dbSettings),
                    flowCharts: flowCharts, flowNodes: flowNodes, flowEdges: flowEdges, flSettings: Object.values(flSettings) };
     download(JSON.stringify(data, null, 2), 'notlar-yedek-' + todayStr() + '.json', 'application/json');
@@ -20919,6 +21017,8 @@
     // Yedekte tema bilgisi varsa onu uygula ve kaydet.
     // (Eski yedeklerde theme alanı olmayabilir ya da tanınmayan bir tema olabilir; o zaman tema değişmez.)
     if (typeof data.theme === 'string' && themeOk(data.theme)) await setThemePref(data.theme);
+    if (typeof data.fontSize === 'string' && FONT_SIZES.some(f => f.id === data.fontSize)) await setFontPref(data.fontSize);
+    if (['on', 'off', 'auto'].includes(data.contrast)) await setHcPref(data.contrast === 'auto' ? null : data.contrast === 'on');
 
     // Eski verinin geri alma geçmişi yeni veriye uygulanmasın
     for (const k in erHistory) delete erHistory[k];
@@ -21129,7 +21229,15 @@
   document.addEventListener('keydown', e => {
     // Yazı kutusundaysa kısayol çalışmaz. (Kapanmış bir pencerede odakta kalmış gizli kutu sayılmaz.)
     const typing = e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]') && e.target.getClientRects().length > 0;
-    if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')) {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && (e.key === 'p' || e.key === 'P')) {   // komut paleti
+      e.preventDefault();
+      openGs('>');
+    } else if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === '/' || e.code === 'Slash')) {   // klavye kısayolları
+      e.preventDefault();
+      if (el('kbdModal').classList.contains('open')) closeKbd(); else openKbd();
+    } else if (e.key === '?' && !typing && !e.ctrlKey && !e.metaKey && currentView !== 'flow' && !document.querySelector('.modal-overlay.open')) {
+      e.preventDefault(); openKbd();   // Akış'ta ? şekillerin yardımını açar
+    } else if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')) {
       e.preventDefault();
       if (el('gsModal').classList.contains('open')) closeGs(); else openGs();
     } else if (e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !document.querySelector('.modal-overlay.open')) {
@@ -21141,6 +21249,120 @@
       else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); focusComposer(); }
     }
   });
+  /* ---------- KLAVYE KISAYOLLARI PENCERESİ (Ctrl+/ ya da ?) ---------- */
+  const IS_MAC = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || '');
+  const KBD_LIST = [
+    ['Her yerde', [['Ctrl+K · /', 'Bütün projelerde ara'], ['Ctrl+Shift+P · Ctrl+K sonra >', 'Komut paleti'], ['Ctrl+/ · ?', 'Klavye kısayolları (bu pencere)'],
+      ['1 · 2 · 3 · 4 · 5', 'Liste / Pano / Şema / Akış / Takvim'], ['N', 'Yeni not ya da görev'], ['Esc', 'Açık pencereyi kapat']]],
+    ['Liste ve kartlar', [['Ctrl+Enter', 'Ekleme kutusunda: ekle'], ['[[', 'Açıklamada: not başlığı öner (Enter / Tab ile seç)'], ['Esc', 'Toplu seçimi bitir']]],
+    ['Akış', [['Ctrl+Z · Ctrl+Y', 'Geri al / yinele'], ['Delete', 'Seçili şekli ya da oku sil'], ['Enter', 'Seçili şekli düzenle (çift tık da olur)'], ['F9', 'Kesme noktası koy / kaldır'],
+      ['Ctrl+C · Ctrl+X · Ctrl+V · Ctrl+D', 'Kopyala / kes / yapıştır / çoğalt'], ['Ctrl+A', 'Bütün şekilleri seç'], ['Shift+tıkla', 'Çoklu seçim (Shift ile sürükle: dikdörtgen)'],
+      ['?', 'Şekiller ne işe yarar?'], ['Ctrl+tekerlek', 'Yakınlaştır / uzaklaştır']]],
+    ['Algoritma kutusu', [['Ctrl+Enter', 'Akış şemasını oluştur'], ['Enter · Shift+Enter', 'Sıradaki "Adım N:" ile / numarasız yeni satır'], ['Tab · Shift+Tab', 'Satırı girintile / geri al']]],
+    ['Şema ve SQL konsolu', [['Ctrl+Enter', 'Konsolda çalıştır (seçili kısım varsa yalnız o)'], ['Ctrl+Z · Ctrl+Y', 'Geri al / yinele'], ['Delete', 'Seçili ilişkiyi sil'], ['Ctrl+tekerlek', 'Yakınlaştır / uzaklaştır']]]
+  ];
+  function renderKbd() {
+    const keys = s => s.split(' · ').map(alt => alt.split(/\s+sonra\s+/).map(part => part.split('+').map(k => '<kbd>' + esc(IS_MAC && k === 'Ctrl' ? '⌘' : k) + '</kbd>').join('+')).join(' sonra ')).join(' <span class="muted">ya da</span> ');
+    el('kbdList').innerHTML = KBD_LIST.map(([g, rows]) => '<section><h3>' + esc(g) + '</h3>' +
+      rows.map(([k, d]) => '<div class="kbd-row"><span class="k">' + keys(k) + '</span><span class="d">' + esc(d) + '</span></div>').join('') + '</section>').join('');
+  }
+  function openKbd() { closeDrawer(); renderKbd(); el('kbdModal').classList.add('open'); el('kbdClose').focus(); }
+  function closeKbd() { el('kbdModal').classList.remove('open'); }
+  el('kbdClose').addEventListener('click', closeKbd);
+  el('kbdModal').addEventListener('click', e => { if (e.target === el('kbdModal')) closeKbd(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && el('kbdModal').classList.contains('open')) { e.stopPropagation(); closeKbd(); } }, true);
+
+  /* ---------- PAYLAŞ HEDEFİ: telefonda başka uygulamadan "Paylaş → White Note" ----------
+     manifest'teki share_target sayfayı ?baslik=…&metin=…&adres=… ile açar (GET paylaşımında adresin sorgusu bunlarla
+     değişir). Paylaşılan içerik ekleme kutusuna gelir (kaydetmeden önce görülüp düzeltilir); adres çubuğu temizlenir,
+     yenileyince tekrar gelmez. */
+  function handleShareTarget() {
+    let u;
+    try { u = new URL(location.href); } catch (e) { return; }
+    if (!['baslik', 'metin', 'adres'].some(k => u.searchParams.has(k))) return;
+    const cut = (k, n) => String(u.searchParams.get(k) || '').replace(/\r/g, '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').slice(0, n).trim();
+    const title = cut('baslik', 120), text = cut('metin', 20000), link = cut('adres', 2000);
+    try { history.replaceState(null, '', u.pathname); } catch (e) {}
+    if (!title && !text && !link) return;
+    const body = [text, link && !text.includes(link) ? link : ''].filter(Boolean).join('\n\n');
+    const t = title || (text.split('\n')[0] || link).slice(0, 120);
+    focusComposer().then(() => {
+      el('cTitle').value = t;
+      el('cBody').value = body.trim() === t ? '' : body;
+      document.querySelector('.composer').classList.add('open');
+      showSnack('Paylaşılan içerik ekleme kutusuna geldi: kontrol edip Ekle\'ye bas.');
+    });
+  }
+
+  /* ---------- SESLE YAZMA (dikte) ----------
+     Tarayıcının konuşma tanıması (Türkçe): mikrofon düğmesine basınca söylenenler imlecin olduğu yere yazılır,
+     tekrar basınca durur. Desteklemeyen tarayıcıda (Firefox) düğme görünmez. Chrome / Edge sesi tanımak için
+     kendi sunucularına gönderir: ilk kullanımda bu söylenir, onay alınır (bu cihazda hatırlanır). */
+  const SPEECH = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  let dict = null;   // { rec, ta, btn }
+  function dictStop() { if (dict) { try { dict.rec.stop(); } catch (e) {} } }
+  function dictToggle(ta, btn) {
+    if (dict) { const same = dict.ta === ta; dictStop(); if (same) return; }
+    if (!SPEECH) { showSnack('Bu tarayıcı sesle yazmayı desteklemiyor (Chrome, Edge ya da Safari\'de çalışır).'); return; }
+    if (!ta || !ta.getClientRects().length) { showSnack('Önce yazı kutusunu aç (önizlemedeysen Düzenle).'); return; }
+    if (localGet('pref:dictok') !== '1') {
+      if (!confirm('Sesle yazma tarayıcının konuşma tanıma hizmetini kullanır: Chrome ve Edge sesi tanımak için kendi sunucularına (Google / Microsoft) gönderir. Yazdıkların yine yalnız bu cihazda kalır.\n\nDevam edilsin mi?')) return;
+      localSet('pref:dictok', '1');
+    }
+    let rec;
+    try { rec = new SPEECH(); } catch (e) { showSnack('Sesle yazma başlatılamadı.'); return; }
+    rec.lang = 'tr-TR'; rec.continuous = true; rec.interimResults = true;
+    const st = ta.selectionStart, en = ta.selectionEnd, before = ta.value.slice(0, st), after = ta.value.slice(en);
+    const sep = before && !/\s$/.test(before) ? ' ' : '';
+    const max = ta.maxLength > 0 ? ta.maxLength : 20000;
+    let fin = '';
+    dict = { rec: rec, ta: ta, btn: btn };
+    btn.classList.add('on'); btn.setAttribute('aria-pressed', 'true'); btn.title = 'Dinliyor… durdurmak için bas';
+    rec.onresult = e => {
+      let mid = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) { const r = e.results[i]; if (r.isFinal) fin += r[0].transcript; else mid += r[0].transcript; }
+      const ins = (sep + (fin + mid).replace(/^\s+/, '')).slice(0, Math.max(0, max - before.length - after.length));
+      ta.value = before + ins + after;
+      const pos = before.length + ins.length;
+      ta.setSelectionRange(pos, pos);
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    rec.onerror = e => {
+      const m = { 'not-allowed': 'Mikrofon izni verilmedi.', 'service-not-allowed': 'Mikrofon izni verilmedi.', network: 'Sesle yazma için internet gerekiyor.', 'audio-capture': 'Mikrofon bulunamadı.' }[e.error];
+      if (m) showSnack(m); else if (e.error !== 'aborted' && e.error !== 'no-speech') showSnack('Sesle yazma durdu (' + String(e.error).slice(0, 40) + ').');
+    };
+    rec.onend = () => {
+      btn.classList.remove('on'); btn.setAttribute('aria-pressed', 'false'); btn.title = 'Sesle yaz (dikte): konuş, söylediklerin yazılsın';
+      if (dict && dict.rec === rec) dict = null;
+    };
+    try { rec.start(); } catch (e) { rec.onend(); showSnack('Sesle yazma başlatılamadı.'); return; }
+    ta.focus();
+  }
+  async function dictateNew() {   // komut paletinden: yeni notun içeriğine sesle yaz
+    await focusComposer();
+    document.querySelector('.composer').classList.add('open');
+    const b = document.querySelector('.md-tools[data-mdfor="cBody"] .md-mic');
+    el('cBody').focus();
+    if (b) dictToggle(el('cBody'), b);
+  }
+  document.querySelectorAll('.md-mic').forEach(b => { b.hidden = !SPEECH; });
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.md-mic');
+    if (!b) return;
+    e.preventDefault();
+    const tools = b.closest('.md-tools');
+    dictToggle(tools && el(tools.dataset.mdfor), b);
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) dictStop(); });
+
+  /* ---------- KARTI PAYLAŞ (telefonun paylaş menüsü) ---------- */
+  if (navigator.share) el('modalShare').hidden = false;
+  el('modalShare').addEventListener('click', async () => {
+    const title = el('modalTitle').value.trim(), text = mdPlain(el('modalDesc').value).trim();
+    try { await navigator.share({ title: title || 'White Note', text: (title && text ? title + '\n\n' : title) + text }); }
+    catch (e) { if (e && e.name !== 'AbortError') showSnack('Paylaşılamadı.'); }
+  });
+
   /* N kısayolu: Liste'ye geçip ekleme kutusuna yazmaya başlatır */
   async function focusComposer() {
     closeExportMenu(); closeThemeMenu();
@@ -21534,6 +21756,34 @@
     if (sysDark.addEventListener) sysDark.addEventListener('change', onSys); else if (sysDark.addListener) sysDark.addListener(onSys);
   }
 
+  /* ---------- ERİŞİLEBİLİRLİK: yazı boyutu ve yüksek karşıtlık ----------
+     Görünüm menüsünden seçilir, bu cihazda saklanır ("pref:fontsize", "pref:contrast"). Yazı boyutu sayfanın
+     kök boyutunu değiştirir (bütün arayüz rem ile ölçülür). Karşıtlık seçilmemişse cihazın "daha fazla karşıtlık"
+     ayarına uyar. */
+  const FONT_SIZES = [{ id: 's', name: 'Küçük', pct: 93.75 }, { id: 'm', name: 'Normal', pct: 100 }, { id: 'l', name: 'Büyük', pct: 112.5 }, { id: 'xl', name: 'Çok büyük', pct: 125 }];
+  const hcMedia = window.matchMedia ? matchMedia('(prefers-contrast: more)') : null;
+  let fontPref = 'm', hcPref = null;   // hcPref: null = cihaza göre
+  const hcOn = () => (hcPref == null ? !!(hcMedia && hcMedia.matches) : hcPref);
+  function applyA11y() {
+    const f = FONT_SIZES.find(x => x.id === fontPref) || FONT_SIZES[1];
+    document.documentElement.style.fontSize = f.pct === 100 ? '' : f.pct + '%';
+    document.body.classList.toggle('hc', hcOn());
+    if (themeMenuOpen()) renderThemeMenu();
+    window.dispatchEvent(new Event('resize'));   // tuvaller ve menüler yeni boyuta göre ölçülsün
+  }
+  async function setFontPref(id) { fontPref = FONT_SIZES.some(x => x.id === id) ? id : 'm'; applyA11y(); if (storageOK) await sSet('pref:fontsize', fontPref); }
+  async function setHcPref(v) { hcPref = v == null ? null : !!v; applyA11y(); if (storageOK) await sSet('pref:contrast', hcPref == null ? 'auto' : hcPref ? 'on' : 'off'); }
+  async function loadA11y() {
+    const a = await sGet('pref:fontsize'), b = await sGet('pref:contrast');
+    fontPref = a && FONT_SIZES.some(x => x.id === a.value) ? a.value : 'm';
+    hcPref = b && b.value === 'on' ? true : b && b.value === 'off' ? false : null;
+    applyA11y();
+  }
+  if (hcMedia) {
+    const onHc = () => { if (hcPref == null) applyA11y(); };
+    if (hcMedia.addEventListener) hcMedia.addEventListener('change', onHc); else if (hcMedia.addListener) hcMedia.addListener(onHc);
+  }
+
   /* Tema menüsü */
   function themeMenuOpen() { return el('themeMenu').classList.contains('open'); }
   function renderThemeMenu() {
@@ -21541,7 +21791,13 @@
       '<button type="button" role="menuitemradio" aria-checked="' + (themePref === t.id) + '" data-theme-id="' + t.id + '">' +
         '<span class="th-sw" aria-hidden="true">' + t.sw.map(c => '<i style="background:' + c + '"></i>').join('') + '</span>' +
         '<span class="th-txt"><b>' + t.name + '</b><small>' + t.note + '</small></span>' + ICO_CHECK +
-      '</button>').join('');
+      '</button>').join('') +
+      '<div class="sep"></div><div class="menu-group-label">Yazı boyutu</div><div class="fs-row" role="group" aria-label="Yazı boyutu">' +
+      FONT_SIZES.map(f => '<button type="button" role="menuitemradio" aria-checked="' + (fontPref === f.id) + '" data-fs="' + f.id + '" aria-label="Yazı boyutu: ' + f.name + '">' +
+        '<b style="font-size:' + (f.pct / 100) + 'rem">A</b><small>' + f.name + '</small></button>').join('') + '</div>' +
+      '<button type="button" class="hc-btn" role="menuitemcheckbox" aria-checked="' + hcOn() + '" data-hc>' +
+        '<span class="th-sw" aria-hidden="true"><i style="background:#000"></i><i style="background:#fff"></i></span>' +
+        '<span class="th-txt"><b>Yüksek karşıtlık</b><small>' + (hcPref == null ? 'Cihazın ayarına göre' : 'Soluk yazı ve çizgiler belirginleşir') + '</small></span>' + ICO_CHECK + '</button>';
   }
   function openThemeMenu() {
     closeExportMenu();
@@ -21558,6 +21814,10 @@
   }
   el('themeBtn').addEventListener('click', e => { e.stopPropagation(); if (themeMenuOpen()) closeThemeMenu(); else openThemeMenu(); });
   el('themeMenu').addEventListener('click', e => {
+    // yazı boyutu / karşıtlık: menü açık kalır, etkisi görülsün (menü yeniden çizildiği için tıklama dışarı sayılmasın)
+    const fs = e.target.closest('[data-fs]');
+    if (fs) { e.stopPropagation(); setFontPref(fs.dataset.fs).then(() => { const x = el('themeMenu').querySelector('[data-fs="' + fontPref + '"]'); if (x) x.focus(); }); return; }
+    if (e.target.closest('[data-hc]')) { e.stopPropagation(); setHcPref(!hcOn()).then(() => { const x = el('themeMenu').querySelector('[data-hc]'); if (x) x.focus(); }); return; }
     const b = e.target.closest('[data-theme-id]');
     if (!b) return;
     setThemePref(b.dataset.themeId);
@@ -22321,17 +22581,19 @@ service cloud.firestore {
   /* Uygulamanın açılışı: kişisel alan mı, ekip alanı mı? */
   async function startApp() {
     await loadTheme();
+    await loadA11y();
     setTimeout(() => checkReminders(), 2500);   // veriler yüklendikten sonra bugün / yarın / gecikmiş görevler
     const inv = readInvite();
     const wsId = localGet('pref:ws');
     const team = wsId ? knownTeams().find(t => t.id === wsId) : null;
-    if (team && !inv && /^https?:$/.test(location.protocol)) { await startTeam(team); ghStart(); return; }
+    if (team && !inv && /^https?:$/.test(location.protocol)) { await startTeam(team); ghStart(); handleShareTarget(); return; }
     if (wsId && !team) localSet('pref:ws', null);
     await loadAll();
     await loadView();
     updateSyncUI();
     if (inv) openTeamPanel({ invite: inv });
     ghStart();
+    handleShareTarget();
   }
   async function switchWorkspace(id) {
     if (cloud.on) { cloudFlush(); await new Promise(r => setTimeout(r, 350)); } // bekleyen yazmalar cihaza işlensin
@@ -22351,6 +22613,7 @@ service cloud.firestore {
   window.addEventListener('storage', e => {
     if (e.storageArea !== localStorage) return;
     if (e.key === STORE_PREFIX + 'pref:theme') { loadTheme(); return; }
+    if (e.key === STORE_PREFIX + 'pref:fontsize' || e.key === STORE_PREFIX + 'pref:contrast') { loadA11y(); return; }
     if (cloud.on) return;
     if (e.key !== null && (e.key.indexOf(STORE_PREFIX) !== 0 || isLocalKey(e.key.slice(STORE_PREFIX.length)))) return;
     clearTimeout(otherTabTimer);
