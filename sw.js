@@ -50,6 +50,9 @@ self.addEventListener('fetch', event => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
+  // White Note sunucusunun API'si (giriş, ekip kayıtları, canlı yayın) hiç önbelleğe girmez
+  if (url.origin === self.location.origin && url.pathname.indexOf('/api/') !== -1) return;
+
   // Sayfanın kendisi: önce internet, yoksa kayıtlı kopya
   if (req.mode === 'navigate') {
     event.respondWith(

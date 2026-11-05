@@ -396,7 +396,49 @@ bilgisayardan aynı anda kullanılır.
 - İnternet kesilirse çalışmaya devam edersin; değişiklikler bağlantı gelince gönderilir.
 - **Kişisel projelerimi bu ekibe kopyala** ile bu cihazdaki projeler ekibe eklenir.
 
-### Bir kez kurulum (ekibi kuran kişi, yaklaşık 10 dakika)
+Ekip alanı iki yoldan biriyle çalışır:
+
+- **Kendi sunucunda (Raspberry Pi):** Site kendi alan adınla bir Raspberry Pi'den yayınlanıyorsa ekipler o
+  sunucuda durur; Google / Firebase hesabı gerekmez. Kurulum: [`sunucu/README.md`](sunucu/README.md).
+  Kullanımı aşağıda: [Kendi sunucunda ekip](#kendi-sunucunda-ekip-raspberry-pi).
+- **Firebase ile:** Site GitHub Pages'ten açılıyorsa ekip alanı ücretsiz bir Firebase projesi kullanır
+  (aşağıdaki kurulum).
+
+### Kendi sunucunda ekip (Raspberry Pi)
+
+Sayfa White Note sunucusundan açıldığında Ekip penceresi kendiliğinden sunucuya bağlanır:
+
+- **Giriş:** kullanıcı adı + şifre. İsteğe bağlı **iki adımlı doğrulama**: Ekip → **Hesap** → **İki adımlı
+  doğrulamayı aç** → telefondaki doğrulama uygulamasıyla (Google Authenticator, Microsoft Authenticator,
+  Aegis…) QR kodunu okut, çıkan 6 haneli kodu yaz. Bundan sonra girişte bu kod da sorulur.
+- **Açık kayıt yok:** ilk kullanıcıyı sunucuyu kuran kişi Pi'de oluşturur. Diğerleri ekipten aldıkları
+  **davet koduyla** hesap açar. Hesabı olan biri davet koduyla başka ekiplere de katılabilir.
+- **Davet:** ekibin sahibi ya da yöneticisi Ekip penceresinde rolü (yönetici / üye / okur), geçerlilik süresini
+  (1 / 7 / 30 gün) ve kaç kişinin kullanabileceğini seçip **Davet oluştur**'a basar. Çıkan bağlantıyı
+  (`…#katil=KOD`) ya da kodu paylaşır. Kod yalnız bir kez gösterilir; açık davetler listelenir ve
+  **İptal et** ile geçersiz kılınabilir.
+- **Roller:**
+
+  | Rol | Görür | Düzenler | Davet eder | Üye çıkarır | Rol / ekip adı değiştirir |
+  | --- | --- | --- | --- | --- | --- |
+  | Ekip sahibi | ✓ | ✓ | ✓ | ✓ | ✓ |
+  | Yönetici | ✓ | ✓ | ✓ (üye, okur) | üye ve okurları | – |
+  | Üye | ✓ | ✓ | – | – | – |
+  | Okur | ✓ | – | – | – | – |
+
+  Okur bir şeyi değiştirmeye çalışırsa kaydedilmez, ekran ekibin hâline döner.
+- **Canlı:** değişiklikler ve kimin çevrimiçi olduğu sunucudan anında gelir (Firebase'deki gibi).
+- **Sunucuya ulaşılamazsa** (internet ya da Pi kapalı): ekip bu cihazda daha önce açıldıysa cihazdaki
+  kopyasıyla açılır; değişiklikler sırada bekler ve bağlantı gelince gönderilir. Durum satırı
+  "Sunucuya ulaşılamıyor" der.
+- **Hesap:** görünen adını ve şifreni Ekip → **Hesap**'tan değiştirirsin. Şifre değişince diğer
+  cihazlardaki oturumların kapanır (oradaki gönderilmemiş değişiklikler, aynı hesapla yeniden girince
+  gönderilir). Şifreni unutursan sunucuyu kuran kişi Pi'de `sifre-sifirla` komutuyla yenisini verir.
+- **Çıkış yap**, bu cihazdaki ekip kopyalarını da siler. Ekipten çıkarılan ya da ayrılan kişinin
+  cihazındaki o ekibin kopyası silinir ve açık sayfası hemen kişisel alana döner.
+- Diğer üyeler senin görünen adını ve kullanıcı adını görür; e-posta istenmez.
+
+### Bir kez kurulum (Firebase ile, ekibi kuran kişi, yaklaşık 10 dakika)
 
 Ekip alanı ücretsiz bir Firebase projesi kullanır (Spark planı yeter, kart bilgisi istemez).
 Aynı adımlar uygulamadaki Ekip penceresinde de yazar.
@@ -501,7 +543,9 @@ kayıtların artık o depoya gider. Bağlantıyı tanımadığın birinden aldı
 ## Veriler nerede?
 
 - **Kişisel alanda** her şey bu cihazın tarayıcısında (`localStorage`) saklanır; hiçbir sunucuya
-  gönderilmez. **Ekip alanında** projeler ekibin Firebase projesinde durur (bkz. Ekip ile çalışma).
+  gönderilmez. **Ekip alanında** projeler ekibin sunucusunda (kendi Raspberry Pi'n) ya da Firebase
+  projesinde durur (bkz. Ekip ile çalışma). Sunucuda ekibin, çevrimdışı açılabilsin diye bir kopyası da
+  cihazda (IndexedDB) tutulur; çıkış yapınca silinir.
   **GitHub'a kaydet** dediğin projelerin bir kopyası da ekibin GitHub deposuna gider
   (bkz. GitHub ile paylaşma).
 - Tarayıcılar bu alana sınır koyar (çoğunda yaklaşık 5 MB). Kapak resimleri bu yüzden

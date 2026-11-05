@@ -1,0 +1,43 @@
+# White Note sunucusu (systemd)
+# Kurulum: sudo cp whitenote.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now whitenote
+# Kayıtlar: journalctl -u whitenote -f
+[Unit]
+Description=White Note sunucusu
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=whitenote
+Group=whitenote
+WorkingDirectory=/opt/whitenote/white_not/sunucu
+ExecStart=/usr/bin/node --no-warnings /opt/whitenote/white_not/sunucu/whitenote-sunucu.js
+Environment=WN_PORT=8080
+Environment=WN_HOST=127.0.0.1
+Environment=WN_VERI=/var/lib/whitenote
+Environment=WN_UYGULAMA=/opt/whitenote/white_not
+Environment=WN_VEKIL=cloudflare
+Environment=WN_ADRES=https://whitenote.com.tr
+Restart=on-failure
+RestartSec=3
+
+# Sertleştirme: yalnız veri klasörüne yazabilir, sistemin geri kalanı salt okunur
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+StateDirectory=whitenote
+StateDirectoryMode=0700
+ReadWritePaths=/var/lib/whitenote
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
