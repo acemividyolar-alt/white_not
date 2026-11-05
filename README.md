@@ -54,7 +54,22 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
   bağlantı ve **işaretlenebilir kontrol listesi** (`- [ ] yapılacak`) — maddeler kartın üstünden
   işaretlenir, ilerleme (☑ 2/5) görünür
 - Görev ilerleme çubuğu
-- Karta tıklayınca düzenleme penceresi (açıklama, etiket, tür, sütun, son tarih, tekrar, kapak resmi)
+- Karta tıklayınca düzenleme penceresi (açıklama, etiket, tür, sütun, öncelik, alt görevler, son tarih, tekrar, kapak resmi)
+- **Öncelik:** Yüksek / Orta / Düşük (ekleme kutusunda ve kart penceresinde); kartta renkli etiket olarak görünür
+- **Alt görevler:** kart penceresinde ekle, işaretle, sırala, istersen her birine ayrı son tarih ver.
+  İlk beşi liste kartında işaretlenebilir, panoda "↳ 2/5" görünür, tarihli olanlar takvimde çıkar.
+  Hepsi bitince "Görevi tamamla" önerilir
+- **Sıralama ve süzgeç:** Yeni → eski, son tarih, öncelik ya da ada göre; önceliğe göre süzme
+- **Kayıtlı görünüm:** arama + süzgeç + sıralama birleşimini "☆ Görünümü kaydet" ile adlandır,
+  sonra tek dokunuşla aç (projeye göre, bu cihazda)
+- **Toplu işlem:** *Seç* ile kartlara dokun, alttaki çubuktan hepsini birden tamamla, etiket ekle,
+  öncelik ya da son tarih ver, başka projeye taşı ya da çöp kutusuna at (Geri al ile hepsi geri gelir)
+- **Şablonlar:** ekleme kutusundaki *Şablon* menüsünde hazır şablonlar (ders notu, toplantı notu,
+  ödev planı, sınav hazırlığı…; `{tarih}` ve `{gün}` bugünle dolar). Kendi şablonun için kartı aç →
+  *Şablon olarak kaydet*
+- **Notlar arası bağlantı:** içerikte `[[Not adı]]` yaz; tıklayınca o not açılır, yoksa oluşturulması önerilir.
+  `[[` yazınca başlıklar önerilir; kart penceresinin altında "Bu nota bağlananlar" görünür;
+  bir notun adı değişince ona giden bağlantılar da güncellenir
 - **Tekrarlayan görev:** kart penceresinde *Her gün / Hafta içi her gün / Her hafta / Her ay / Her yıl*.
   Görev tamamlanınca bir sonraki tarihe yenisi açılır (tamamlanan geçmiş olarak kalır, panoda "Bitti"de durur);
   yenisinde kontrol listesi maddeleri işaretsiz başlar. Alttaki bildirimden **Geri al** ile vazgeçilir.
@@ -64,6 +79,7 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
 - Son tarihi olan not ve görevler **aylık** ya da **haftalık** takvimde (Ay / Hafta); güne tıklayınca o günün listesi
 - O güne doğrudan görev ekleme, görevi oradan tamamlama, "Tüm projeler" seçeneği
 - Tekrarlayan görevlerin ileriki günleri takvimde soluk ve kesik çizgili görünür
+- Tarihli alt görevler takvimde "↳" ile görünür ve günün listesinden işaretlenir
 - **Hatırlat:** açınca (tarayıcı bildirim izni ister) bugün, yarın ve gecikmiş görevler için bildirim gelir:
   sayfa açılınca, sekmeye dönünce ve açıkken 5 dakikada bir bakılır; aynı görev için günde bir kez.
   Sunucu olmadığı için tarayıcı tamamen kapalıyken bildirim gelmez.
@@ -404,6 +420,8 @@ kayıtların artık o depoya gider. Bağlantıyı tanımadığın birinden aldı
 | 1 – 5 | Her yerde (yazmıyorken) | Liste / Pano / Şema / Akış / Takvim |
 | N | Her yerde (yazmıyorken) | Yeni not ya da görev (ekleme kutusuna geçer) |
 | Ctrl+Enter | Ekleme kutusu | Not/görev ekle |
+| `[[` | Kart açıklaması | Not başlığı öner (Enter / Tab ile seç) |
+| Esc | Liste (Seç açıkken) | Toplu seçimi bitir |
 | Ctrl+Enter | SQL konsolu | Çalıştır (seçili kısım varsa sadece o) |
 | Ctrl+Z / Ctrl+Y | Şema, Akış | Geri al / yinele |
 | Delete | Şema | Seçili ilişkiyi sil |

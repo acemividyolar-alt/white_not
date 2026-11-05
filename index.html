@@ -557,8 +557,86 @@
   .composer .c-title { font-size: 1.0625rem; font-weight: 680; height: 30px; }
   .composer textarea { font-size: 0.9375rem; line-height: 1.6; min-height: 64px; margin-top: 0.2rem; color: var(--ink-2); }
   .composer .c-tags { font-size: 0.875rem; color: var(--ink-2); border-top: 1px solid var(--line); padding-top: 0.6rem; margin-top: 0.35rem; height: auto; }
-  .c-row { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.6rem; margin-top: 0.75rem; }
-  .c-row .btn-add { grid-column: 1 / -1; }
+  .c-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 0.75rem; }
+  .c-row .c-due { flex: 1 1 9.5rem; min-width: 9.5rem; }
+  .c-prio {
+    height: var(--ctl-h); padding: 0 0.45rem; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--paper);
+    color: var(--ink-2); font-size: 0.85rem; max-width: 7.5rem;
+  }
+  .c-title-row { display: flex; align-items: center; gap: 0.4rem; }
+  .c-title-row .c-title { flex: 1; min-width: 0; }
+  .c-tpl-btn { height: 30px; font-size: 0.8125rem; padding: 0 0.6rem; flex-shrink: 0; }
+  #tplMenu { right: 0; left: auto; min-width: 15rem; }
+  .tpl-mine { display: flex; align-items: stretch; }
+  .tpl-mine button:first-child { flex: 1; }
+  .tpl-mine .tpl-del { flex: 0 0 auto; width: 2.2rem; justify-content: center; color: var(--muted); }
+  .menu-hint { font-size: 0.75rem; color: var(--muted); padding: 0.45rem 0.75rem 0.3rem; line-height: 1.4; }
+
+  /* Liste araçları: sıralama, öncelik süzgeci, Seç, kayıtlı görünümler */
+  .list-tools { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin-bottom: 0.6rem; }
+  .lt-sel { height: calc(var(--ctl-h) - 4px); font-size: 0.8125rem; max-width: 11rem; }
+  .list-tools .er-btn { height: calc(var(--ctl-h) - 4px); font-size: 0.8125rem; }
+  .view-chips { display: contents; }
+  .view-chip { display: inline-flex; align-items: stretch; border: 1px solid var(--line-2); border-radius: 999px; background: var(--paper); overflow: hidden; }
+  .view-chip button { border: 0; background: transparent; color: var(--ink-2); font-size: 0.8rem; font-weight: 600; padding: 0.2rem 0.6rem; cursor: pointer; }
+  .view-chip .vx { padding: 0.2rem 0.45rem; color: var(--muted); border-left: 1px solid var(--line); }
+  .view-chip.on { border-color: var(--accent); background: var(--accent-soft); }
+  .view-chip.on button:first-child { color: var(--accent); }
+
+  /* Öncelik ve alt görevler */
+  .prio { font-size: 0.72rem; font-weight: 700; border-radius: 999px; padding: 0.05rem 0.5rem; white-space: nowrap; line-height: 1.5; }
+  .prio.p1 { color: var(--danger); background: var(--danger-soft); }
+  .prio.p2 { color: var(--warn); background: var(--warn-soft); }
+  .prio.p3 { color: var(--muted); background: var(--paper-2); }
+  .sub-chip { font-size: 0.72rem; font-weight: 600; color: var(--muted); background: var(--paper-2); border-radius: 999px; padding: 0.05rem 0.5rem; white-space: nowrap; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  .sub-chip.full { color: var(--green); background: var(--green-soft); }
+  .subs-mini { list-style: none; margin: 0.35rem 0 0.2rem; padding: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+  .subs-mini li { display: flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; color: var(--ink-2); flex-wrap: wrap; }
+  .subs-mini li.done span { text-decoration: line-through; color: var(--muted); }
+  .subs-mini li.more { color: var(--muted); font-size: 0.78rem; padding-left: 1.4rem; }
+  .subs-mini input { width: 15px; height: 15px; accent-color: var(--accent); }
+  .subs { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.4rem; }
+  .sub-row { display: flex; align-items: center; gap: 0.35rem; }
+  .sub-row input[type="checkbox"] { width: 17px; height: 17px; flex-shrink: 0; accent-color: var(--accent); }
+  .sub-row .sub-t { flex: 1; min-width: 0; height: calc(var(--ctl-h) - 6px); border: 1px solid var(--line); border-radius: var(--r); padding: 0 0.5rem; background: var(--paper); color: var(--ink); font-size: 0.875rem; }
+  .sub-row.done .sub-t { text-decoration: line-through; color: var(--muted); }
+  .sub-row .sub-due { height: calc(var(--ctl-h) - 6px); border: 1px solid var(--line); border-radius: var(--r); padding: 0 0.35rem; background: var(--paper); color: var(--ink-2); font-size: 0.8rem; width: 9.2rem; }
+  .sub-row .er-btn.icon { width: 30px; height: 30px; }
+  .sub-prog { font-weight: 600; color: var(--muted); margin-left: 0.3rem; }
+
+  /* Notlar arası bağlantı */
+  .md a.wl, a.wl { color: var(--accent); text-decoration: none; border-bottom: 1px dashed currentColor; font-weight: 600; }
+  .md a.wl::before { content: '\2197\00a0'; font-size: 0.8em; opacity: 0.7; }
+  .wl-suggest { position: relative; z-index: 3; display: flex; flex-direction: column; margin: -0.3rem 0 0.6rem; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--paper); box-shadow: var(--shadow-2); max-height: 14rem; overflow-y: auto; }
+  .wl-suggest button { text-align: left; border: 0; background: transparent; color: var(--ink); padding: 0.45rem 0.7rem; font-size: 0.875rem; cursor: pointer; }
+  .wl-suggest button:hover, .wl-suggest button:first-child { background: var(--accent-soft); }
+  .backlinks { margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+  .backlinks .modal-section-label { width: 100%; }
+  .backlinks .bl { border: 1px solid var(--line-2); border-radius: 999px; background: var(--paper); color: var(--accent); font-size: 0.8125rem; font-weight: 600; padding: 0.2rem 0.65rem; cursor: pointer; }
+
+  /* Toplu işlem: seçim kutusu ve alttaki çubuk */
+  #list.selecting .item { cursor: pointer; padding-left: 2.6rem; position: relative; }
+  .pick-box { position: absolute; left: 0.75rem; top: 0.9rem; width: 1.25rem; height: 1.25rem; border: 2px solid var(--line-2); border-radius: 6px; display: grid; place-items: center; font-size: 0.8rem; font-weight: 800; color: var(--on-accent); background: var(--paper); }
+  .item.picked { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .item.picked .pick-box { background: var(--accent); border-color: var(--accent); }
+  .bulk-bar {
+    position: sticky; bottom: 0.6rem; z-index: 5; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin-top: 0.8rem;
+    padding: 0.45rem 0.55rem; border: 1px solid var(--accent); border-radius: var(--r-lg); background: var(--paper); box-shadow: var(--shadow-2);
+  }
+  .bulk-bar .er-btn, .bulk-bar .modal-select { height: calc(var(--ctl-h) - 6px); font-size: 0.8125rem; }
+  .bulk-bar .modal-select { max-width: 9rem; }
+  .bulk-n { font-size: 0.8125rem; font-weight: 700; color: var(--accent); margin-right: 0.2rem; }
+  .bulk-date input { height: calc(var(--ctl-h) - 6px); border: 1px solid var(--line-2); border-radius: var(--r); background: var(--paper); color: var(--ink-2); font-size: 0.8rem; padding: 0 0.3rem; }
+  .cal-item.sub { font-style: italic; }
+  .cal-row.sub .t { font-style: italic; }
+  .c-row .btn-add { flex: 1 0 100%; }
+  @media (max-width: 760px) {
+    .bulk-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .bulk-bar::-webkit-scrollbar { display: none; }
+    .bulk-bar > * { flex-shrink: 0; }
+    .sub-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; column-gap: 0.35rem; row-gap: 0.3rem; }
+    .sub-row .sub-due { grid-column: 2; grid-row: 2; width: 100%; max-width: 11rem; }
+  }
 
   /* Not / Görev seçimi: iki parçalı düğme */
   .type-toggle { display: inline-flex; padding: 2px; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--paper-2); }
@@ -2092,7 +2170,13 @@
       <div class="content">
         <div class="col-composer">
           <div class="composer">
-            <input class="c-title" id="cTitle" type="text" placeholder="Yeni not başlığı" maxlength="120" aria-label="Yeni not ya da görev başlığı">
+            <div class="c-title-row">
+              <input class="c-title" id="cTitle" type="text" placeholder="Yeni not başlığı" maxlength="120" aria-label="Yeni not ya da görev başlığı">
+              <div class="er-menu-wrap">
+                <button class="er-btn c-tpl-btn" id="tplBtn" type="button" title="Şablondan başla: ders notu, toplantı, ödev planı…" aria-haspopup="true">Şablon</button>
+                <div class="menu" id="tplMenu"></div>
+              </div>
+            </div>
             <!-- Dar ekranda bu kısım başlığa dokununca açılır -->
             <div class="c-more">
             <textarea id="cBody" placeholder="İçerik... Markdown: **kalın**, -&#8288;&nbsp;madde, -&#8288;&nbsp;[&nbsp;]&nbsp;yapılacak"></textarea>
@@ -2110,6 +2194,7 @@
                 <button data-type="note" class="sel" id="tNote">Not</button>
                 <button data-type="task" id="tTask">Görev</button>
               </div>
+              <select class="c-prio" id="cPrio" aria-label="Öncelik" title="Öncelik"><option value="">Öncelik</option><option value="1">Yüksek</option><option value="2">Orta</option><option value="3">Düşük</option></select>
               <label class="c-due" title="Son tarih (isteğe bağlı)"><span class="c-due-ico"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v10h-11zM2.5 6.5h11M5.5 2v3M10.5 2v3"/></svg></span><input type="date" id="cDue" aria-label="Son tarih"></label>
               <button class="btn-add" id="add">Ekle</button>
             </div>
@@ -2118,8 +2203,37 @@
         </div>
 
         <div class="col-list">
+          <div class="list-tools" id="listTools">
+            <select class="modal-select lt-sel" id="listSort" aria-label="Sıralama" title="Sıralama">
+              <option value="new">Yeni → eski</option>
+              <option value="due">Son tarihe göre</option>
+              <option value="prio">Önceliğe göre</option>
+              <option value="name">Ada göre (A–Z)</option>
+            </select>
+            <select class="modal-select lt-sel" id="listPrio" aria-label="Öncelik süzgeci" title="Öncelik süzgeci">
+              <option value="">Her öncelik</option>
+              <option value="1">Yüksek öncelik</option>
+              <option value="2">Orta öncelik</option>
+              <option value="3">Düşük öncelik</option>
+              <option value="0">Önceliksiz</option>
+            </select>
+            <button class="er-btn tgl" id="listSelBtn" type="button" aria-pressed="false" title="Birden çok kartı seçip hepsine aynı işlemi uygula">Seç</button>
+            <button class="er-btn" id="viewSave" type="button" title="Şu anki arama, süzgeç ve sıralamayı kaydet" style="display:none">&#9734; Görünümü kaydet</button>
+            <div class="view-chips" id="viewChips"></div>
+          </div>
           <div class="due-filters" id="dueFilters"></div>
           <div id="list"></div>                     <!-- Notlar/görevler JS ile buraya yazılır -->
+          <div class="bulk-bar" id="bulkBar" style="display:none" role="toolbar" aria-label="Seçili kartlar">
+            <span class="bulk-n" id="bulkN"></span>
+            <button class="er-btn" type="button" data-bulk="done">Tamamla</button>
+            <button class="er-btn" type="button" data-bulk="tag">Etiket ekle</button>
+            <select class="modal-select" data-bulk="prio" aria-label="Öncelik ver"><option value="">Öncelik…</option><option value="1">Yüksek</option><option value="2">Orta</option><option value="3">Düşük</option><option value="0">Önceliği kaldır</option></select>
+            <label class="bulk-date" title="Son tarih ver"><input type="date" data-bulk="due" aria-label="Son tarih ver"></label>
+            <select class="modal-select" data-bulk="move" aria-label="Başka projeye taşı" id="bulkMove"></select>
+            <button class="er-btn" type="button" data-bulk="del">Sil</button>
+            <button class="er-btn" type="button" data-bulk="all">Hepsi</button>
+            <button class="er-btn icon" type="button" data-bulk="close" title="Seçimi bitir" aria-label="Seçimi bitir">&times;</button>
+          </div>
           <div class="status" id="status"></div>    <!-- Bilgi/uyarı satırı -->
         </div>
       </div>
@@ -2379,7 +2493,8 @@
           <button type="button" class="md-preview-btn" id="modalPreviewBtn" title="Önizleme ile düzenleme arasında geç">Önizle</button>
         </span>
       </div>
-      <textarea class="modal-desc" id="modalDesc" placeholder="Daha ayrıntılı bir açıklama ekle... Markdown: **kalın**, -&#8288;&nbsp;madde, -&#8288;&nbsp;[&nbsp;]&nbsp;yapılacak"></textarea>
+      <textarea class="modal-desc" id="modalDesc" placeholder="Daha ayrıntılı bir açıklama ekle... Markdown: **kalın**, -&#8288;&nbsp;madde, -&#8288;&nbsp;[&nbsp;]&nbsp;yapılacak, [[başka not]]"></textarea>
+      <div class="wl-suggest" id="wlSuggest" hidden></div>
       <div class="modal-desc md md-preview" id="modalPreview" style="display:none"></div>
 
       <div class="modal-section-label">Etiketler (virgülle ayır)</div>
@@ -2392,6 +2507,19 @@
           <option value="note">Not</option>
           <option value="task">Görev</option>
         </select>
+      </div>
+
+      <div class="modal-section-label">Öncelik</div>
+      <div class="modal-row">
+        <select class="modal-select" id="modalPrio" aria-label="Öncelik">
+          <option value="">Öncelik yok</option><option value="1">Yüksek</option><option value="2">Orta</option><option value="3">Düşük</option>
+        </select>
+      </div>
+
+      <div id="modalSubsWrap">
+        <div class="modal-section-label">Alt görevler <span class="sub-prog" id="modalSubsProg"></span></div>
+        <div class="subs" id="modalSubs"></div>
+        <input class="modal-tags-input" id="modalSubNew" placeholder="+ Alt görev ekle (Enter)" maxlength="300">
       </div>
 
       <div class="modal-section-label">Son tarih</div>
@@ -2420,8 +2548,13 @@
         <input type="file" id="modalCoverFile" accept="image/*" style="display:none">
       </div>
 
+      <div class="backlinks" id="modalBacklinks" hidden></div>
+
       <div class="modal-actions">
-        <button class="modal-btn danger" id="modalDelete">Kartı sil</button>
+        <div class="modal-actions-left">
+          <button class="modal-btn danger" id="modalDelete">Kartı sil</button>
+          <button class="modal-btn" id="modalTplSave" type="button" title="Bu kartın başlığı, içeriği, etiketleri ve alt görevleri şablon olarak saklansın">Şablon olarak kaydet</button>
+        </div>
         <button class="modal-btn primary" id="modalDone">Bitti</button>
       </div>
     </div>
@@ -3737,6 +3870,8 @@
       cover: null,    // kapak resmi (data URL); başlangıçta yok
       due: el('cDue').value || null, // son tarih ('YYYY-AA-GG'), isteğe bağlı
       done: false,    // görev başlangıçta tamamlanmamış
+      prio: +el('cPrio').value || undefined,                       // öncelik (isteğe bağlı)
+      subs: composerSubs.length ? cleanSubs(composerSubs) : undefined, // şablondan gelen alt görevler
       pinned: false,  // başlangıçta sabitlenmemiş
       created: Date.now()
     };
@@ -3744,7 +3879,10 @@
     await saveItem(item);
 
     // Kutuları temizle ki yeni giriş yapılabilsin
-    el('cTitle').value = ''; el('cBody').value = ''; el('cTags').value = ''; el('cDue').value = '';
+    if (!item.prio) delete item.prio;
+    if (!item.subs) delete item.subs;
+    el('cTitle').value = ''; el('cBody').value = ''; el('cTags').value = ''; el('cDue').value = ''; el('cPrio').value = '';
+    composerSubs = [];
     renderProjects(); renderMain(); renderBoard();
     el('cTitle').focus(); // imleci tekrar başlığa al
   }
@@ -3778,16 +3916,25 @@
      sadece bilinen kalıplardan üretilir; bağlantılar yalnızca http(s) olabilir. Kontrol listesi
      maddeleri ("- [ ] süt al") tıklanabilir onay kutusu olur; tıklayınca nottaki satır güncellenir. */
   const MD_LINK_ATTR = '" target="_blank" rel="noopener noreferrer">';
+  const mdAttr = s => s.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const mdEmph = p => p
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?![\w*])/g, '$1<em>$2</em>')
+    .replace(/(^|[^\w])_([^_\s][^_]*?)_(?!\w)/g, '$1<em>$2</em>')
+    .replace(/~~([^~]+)~~/g, '<del>$1</del>');
+  /* Bağlantılar TEK geçişte bulunur ve üretilen HTML yer tutucuya (n) konur; sonraki
+     kalıplar (kalın, eğik, başka bağlantı) üretilmiş bir özniteliğin içine asla dokunamaz.
+     (Eskiden adres içindeki "(http://…" ikinci kez bağlantıya çevrilip href'in tırnağını kapatıyor,
+     arkasından gelen metin olay özniteliği olabiliyordu: [x](http://a(http://b/onmouseover=…//).) */
   function mdInline(s) { // s zaten kaçışlanmış
     return s.split(/(`[^`]+`)/g).map(p => {
       if (/^`[^`]+`$/.test(p)) return '<code>' + p.slice(1, -1) + '</code>';
-      return p
-        .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, t, u) => '<a href="' + u.replace(/"/g, '&quot;') + MD_LINK_ATTR + t + '</a>')
-        .replace(/(^|[\s(])(https?:\/\/[^\s<]*[^\s<.,;:!?)])/g, (m, pre, u) => pre + '<a href="' + u.replace(/"/g, '&quot;') + MD_LINK_ATTR + u + '</a>')
-        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-        .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?![\w*])/g, '$1<em>$2</em>')
-        .replace(/(^|[^\w])_([^_\s][^_]*?)_(?!\w)/g, '$1<em>$2</em>')
-        .replace(/~~([^~]+)~~/g, '<del>$1</del>');
+      const toks = [], tok = h => '' + (toks.push(h) - 1) + '';
+      p = p.replace(/[]/g, '').replace(/\[\[([^\[\]\n]{1,120})\]\]|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(^|[\s(])(https?:\/\/[^\s<]*[^\s<.,;:!?)])/g,
+        (m, wl, t, u, pre, bu) => wl ? tok('<a class="wl" href="#" data-wl="' + mdAttr(wl) + '" title="Nota git">' + wl + '</a>')
+          : t ? tok('<a href="' + mdAttr(u) + MD_LINK_ATTR + mdEmph(t) + '</a>')
+          : pre + tok('<a href="' + mdAttr(bu) + MD_LINK_ATTR + bu + '</a>'));
+      return mdEmph(p).replace(/(\d+)/g, (m, k) => toks[+k] || '');
     }).join('');
   }
   /* checkable: onay kutuları tıklanabilsin mi (data-mdline = içerikteki satır numarası) */
@@ -3841,7 +3988,7 @@
   function mdPlain(text) {
     return String(text || '').replace(/^\s*[-*+]\s+\[[xX]\]\s*/gm, '☑ ').replace(/^\s*[-*+]\s+\[ \]\s*/gm, '☐ ')
       .replace(/^#{1,3}\s+/gm, '').replace(/^\s*[-*+]\s+/gm, '• ').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/(^|[^*\w])\*([^*\s][^*]*?)\*/g, '$1$2').replace(/`([^`]+)`/g, '$1')
-      .replace(/~~([^~]+)~~/g, '$1').replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '$1').replace(/```/g, '');
+      .replace(/~~([^~]+)~~/g, '$1').replace(/\[\[([^\[\]\n]{1,120})\]\]/g, '$1').replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '$1').replace(/```/g, '');
   }
   /* İçerikteki n. satırın onay kutusunu çevirir */
   function mdToggleLine(text, n) {
@@ -3907,6 +4054,43 @@
     else if (k > 1 && k <= 7) { cls = 'soon'; txt = k + ' gün kaldı'; }
     return { cls: cls, txt: txt, k: k };
   }
+  /* ---- ÖNCELİK ve ALT GÖREVLER ---- */
+  const PRIO_NAME = { 1: 'Yüksek', 2: 'Orta', 3: 'Düşük' };
+  function prioChip(i) {
+    return i.prio ? '<span class="prio p' + i.prio + '" title="Öncelik: ' + PRIO_NAME[i.prio] + '">' + PRIO_NAME[i.prio] + '</span>' : '';
+  }
+  function cleanSubs(a) {
+    return (Array.isArray(a) ? a : []).filter(x => x && typeof x === 'object').slice(0, 100).map(x => ({
+      id: SAFE_ID.test(x.id) ? x.id : uid(),
+      t: String(x.t == null ? '' : x.t).replace(/[\r\n]+/g, ' ').slice(0, 300),
+      d: !!x.d,
+      due: typeof x.due === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.due) ? x.due : null
+    })).filter(x => x.t.trim());
+  }
+  function subsChip(i) {
+    const a = i.subs || [];
+    if (!a.length) return '';
+    const n = a.filter(x => x.d).length;
+    return '<span class="sub-chip' + (n === a.length ? ' full' : '') + '" title="Alt görevler">&#8627; ' + n + '/' + a.length + '</span>';
+  }
+  /* Liste kartında alt görevler: ilk 5'i işaretlenebilir, gerisi "+N" */
+  function subsListHTML(i) {
+    const a = i.subs || [];
+    if (!a.length) return '';
+    return '<ul class="subs-mini">' + a.slice(0, 5).map(x => '<li class="' + (x.d ? 'done' : '') + '"><input type="checkbox" data-subcheck="' + i.id + ':' + x.id + '"' + (x.d ? ' checked' : '') +
+      ' aria-label="Alt görev tamamlandı"><span>' + esc(x.t) + '</span>' + (x.due ? subDueChip(x) : '') + '</li>').join('') +
+      (a.length > 5 ? '<li class="more">+' + (a.length - 5) + ' alt görev daha</li>' : '') + '</ul>';
+  }
+  function subDueChip(x) { return dueChip({ due: x.due, type: 'task', done: x.d }); }
+  async function toggleSub(itemId, subId) {
+    const i = items.find(x => x.id === itemId), x = i && (i.subs || []).find(y => y.id === subId);
+    if (!x) return;
+    x.d = !x.d;
+    await saveItem(i);
+    renderMain(); renderBoard();
+    if (x.d && i.type === 'task' && !i.done && i.subs.every(y => y.d)) showSnack('Bütün alt görevler bitti.', () => toggleDone(i.id), 'Görevi tamamla');
+  }
+
   function dueChip(i) {
     const d = dueInfo(i);
     if (!d) return '';
@@ -4037,19 +4221,30 @@
         chip('late', 'Gecikenler') + chip('today', 'Bugün') + chip('week', '7 gün içinde');
     } else { el('dueFilters').innerHTML = ''; dueFilter = null; }
     if (dueFilter && groups[dueFilter]) mine = mine.filter(groups[dueFilter]);
+    // --- Öncelik süzgeci ---
+    const pf = el('listPrio').value;
+    if (pf) mine = mine.filter(i => pf === '0' ? !i.prio : i.prio === +pf);
 
-    // --- Sıralama: önce sabitlenmişler, sonra en yeni (süzgeç açıkken son tarihe göre) ---
-    if (dueFilter) mine.sort((a, b) => a.due.localeCompare(b.due) || (b.pinned - a.pinned));
-    else mine.sort((a,b) => (b.pinned - a.pinned) || (b.created - a.created));
+    // --- Sıralama: önce sabitlenmişler; sonra seçilen sıra (süzgeç açıkken varsayılan son tarih) ---
+    const byNew = (a, b) => b.created - a.created;
+    const byDue = (a, b) => (a.due || '9999').localeCompare(b.due || '9999');
+    const sortBy = { new: dueFilter ? (a, b) => byDue(a, b) || byNew(a, b) : byNew, due: (a, b) => byDue(a, b) || byNew(a, b),
+      prio: (a, b) => ((a.prio || 9) - (b.prio || 9)) || byDue(a, b) || byNew(a, b),
+      name: (a, b) => (a.title || a.body || '').localeCompare(b.title || b.body || '', 'tr', { sensitivity: 'base' }) || byNew(a, b) }[el('listSort').value] || byNew;
+    mine.sort((a, b) => (b.pinned - a.pinned) || sortBy(a, b));
+    renderViews();
+    listVisible = mine.map(i => i.id);
+    renderBulkBar();
 
     // Hiç öğe yoksa uygun mesaj göster
     if (mine.length === 0) {
-      el('list').innerHTML = '<div class="empty">' + (q || dueFilter ? 'Aramaya uyan not ya da görev yok.' : 'Bu projede henüz not ya da görev yok.<br>Ekleme kutusuna bir başlık yazıp <b>Ekle</b>\'ye bas.') + '</div>';
+      el('list').innerHTML = '<div class="empty">' + (q || dueFilter || pf ? 'Aramaya uyan not ya da görev yok.' : 'Bu projede henüz not ya da görev yok.<br>Ekleme kutusuna bir başlık yazıp <b>Ekle</b>\'ye bas.') + '</div>';
       return;
     }
 
     // Her öğeyi türüne göre uygun HTML'e çevir ve ekrana yaz
     el('list').innerHTML = mine.map(i => i.type === 'task' ? taskHTML(i) : noteHTML(i)).join('');
+    el('list').classList.toggle('selecting', listSelOn);
     bindItemEvents(); // yeni oluşan butonlara olayları bağla
   }
 
@@ -4069,7 +4264,7 @@
     }
     const words = fold(q).split(/\s+/).filter(Boolean);
     return { tag: null, test: i => {
-      const hay = fold((i.title || '') + ' ' + (i.body || '') + ' ' + (i.tags || []).map(t => '#' + t).join(' '));
+      const hay = fold((i.title || '') + ' ' + (i.body || '') + ' ' + (i.tags || []).map(t => '#' + t).join(' ') + ' ' + (i.subs || []).map(x => x.t).join(' '));
       return words.every(w => hay.includes(w));
     } };
   }
@@ -4091,16 +4286,17 @@
   /* Bir NOT nesnesini kart HTML'ine çevirir. */
   function noteHTML(i) {
     const cover = i.cover ? '<img class="item-cover" src="' + i.cover + '" alt="">' : '';
-    return '<div class="item ' + (i.pinned?'pinned':'') + '" data-item="' + i.id + '" title="Düzenlemek için tıkla">' +
-      cover +
+    return '<div class="item ' + (i.pinned?'pinned':'') + (listSel.has(i.id) ? ' picked' : '') + '" data-item="' + i.id + '" title="' + (listSelOn ? 'Seçmek için tıkla' : 'Düzenlemek için tıkla') + '">' +
+      selBox(i) + cover +
       '<h3>' + esc(i.title) + '</h3>' +
       (i.body ? '<div class="md" data-mditem="' + i.id + '">' + mdToHTML(i.body, true) + '</div>' : '') +
       tagsHTML(i.tags) +
-      '<div class="meta"><span class="meta-left"><span class="date">' + fmtDate(i.created) + '</span>' + dueChip(i) + mdProgress(i.body) + '</span>' +
+      '<div class="meta"><span class="meta-left"><span class="date">' + fmtDate(i.created) + '</span>' + prioChip(i) + dueChip(i) + mdProgress(i.body) + subsChip(i) + '</span>' +
       '<div class="actions">' +
       '<button data-pin="' + i.id + '">' + (i.pinned?'Sabit ✓':'Sabitle') + '</button>' +
       '<button data-del="' + i.id + '">Sil</button></div></div></div>';
   }
+  const selBox = i => (listSelOn ? '<span class="pick-box" aria-hidden="true">' + (listSel.has(i.id) ? '&#10003;' : '') + '</span>' : '');
 
   /* Bir GÖREV nesnesini kart HTML'ine çevirir (başında onay kutusu vardır). */
   function taskHTML(i) {
@@ -4113,13 +4309,13 @@
       '<div class="task-body">' +
       '<div class="task-text">' + esc(i.title || i.body) + '</div>' +
       (i.title && i.body ? '<div class="md" data-mditem="' + i.id + '">' + mdToHTML(i.body, true) + '</div>' : '') +
-      tagsHTML(i.tags) +
-      '<div class="meta"><span class="meta-left"><span class="date">' + fmtDate(i.created) + '</span>' + dueChip(i) + mdProgress(i.body) + '</span>' +
+      subsListHTML(i) + tagsHTML(i.tags) +
+      '<div class="meta"><span class="meta-left"><span class="date">' + fmtDate(i.created) + '</span>' + prioChip(i) + dueChip(i) + mdProgress(i.body) + subsChip(i) + '</span>' +
       '<div class="actions">' +
       '<button data-pin="' + i.id + '">' + (i.pinned?'Sabit ✓':'Sabitle') + '</button>' +
       '<button data-del="' + i.id + '">Sil</button></div></div></div></div>';
-    return '<div class="item task ' + (i.pinned?'pinned':'') + ' ' + (i.done?'done':'') + ' ' + (hasCover?'has-cover':'') + '" data-item="' + i.id + '" title="Düzenlemek için tıkla">' +
-      cover + row +
+    return '<div class="item task ' + (i.pinned?'pinned':'') + ' ' + (i.done?'done':'') + ' ' + (hasCover?'has-cover':'') + (listSel.has(i.id) ? ' picked' : '') + '" data-item="' + i.id + '" title="' + (listSelOn ? 'Seçmek için tıkla' : 'Düzenlemek için tıkla') + '">' +
+      selBox(i) + cover + row +
     '</div>';
   }
 
@@ -4127,6 +4323,7 @@
      tıklama/değişiklik olaylarını bağlar. */
   function bindItemEvents() {
     el('list').querySelectorAll('[data-check]').forEach(c => c.addEventListener('change', () => toggleDone(c.dataset.check)));
+    el('list').querySelectorAll('[data-subcheck]').forEach(c => c.addEventListener('change', () => { const [a, b] = c.dataset.subcheck.split(':'); toggleSub(a, b); }));
     el('list').querySelectorAll('[data-mdline]').forEach(c => c.addEventListener('change', () => toggleMdCheck(c.closest('[data-mditem]').dataset.mditem, +c.dataset.mdline)));
     el('list').querySelectorAll('[data-pin]').forEach(b => b.addEventListener('click', () => togglePin(b.dataset.pin)));
     el('list').querySelectorAll('[data-tagf]').forEach(b => b.addEventListener('click', () => setTagFilter(b.dataset.tagf)));
@@ -4136,6 +4333,7 @@
     }));
     // Karta tıklayınca düzenleme penceresi açılsın (düğme/kutucuk ve metin seçimi hariç)
     el('list').querySelectorAll('[data-item]').forEach(n => n.addEventListener('click', e => {
+      if (listSelOn) { e.preventDefault(); toggleListSel(n.dataset.item); return; } // seçim kipinde dokununca seçilir
       if (e.target.closest('button, input, a')) return;
       if (String(window.getSelection())) return; // kullanıcı metin seçiyorsa açma
       openCard(n.dataset.item);
@@ -4166,7 +4364,7 @@
       cover +
       '<div class="card-pad">' +
         '<div class="card-row">' + check + '<div class="card-title">' + title + '</div></div>' +
-        bodyPrev + tags + ((i.due || mdChecks(i.body).total) ? '<div class="card-meta-row">' + dueChip(i) + mdProgress(i.body) + '</div>' : '') +
+        bodyPrev + tags + ((i.due || i.prio || (i.subs && i.subs.length) || mdChecks(i.body).total) ? '<div class="card-meta-row">' + prioChip(i) + dueChip(i) + mdProgress(i.body) + subsChip(i) + '</div>' : '') +
       '</div>' +
     '</div>';
   }
@@ -4824,6 +5022,11 @@
     el('modalType').value = i.type || 'note';
     el('modalDue').value = i.due || '';
     el('modalRepeat').value = repName(i.repeat) ? i.repeat : '';
+    el('modalPrio').value = i.prio ? String(i.prio) : '';
+    modalSubs = cleanSubs(i.subs || []);
+    renderModalSubs();
+    renderBacklinks(i);
+    el('wlSuggest').hidden = true;
     updateModalDueHint();
     // İçinde kontrol listesi olan açıklama önizlemeyle açılsın (maddeler hemen işaretlenebilsin)
     setModalPreview(mdChecks(i.body).total > 0);
@@ -4866,6 +5069,7 @@
   /* Görev onay kutusunun görünürlüğünü ve durumunu ayarlar. */
   function updateModalCheckVisibility(type, done) {
     el('modalRepeatRow').style.display = type === 'task' ? '' : 'none';
+    el('modalSubsWrap').style.display = type === 'task' || modalSubs.length ? '' : 'none';
     const chk = el('modalCheck');
     if (type === 'task') {
       chk.style.display = '';
@@ -4903,8 +5107,12 @@
     if (!i) return;
 
     const newType = el('modalType').value;
-    const wasDone = !!i.done, oldDue = i.due, oldRep = i.repeat;
+    const wasDone = !!i.done, oldDue = i.due, oldRep = i.repeat, oldTitle = i.title;
     i.title = el('modalTitle').value.trim();
+    const pr = +el('modalPrio').value;
+    if (pr) i.prio = pr; else delete i.prio;
+    const subs = cleanSubs(modalSubs);
+    if (subs.length) i.subs = subs; else delete i.subs;
     i.body = el('modalDesc').value.trim();
     i.tags = el('modalTags').value.split(',').map(t => t.trim()).filter(Boolean);
     i.type = newType;
@@ -4922,7 +5130,247 @@
     if (!i.title && !i.body) i.title = '(başlıksız)'; // tamamen boş kalmasın
 
     await saveItem(i);
+    if (oldTitle && i.title && oldTitle !== i.title) await renameWikiLinks(i, oldTitle);
     await afterTaskDone(i, wasDone);
+    renderProjects(); renderMain(); renderBoard();
+  }
+
+  /* ---- Kart penceresinde alt görevler (pencere kapanınca kaydedilir) ---- */
+  let modalSubs = [];
+  function renderModalSubs() {
+    const n = modalSubs.filter(x => x.d).length;
+    el('modalSubsProg').textContent = modalSubs.length ? n + '/' + modalSubs.length : '';
+    el('modalSubs').innerHTML = modalSubs.map((x, k) => '<div class="sub-row' + (x.d ? ' done' : '') + '" data-sub="' + k + '">' +
+      '<input type="checkbox" data-subd' + (x.d ? ' checked' : '') + ' aria-label="Tamamlandı">' +
+      '<input class="sub-t" data-subt value="' + escAttr(x.t) + '" maxlength="300" aria-label="Alt görev">' +
+      '<input type="date" class="sub-due" data-subdue value="' + (x.due || '') + '" aria-label="Alt görevin son tarihi">' +
+      '<button class="er-btn icon" type="button" data-subup title="Yukarı taşı" aria-label="Yukarı taşı"' + (k ? '' : ' disabled') + '>&uarr;</button>' +
+      '<button class="er-btn icon" type="button" data-subdel title="Sil" aria-label="Alt görevi sil">&times;</button></div>').join('');
+  }
+
+  /* ---- Notlar arası bağlantı: [[Başlık]] ---- */
+  const wlKey = t => flFold(String(t || '').trim());
+  function findByTitle(t, pid) {
+    const k = wlKey(t);
+    if (!k) return null;
+    const hit = x => wlKey(x.title) === k;
+    return items.find(x => x.projectId === pid && hit(x)) || items.find(hit) || null;
+  }
+  async function openWikiLink(t) {
+    t = String(t || '').trim().slice(0, 120);
+    if (!t) return;
+    const pid = openCardId ? (items.find(x => x.id === openCardId) || {}).projectId || activeProject : activeProject;
+    let target = findByTitle(t, pid);
+    if (openCardId) { await saveOpenCard(); el('cardModal').classList.remove('open'); openCardId = null; }
+    if (!target) {
+      if (!confirm('“' + t + '” adında bir not yok. Bu adla yeni bir not oluşturulsun mu?')) return;
+      const cols = projectColumns(pid);
+      target = { id: uid(), projectId: pid, columnId: cols.length ? cols[0].id : null, order: Date.now(), type: 'note', title: t, body: '', tags: [], cover: null, due: null, done: false, pinned: false, created: Date.now() };
+      items.push(target); await saveItem(target);
+      renderProjects(); renderMain(); renderBoard();
+    }
+    if (target.projectId !== activeProject) switchProject(target.projectId);
+    openCard(target.id);
+  }
+  /* Bu nota [[başlığıyla]] bağlanan kartlar (pencerenin altında) */
+  function renderBacklinks(i) {
+    const box = el('modalBacklinks'), k = wlKey(i.title);
+    const re = /\[\[([^\[\]\n]{1,120})\]\]/g;
+    const from = k ? items.filter(x => x.id !== i.id && x.body && [...x.body.matchAll(re)].some(m => wlKey(m[1]) === k)) : [];
+    box.hidden = !from.length;
+    box.innerHTML = from.length ? '<div class="modal-section-label">Bu nota bağlananlar</div>' + from.slice(0, 20).map(x =>
+      '<button class="bl" type="button" data-blopen="' + x.id + '">' + esc(x.title || x.body.slice(0, 40) || '(başlıksız)') + '</button>').join('') : '';
+  }
+  /* Bir notun başlığı değişince başka notlardaki [[eski]] bağlantıları [[yeni]] olur */
+  async function renameWikiLinks(i, oldTitle) {
+    const k = wlKey(oldTitle), nt = String(i.title || '');
+    // yalnız büyük/küçük harf değiştiyse, yeni ad bağlantı olamıyorsa ya da bu projede aynı adla başka not varsa dokunma
+    if (!k || wlKey(nt) === k || !nt.trim() || nt.length > 120 || /[\[\]\n]/.test(nt) ||
+        items.some(x => x.projectId === i.projectId && x.id !== i.id && wlKey(x.title) === k)) return;
+    let n = 0;
+    for (const x of items.filter(x => x.projectId === i.projectId && x.id !== i.id && x.body && x.body.includes('[['))) {
+      const nb = x.body.replace(/\[\[([^\[\]\n]{1,120})\]\]/g, (m, t) => (wlKey(t) === k ? '[[' + i.title + ']]' : m));
+      if (nb !== x.body) { x.body = nb; await saveItem(x); n++; }
+    }
+    if (n) showSnack(n + ' nottaki bağlantı yeni başlığa güncellendi.');
+  }
+  /* "[[" yazınca not başlıkları önerilir */
+  function wlSuggest(ta, box) {
+    const v = ta.value.slice(0, ta.selectionStart), m = v.match(/\[\[([^\[\]\n]{0,40})$/);
+    if (!m) { box.hidden = true; return; }
+    const k = flFold(m[1]), mine = openCardId;
+    const list = items.filter(x => x.id !== mine && x.title && x.title !== '(başlıksız)' && flFold(x.title).includes(k))
+      .sort((a, b) => (a.projectId !== activeProject) - (b.projectId !== activeProject) || a.title.localeCompare(b.title, 'tr')).slice(0, 8);
+    box.hidden = !list.length;
+    box.innerHTML = list.map(x => '<button type="button" data-wlpick="' + escAttr(x.title) + '">' + esc(x.title) + '</button>').join('');
+    box.dataset.for = ta.id;
+  }
+  function wlPick(box, title) {
+    const ta = el(box.dataset.for), pos = ta.selectionStart, v = ta.value;
+    const start = v.slice(0, pos).lastIndexOf('[[');
+    if (start < 0) return;
+    const after = v.slice(pos).startsWith(']]') ? v.slice(pos + 2) : v.slice(pos);
+    ta.value = v.slice(0, start) + '[[' + title + ']]' + after;
+    const c = start + title.length + 4;
+    ta.focus(); ta.setSelectionRange(c, c);
+    box.hidden = true;
+  }
+
+  /* ---- ŞABLONLAR: hazır olanlar + kullanıcının kaydettikleri (bu cihazda) ---- */
+  const ITEM_TEMPLATES = [
+    { name: 'Ders notu', type: 'note', title: 'Ders notu — {tarih}', tags: 'ders', body: '# Konu\n\n# Önemli noktalar\n- \n\n# Örnekler\n\n# Sorularım\n- [ ] ' },
+    { name: 'Toplantı notu', type: 'note', title: 'Toplantı — {tarih}', tags: 'toplantı', body: '**Katılanlar:** \n\n# Gündem\n1. \n\n# Kararlar\n- \n\n# Yapılacaklar\n- [ ] ' },
+    { name: 'Ödev planı', type: 'task', title: 'Ödev: ', tags: 'ödev', body: '**Ders:** \n**Teslim:** ', subs: ['Konuyu araştır', 'Taslağı yaz', 'Kontrol et', 'Teslim et'] },
+    { name: 'Proje raporu', type: 'note', title: 'Proje raporu — {tarih}', tags: 'rapor', body: '# Amaç\n\n# Yapılanlar\n- \n\n# Sorunlar\n- \n\n# Sonraki adımlar\n- [ ] ' },
+    { name: 'Günlük', type: 'note', title: '{gün}, {tarih}', tags: 'günlük', body: '# Bugün\n- \n\n# Öğrendiklerim\n- \n\n# Yarın\n- [ ] ' },
+    { name: 'Haftalık plan', type: 'task', title: 'Hafta planı — {tarih}', tags: 'plan', body: '', subs: ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Hafta sonu'] },
+    { name: 'Sınav hazırlığı', type: 'task', title: 'Sınav: ', tags: 'sınav', body: '**Tarih:** \n**Konular:** ', subs: ['Konu listesini çıkar', 'Notları gözden geçir', 'Soru çöz', 'Eksikleri tekrar et'] }
+  ];
+  let composerSubs = [];
+  function userTemplates() { const a = localJSON('pref:tpls', []); return Array.isArray(a) ? a.filter(t => t && typeof t.name === 'string').slice(0, 30) : []; }
+  function tplFill(t) {
+    const d = new Date();
+    const day = String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
+    const wd = d.toLocaleDateString('tr-TR', { weekday: 'long' });
+    return String(t || '').replace(/\{tarih\}/g, day).replace(/\{gün\}/g, wd.charAt(0).toLocaleUpperCase('tr') + wd.slice(1));
+  }
+  function renderTplMenu() {
+    const mine = userTemplates();
+    el('tplMenu').innerHTML = '<div class="menu-group-label">Hazır şablonlar</div>' +
+      ITEM_TEMPLATES.map((t, k) => '<button type="button" data-tpl="b' + k + '">' + esc(t.name) + '</button>').join('') +
+      (mine.length ? '<div class="sep"></div><div class="menu-group-label">Benim şablonlarım</div>' +
+        mine.map((t, k) => '<div class="tpl-mine"><button type="button" data-tpl="u' + k + '">' + esc(t.name) + '</button><button type="button" class="tpl-del" data-tpldel="' + k + '" title="Şablonu sil" aria-label="Şablonu sil">&times;</button></div>').join('') : '') +
+      '<div class="menu-hint">Kendi şablonun için: bir kartı aç → <b>Şablon olarak kaydet</b></div>';
+  }
+  function applyTemplate(key) {
+    const t = key[0] === 'b' ? ITEM_TEMPLATES[+key.slice(1)] : userTemplates()[+key.slice(1)];
+    if (!t) return;
+    setType(t.type === 'task' ? 'task' : 'note');
+    el('cTitle').value = tplFill(t.title).slice(0, 120);
+    el('cBody').value = tplFill(t.body).slice(0, 20000);
+    el('cTags').value = String(t.tags || '').slice(0, 300);
+    el('cPrio').value = [1, 2, 3].includes(+t.prio) ? String(t.prio) : '';
+    composerSubs = (Array.isArray(t.subs) ? t.subs : []).slice(0, 100).map(x => ({ t: String(typeof x === 'string' ? x : (x && x.t) || '').slice(0, 300), d: false }));
+    document.querySelector('.composer').classList.add('open');
+    el('tplMenu').classList.remove('open');
+    el('cTitle').focus();
+    const v = el('cTitle').value; el('cTitle').setSelectionRange(v.length, v.length);
+    showSnack('“' + t.name + '” şablonu dolduruldu' + (composerSubs.length ? ' (' + composerSubs.length + ' alt görevle)' : '') + '; Ekle\'ye basınca kart oluşur.');
+  }
+  function saveAsTemplate() {
+    const i = items.find(x => x.id === openCardId);
+    if (!i) return;
+    const name = prompt('Şablonun adı:', (el('modalTitle').value.trim() || 'Şablonum').slice(0, 40));
+    if (name === null || !name.trim()) return;
+    const mine = userTemplates().filter(t => t.name !== name.trim());
+    if (mine.length >= 30) { alert('En fazla 30 şablon saklanabilir; önce birini sil.'); return; }
+    mine.push({ name: name.trim().slice(0, 40), type: el('modalType').value, title: el('modalTitle').value.trim().slice(0, 120), body: el('modalDesc').value.slice(0, 20000),
+      tags: el('modalTags').value.slice(0, 300), prio: +el('modalPrio').value || undefined, subs: cleanSubs(modalSubs).map(x => x.t) });
+    try { localSet('pref:tpls', JSON.stringify(mine)); } catch (e) {}
+    showSnack('“' + name.trim() + '” şablonu kaydedildi; yeni kart eklerken Şablon menüsünde.');
+  }
+
+  /* ---- KAYITLI GÖRÜNÜMLER: arama + son tarih + öncelik + sıralama (projeye göre, bu cihazda) ---- */
+  const viewKey = () => 'pref:views:' + activeProject;
+  function savedViews() { const a = localJSON(viewKey(), []); return Array.isArray(a) ? a.filter(v => v && typeof v.name === 'string').slice(0, 20) : []; }
+  const curView = () => ({ q: el('search').value.trim(), df: dueFilter || '', pr: el('listPrio').value, sort: el('listSort').value });
+  const sameView = (a, b) => a.q === b.q && (a.df || '') === (b.df || '') && (a.pr || '') === (b.pr || '') && (a.sort || 'new') === (b.sort || 'new');
+  function renderViews() {
+    const cur = curView(), list = savedViews();
+    const active = cur.q || cur.df || cur.pr || cur.sort !== 'new';
+    el('viewSave').style.display = active && !list.some(v => sameView(v, cur)) ? '' : 'none';
+    el('viewChips').innerHTML = list.map((v, k) => '<span class="view-chip' + (sameView(v, cur) ? ' on' : '') + '"><button type="button" data-view="' + k + '" title="Bu görünümü aç">&#9733; ' + esc(v.name) + '</button>' +
+      '<button type="button" class="vx" data-viewdel="' + k + '" title="Görünümü sil" aria-label="Görünümü sil">&times;</button></span>').join('');
+  }
+  function applyView(k) {
+    const v = savedViews()[k];
+    if (!v) return;
+    const on = sameView(v, curView());
+    el('search').value = on ? '' : String(v.q || '');
+    dueFilter = on ? null : (['late', 'today', 'week'].includes(v.df) ? v.df : null);
+    el('listPrio').value = on ? '' : (['1', '2', '3', '0'].includes(v.pr) ? v.pr : '');
+    el('listSort').value = on ? 'new' : (['new', 'due', 'prio', 'name'].includes(v.sort) ? v.sort : 'new');
+    localSet('pref:listsort', el('listSort').value === 'new' ? '' : el('listSort').value);
+    renderMain(); renderBoard();
+  }
+  function saveView() {
+    const name = prompt('Görünümün adı (ör. "Bu haftaki ödevler"):', '');
+    if (name === null || !name.trim()) return;
+    const list = savedViews().filter(v => v.name !== name.trim());
+    if (list.length >= 20) { alert('En fazla 20 görünüm saklanabilir.'); return; }
+    list.push(Object.assign({ name: name.trim().slice(0, 40) }, curView()));
+    localSet(viewKey(), JSON.stringify(list));
+    renderViews();
+    showSnack('“' + name.trim() + '” görünümü kaydedildi.');
+  }
+
+  /* ---- TOPLU İŞLEM: Seç kipinde dokunulan kartlar seçilir, alttaki çubukla hepsine birden uygulanır ---- */
+  let listSelOn = false, listVisible = [];
+  const listSel = new Set();
+  function setListSel(on) {
+    listSelOn = on;
+    if (!on) listSel.clear();
+    el('listSelBtn').setAttribute('aria-pressed', on ? 'true' : 'false');
+    renderMain();
+  }
+  function toggleListSel(id) {
+    if (listSel.has(id)) listSel.delete(id); else listSel.add(id);
+    const n = el('list').querySelector('[data-item="' + id + '"]');
+    if (n) { n.classList.toggle('picked', listSel.has(id)); const b = n.querySelector('.pick-box'); if (b) b.innerHTML = listSel.has(id) ? '&#10003;' : ''; }
+    renderBulkBar();
+  }
+  function renderBulkBar() {
+    [...listSel].forEach(id => { if (!items.some(x => x.id === id)) listSel.delete(id); });
+    el('bulkBar').style.display = listSelOn ? '' : 'none';
+    if (!listSelOn) return;
+    const n = listSel.size;
+    el('bulkN').textContent = n ? n + ' seçili' : 'Kartlara dokun';
+    el('bulkBar').querySelectorAll('[data-bulk]').forEach(b => { if (!['all', 'close'].includes(b.dataset.bulk)) b.disabled = !n; });
+    el('bulkMove').innerHTML = '<option value="">Taşı…</option>' + projects.filter(p => p.id !== activeProject).map(p => '<option value="' + escAttr(p.id) + '">' + esc(p.name) + '</option>').join('');
+  }
+  async function bulkDo(act, val) {
+    const sel = items.filter(x => listSel.has(x.id));
+    if (act === 'all') { const all = listVisible.every(id => listSel.has(id)); listVisible.forEach(id => (all ? listSel.delete(id) : listSel.add(id))); renderMain(); return; }
+    if (act === 'close') { setListSel(false); return; }
+    if (!sel.length) return;
+    if (act === 'done') {
+      const open = sel.filter(x => x.type === 'task' && !x.done);
+      for (const x of open) { x.done = true; await saveItem(x); await afterTaskDone(x, false); }
+      showSnack(open.length ? open.length + ' görev tamamlandı.' : 'Seçilenlerde açık görev yok (notlar tamamlanmaz).');
+    } else if (act === 'tag') {
+      const t = prompt('Eklenecek etiket(ler) (virgülle):', '');
+      if (t === null) return;
+      const add = t.split(',').map(x => x.trim()).filter(Boolean).slice(0, 20);
+      if (!add.length) return;
+      for (const x of sel) { const have = new Set((x.tags || []).map(flFold)); add.forEach(a => { if (!have.has(flFold(a))) { x.tags.push(a.slice(0, 60)); have.add(flFold(a)); } }); await saveItem(x); }
+      showSnack(sel.length + ' karta etiket eklendi.');
+    } else if (act === 'prio') {
+      if (val === '') return;
+      for (const x of sel) { if (+val) x.prio = +val; else delete x.prio; await saveItem(x); }
+      showSnack(sel.length + ' kartın önceliği ' + (+val ? '“' + PRIO_NAME[+val] + '”' : 'kaldırıldı') + '.');
+    } else if (act === 'due') {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return;
+      for (const x of sel) { x.due = val; if (x.repeat) x.repeatDay = parseDay(val).getDate(); await saveItem(x); }
+      showSnack(sel.length + ' karta son tarih verildi: ' + fmtLongDay(val) + '.');
+    } else if (act === 'move') {
+      const p = projects.find(x => x.id === val);
+      if (!p) return;
+      const cols = projectColumns(p.id);
+      for (const x of sel) { x.projectId = p.id; x.columnId = cols.length ? cols[0].id : null; x.order = Date.now(); await saveItem(x); }
+      listSel.clear();
+      showSnack(sel.length + ' kart “' + p.name + '” projesine taşındı.');
+    } else if (act === 'del') {
+      if (!confirm(sel.length + ' kart çöp kutusuna taşınsın mı?')) return;
+      const ts = [];
+      for (const x of sel) {
+        const p = projects.find(y => y.id === x.projectId);
+        await deleteItemStore(x.id);
+        items = items.filter(y => y.id !== x.id);
+        ts.push(await addTrash('item', x.title || x.body.slice(0, 60), (x.type === 'task' ? 'Görev' : 'Not') + (p ? ' · ' + p.name : ''), { item: x }));
+      }
+      listSel.clear();
+      showSnack(sel.length + ' kart çöp kutusuna taşındı', async () => { for (const t of ts) await restoreTrash(t.id); });
+    }
     renderProjects(); renderMain(); renderBoard();
   }
 
@@ -4971,6 +5419,7 @@
     const byDay = {};
     const put = (ds, e) => { (byDay[ds] = byDay[ds] || []).push(e); };
     calItems().forEach(i => put(i.due, { i: i, ghost: false }));
+    items.filter(i => (calAll || i.projectId === activeProject) && i.subs).forEach(i => i.subs.forEach(x => { if (x.due) put(x.due, { i: i, sub: x, ghost: false }); }));
     // Tekrarlayan (tamamlanmamış) görevler ileriki günlerinde soluk gösterilir; tıklayınca asıl görev açılır
     calItems().filter(i => isRepeating(i) && !i.done).forEach(i => {
       let d = parseDay(i.due), guard = 0;
@@ -4980,7 +5429,8 @@
         if (d >= start && d >= todayD) put(dateStr(d), { i: i, ghost: true });
       }
     });
-    Object.values(byDay).forEach(l => l.sort((a, b) => (a.ghost - b.ghost) || (calCls(a.i) === 'done') - (calCls(b.i) === 'done') || a.i.created - b.i.created));
+    const eCls = e => (e.sub ? (e.sub.d ? 'done' : dayDiff(e.sub.due) < 0 ? 'late' : '') : calCls(e.i));
+    Object.values(byDay).forEach(l => l.sort((a, b) => (a.ghost - b.ghost) || (eCls(a) === 'done') - (eCls(b) === 'done') || !!a.sub - !!b.sub || a.i.created - b.i.created));
     const fmt = (d, o) => d.toLocaleDateString('tr-TR', o);
     el('calTitle').textContent = !week ? fmt(new Date(calMonth.y, calMonth.m, 1), { month: 'long', year: 'numeric' })
       : start.getMonth() === end.getMonth() ? start.getDate() + ' – ' + fmt(end, { day: 'numeric', month: 'long', year: 'numeric' })
@@ -5000,10 +5450,12 @@
       const label = d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }) + (list.length ? ', ' + list.length + ' öğe' : '');
       h += '<button class="' + cls + '" type="button" role="gridcell" data-day="' + ds + '" aria-label="' + escAttr(label) + '">' +
         '<span class="cal-num">' + d.getDate() + '</span>' +
-        list.slice(0, lim).map(e => '<span class="cal-item ' + (e.ghost ? 'ghost' : calCls(e.i)) + '" data-open="' + e.i.id + '" title="' + escAttr(name(e.i) + (e.ghost ? ' · ' + repName(e.i.repeat) : '')) + '">' +
+        list.slice(0, lim).map(e => e.sub
+          ? '<span class="cal-item sub ' + eCls(e) + '" data-open="' + e.i.id + '" title="' + escAttr(e.sub.t + ' · ' + name(e.i)) + '">&#8627; ' + esc(e.sub.t) + '</span>'
+          : '<span class="cal-item ' + (e.ghost ? 'ghost' : calCls(e.i)) + '" data-open="' + e.i.id + '" title="' + escAttr(name(e.i) + (e.ghost ? ' · ' + repName(e.i.repeat) : '')) + '">' +
           (e.ghost ? REP_ICO + ' ' : '') + esc(name(e.i)) + '</span>').join('') +
         (list.length > lim ? '<span class="cal-more">+' + (list.length - lim) + ' daha</span>' : '') +
-        (list.length ? '<span class="cal-dots">' + list.slice(0, 6).map(e => '<i class="' + (e.ghost ? 'ghost' : calCls(e.i)) + '"></i>').join('') + '</span>' : '') +
+        (list.length ? '<span class="cal-dots">' + list.slice(0, 6).map(e => '<i class="' + (e.ghost ? 'ghost' : eCls(e)) + '"></i>').join('') + '</span>' : '') +
       '</button>';
     }
     el('calGrid').innerHTML = h;
@@ -5030,7 +5482,12 @@
     el('calDay').innerHTML =
       '<h4><span>' + esc(fmtLongDay(calSel)) + (rel ? ' · ' + rel : '') + '</span>' +
       '<button class="er-btn" type="button" data-caladd>+ Bu güne görev ekle</button></h4>' +
-      (list.length ? list.map(({ i, ghost }) => ghost
+      (list.length ? list.map(({ i, ghost, sub }) => sub
+        ? '<div class="cal-row sub" data-open="' + i.id + '" title="Alt görev · ' + escAttr(i.title || i.body || '') + '">' +
+            '<input type="checkbox" data-calsub="' + i.id + ':' + sub.id + '"' + (sub.d ? ' checked' : '') + ' aria-label="Alt görev tamamlandı">' +
+            '<span class="t' + (sub.d ? ' done' : '') + '">&#8627; ' + esc(sub.t) + '</span><span class="pj">' + esc(i.title || i.body || '(başlıksız)') + '</span>' +
+          '</div>'
+        : ghost
         ? '<div class="cal-row ghost" data-open="' + i.id + '" title="Tekrarlayan görev: bu gün için kopyası, önceki tamamlanınca açılır">' + REP_ICO +
             '<span class="t">' + esc(i.title || i.body || '(başlıksız)') + '</span>' +
             (calAll ? '<span class="pj">' + esc(pname(i.projectId)) + '</span>' : '') + '<span class="rep-tag">' + esc(repName(i.repeat)) + '</span>' +
@@ -15710,6 +16167,7 @@
       else if (el('backupModal').classList.contains('open')) closeBackupModal();
       else if (el('flAlgoModal').classList.contains('open')) el('flAlgoModal').classList.remove('open');
       else if (currentView === 'flow' && flSel && !document.querySelector('.modal-overlay.open')) flSelect(null);
+      else if (currentView === 'list' && listSelOn && !document.querySelector('.modal-overlay.open')) setListSel(false);
       return;
     }
     if (currentView !== 'flow') return;
@@ -16473,6 +16931,8 @@
       if (!(Number.isInteger(i.repeatDay) && i.repeatDay >= 1 && i.repeatDay <= 31)) delete i.repeatDay;
       if (i.repeatNext != null && !SAFE_ID.test(i.repeatNext)) delete i.repeatNext;
       if (i.cover && !(typeof i.cover === 'string' && SAFE_COVER.test(i.cover))) i.cover = null;
+      if (![1, 2, 3].includes(i.prio)) delete i.prio;                                      // öncelik: 1 yüksek, 2 orta, 3 düşük
+      if (Array.isArray(i.subs) && i.subs.length) i.subs = cleanSubs(i.subs); else delete i.subs; // alt görevler
       i.created = +i.created || Date.now();
       return i;
     });
@@ -16864,11 +17324,16 @@
   });
   el('calDay').addEventListener('click', e => {
     if (e.target.closest('[data-caladd]')) { calAddTask(); return; }
-    if (e.target.closest('[data-caldone]')) return; // değişiklik olayı işler
+    if (e.target.closest('[data-caldone], [data-calsub]')) return; // değişiklik olayı işler
     const r = e.target.closest('[data-open]');
     if (r) openCard(r.dataset.open);
   });
-  el('calDay').addEventListener('change', e => { const c = e.target.closest('[data-caldone]'); if (c) toggleDone(c.dataset.caldone); });
+  el('calDay').addEventListener('change', e => {
+    const c = e.target.closest('[data-caldone]');
+    if (c) { toggleDone(c.dataset.caldone); return; }
+    const sb = e.target.closest('[data-calsub]');
+    if (sb) { const [a, b] = sb.dataset.calsub.split(':'); toggleSub(a, b); }
+  });
 
   /* ---- TÜM PROJELERDE ARA olayları ---- */
   if (/Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent)) {
@@ -16977,6 +17442,109 @@
 
   /* ---- SON TARİH olayları ---- */
   el('dueFilters').addEventListener('click', e => { const b = e.target.closest('[data-df]'); if (!b) return; dueFilter = b.dataset.df || null; renderMain(); });
+  /* sıralama, öncelik süzgeci, kayıtlı görünümler, toplu işlem */
+  el('listSort').value = ['due', 'prio', 'name'].includes(localGet('pref:listsort')) ? localGet('pref:listsort') : 'new';
+  el('listSort').addEventListener('change', () => { localSet('pref:listsort', el('listSort').value === 'new' ? '' : el('listSort').value); renderMain(); });
+  el('listPrio').addEventListener('change', renderMain);
+  el('viewSave').addEventListener('click', saveView);
+  el('viewChips').addEventListener('click', e => {
+    const d = e.target.closest('[data-viewdel]');
+    if (d) { const list = savedViews(); list.splice(+d.dataset.viewdel, 1); localSet(viewKey(), list.length ? JSON.stringify(list) : ''); renderViews(); return; }
+    const v = e.target.closest('[data-view]');
+    if (v) applyView(+v.dataset.view);
+  });
+  el('listSelBtn').addEventListener('click', () => setListSel(!listSelOn));
+  /* Seçim kipinde karttaki düğme / kutucuk / bağlantılar çalışmasın: tıklama yalnızca seçer
+     (yakalama aşamasında, kartın içindekilerden önce) */
+  el('list').addEventListener('click', e => {
+    if (!listSelOn) return;
+    const n = e.target.closest('[data-item]');
+    if (!n) return;
+    e.preventDefault(); e.stopPropagation();
+    toggleListSel(n.dataset.item);
+  }, true);
+  el('bulkBar').addEventListener('click', e => { const b = e.target.closest('button[data-bulk]'); if (b) bulkDo(b.dataset.bulk); });
+  let bulkDueT = 0;
+  el('bulkBar').addEventListener('change', e => {
+    const c = e.target.closest('select[data-bulk], input[data-bulk]');
+    if (!c) return;
+    if (c.type === 'date') {
+      // Klavyeyle yazarken yıl her rakamda değişir (0002, 0020, 0202, 2026): yazma bitince uygula
+      clearTimeout(bulkDueT);
+      const y = +c.value.slice(0, 4);
+      if (!(y >= 1900 && y <= 2999)) return;
+      bulkDueT = setTimeout(() => { const v = c.value; c.value = ''; bulkDo('due', v); }, 700);
+      return;
+    }
+    const v = c.value; c.value = '';
+    bulkDo(c.dataset.bulk, v);
+  });
+  /* şablon menüsü */
+  el('tplBtn').addEventListener('click', e => { e.stopPropagation(); renderTplMenu(); el('tplMenu').classList.toggle('open'); });
+  el('tplMenu').addEventListener('click', e => {
+    e.stopPropagation();
+    const d = e.target.closest('[data-tpldel]');
+    if (d) { const mine = userTemplates(); mine.splice(+d.dataset.tpldel, 1); localSet('pref:tpls', mine.length ? JSON.stringify(mine) : ''); renderTplMenu(); return; }
+    const t = e.target.closest('[data-tpl]');
+    if (t) applyTemplate(t.dataset.tpl);
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('#tplMenu, #tplBtn')) el('tplMenu').classList.remove('open'); });
+  el('modalTplSave').addEventListener('click', saveAsTemplate);
+  /* kart penceresi: öncelik, alt görevler */
+  el('modalType').addEventListener('change', () => { el('modalSubsWrap').style.display = el('modalType').value === 'task' || modalSubs.length ? '' : 'none'; });
+  el('modalSubNew').addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const t = el('modalSubNew').value.trim();
+    if (!t) return;
+    if (modalSubs.length >= 100) { alert('En fazla 100 alt görev olabilir.'); return; }
+    modalSubs.push({ id: uid(), t: t.slice(0, 300), d: false, due: null });
+    el('modalSubNew').value = '';
+    renderModalSubs();
+  });
+  el('modalSubs').addEventListener('input', e => {
+    const r = e.target.closest('[data-sub]');
+    if (!r) return;
+    const x = modalSubs[+r.dataset.sub];
+    if (e.target.matches('[data-subt]')) x.t = e.target.value.slice(0, 300);
+  });
+  el('modalSubs').addEventListener('change', e => {
+    const r = e.target.closest('[data-sub]');
+    if (!r) return;
+    const x = modalSubs[+r.dataset.sub];
+    if (e.target.matches('[data-subd]')) { x.d = e.target.checked; r.classList.toggle('done', x.d); renderModalSubsProg(); }
+    else if (e.target.matches('[data-subdue]')) x.due = e.target.value || null;
+  });
+  el('modalSubs').addEventListener('click', e => {
+    const r = e.target.closest('[data-sub]');
+    if (!r) return;
+    const k = +r.dataset.sub;
+    if (e.target.closest('[data-subdel]')) { modalSubs.splice(k, 1); renderModalSubs(); }
+    else if (e.target.closest('[data-subup]') && k > 0) { [modalSubs[k - 1], modalSubs[k]] = [modalSubs[k], modalSubs[k - 1]]; renderModalSubs(); }
+  });
+  function renderModalSubsProg() { const n = modalSubs.filter(x => x.d).length; el('modalSubsProg').textContent = modalSubs.length ? n + '/' + modalSubs.length : ''; }
+  /* [[bağlantı]]: tıklayınca nota git; yazarken öneri */
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[data-wl]');
+    if (!a || (listSelOn && a.closest('#list'))) return; // seçim kipinde kart seçilir
+    e.preventDefault(); e.stopPropagation();
+    openWikiLink(a.dataset.wl);
+  }, true);
+  el('modalBacklinks').addEventListener('click', async e => {
+    const b = e.target.closest('[data-blopen]');
+    if (!b) return;
+    await saveOpenCard(); el('cardModal').classList.remove('open'); openCardId = null;
+    const x = items.find(y => y.id === b.dataset.blopen);
+    if (x) { if (x.projectId !== activeProject) switchProject(x.projectId); openCard(x.id); }
+  });
+  el('modalDesc').addEventListener('input', () => wlSuggest(el('modalDesc'), el('wlSuggest')));
+  el('wlSuggest').addEventListener('mousedown', e => { const b = e.target.closest('[data-wlpick]'); if (b) { e.preventDefault(); wlPick(el('wlSuggest'), b.dataset.wlpick); } });
+  el('modalDesc').addEventListener('keydown', e => {
+    if (el('wlSuggest').hidden) return;
+    if (e.key === 'Escape') { el('wlSuggest').hidden = true; e.stopPropagation(); }
+    else if (e.key === 'Enter' || e.key === 'Tab') { const b = el('wlSuggest').querySelector('[data-wlpick]'); if (b) { e.preventDefault(); wlPick(el('wlSuggest'), b.dataset.wlpick); } }
+  });
+  el('modalDesc').addEventListener('blur', () => setTimeout(() => { el('wlSuggest').hidden = true; }, 150));
   el('modalDue').addEventListener('change', updateModalDueHint);
   el('modalDueClear').addEventListener('click', () => { el('modalDue').value = ''; el('modalRepeat').value = ''; updateModalDueHint(); });
   // Tekrar seçilince tarih yoksa bugün olur (tekrar son tarihe göre hesaplanır)
