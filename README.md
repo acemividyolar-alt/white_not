@@ -76,23 +76,47 @@ sekme sarı alt çizgiyle gösterilir (açık renk yazının üstüne sarı bant
   Aylık tekrarda gün ayın sonuna sığdırılır ama unutulmaz (31 Ocak → 28 Şubat → 31 Mart).
 
 ### Takvim
-- Son tarihi olan not ve görevler **aylık** ya da **haftalık** takvimde (Ay / Hafta); güne tıklayınca o günün listesi
+- Son tarihi olan not ve görevler **Ay**, **Hafta** ya da **Gün** görünümünde; güne tıklayınca o günün listesi
 - O güne doğrudan görev ekleme, görevi oradan tamamlama, "Tüm projeler" seçeneği
-- Tekrarlayan görevlerin ileriki günleri takvimde soluk ve kesik çizgili görünür
+- **Saatli görevler:** kart penceresinde son tarihin yanına saat ve süre (15 dk – 4 saat) verilir; rozette
+  "Bugün 14:30" görünür, saati geçen bugünkü görev gecikmiş sayılır
+- **Gün görünümü:** üstte "Tüm gün" şeridi, altta saat çizelgesi (saatli görevler, o günün dersleri, kırmızı
+  "şimdi" çizgisi). Çizelgede boş bir yere dokununca o saate görev eklenir
+- **Sürükle bırak:** Ay / Hafta'da kartı başka güne bırakınca tarihi değişir (alt görevler de taşınır);
+  Gün'de saatli kartı yukarı / aşağı çekince saati 15 dakikalık adımlarla değişir, "Tüm gün"e bırakınca saati
+  kalkar, "Tüm gün"deki kartı çizelgeye bırakınca saat alır. Telefonda karta kısa süre basılı tutup sürükle.
+  Her taşımadan sonra alttaki bildirimden **Geri al**
+- Tekrarlayan görevlerin ileriki günleri takvimde soluk ve kesik çizgili görünür; tamamlanınca açılan yeni
+  kopya saati, süreyi, önceliği ve (işaretsiz) alt görevleri taşır
 - Tarihli alt görevler takvimde "↳" ile görünür ve günün listesinden işaretlenir
-- **Hatırlat:** açınca (tarayıcı bildirim izni ister) bugün, yarın ve gecikmiş görevler için bildirim gelir:
-  sayfa açılınca, sekmeye dönünce ve açıkken 5 dakikada bir bakılır; aynı görev için günde bir kez.
+- **Hatırlat:** açınca (tarayıcı bildirim izni ister) bugün, yarın ve gecikmiş görevler için bildirim gelir;
+  saatli görevler için ayrıca **15 dakika kala**. Sayfa açılınca, sekmeye dönünce ve açıkken dakikada bir bakılır.
   Sunucu olmadığı için tarayıcı tamamen kapalıyken bildirim gelmez.
-- **Takvim dosyası (.ics):** *Dışa / İçe aktar → Takvim dosyası* son tarihli not ve görevleri Google Takvim,
-  Outlook ya da telefonun takvimine aktarılabilen dosyaya yazar (tekrarlayanlar tekrar kuralıyla).
+- **Takvim dosyası (.ics) dışa aktar:** *Dışa / İçe aktar → Takvim dosyası* son tarihli not ve görevleri Google Takvim,
+  Outlook ya da telefonun takvimine aktarılabilen dosyaya yazar (saatliler saatiyle, tekrarlayanlar tekrar kuralıyla).
   Google Takvim'de: Ayarlar → İçe ve dışa aktar → İçe aktar.
+- **Takvim dosyası (.ics) yükle:** *Dışa / İçe aktar → Takvim dosyası yükle* Google Takvim, Outlook ya da okulun
+  takviminden alınan dosyadaki etkinlikleri ve yapılacakları açık projeye ekler: saat (saat dilimi dahil), süre,
+  yer, açıklama, kategoriler (etiket olur) ve tekrar (her gün / hafta içi / her hafta / her ay / her yıl).
+  Geçmişte başlamış tekrarlayan etkinlik bu haftaya kaydırılır; geçmiş tarihliler istenirse alınır;
+  iptal edilenler alınmaz. Aynı dosya tekrar yüklenirse daha önce eklenenler tekrar eklenmez
+- **Ders programı (Program):** haftalık ders çizelgesi. Hazır saatlerle başla (okul: 40 dk ders / 10 dk teneffüs,
+  üniversite: 50 dk) ya da saatleri kendin ekle; kutuya dokunup ders adını, dersliği / öğretmeni yaz, renk seç
+  (aynı ders her yerde aynı renkte). Cumartesi / Pazar eklenebilir, saatler düzenlenebilir, **yazdırılabilir**.
+  Dersler Gün görünümünde de çıkar; derse dokununca (ya da ders penceresinde *Bu derse ödev ekle*) teslim tarihi
+  **bir sonraki o ders** olan bir ödev eklenir. Program projeye kayıtlıdır (yedekle, ekiple ve GitHub'la gider)
 
 ### Pano
 - Trello tarzı sütunlar: ekle, yeniden adlandır, renk ver, sil
 - Kartları sütunlar arasında ve sütun içinde **sürükleyerek** taşı
   (telefonda karta kısa süre basılı tut, sonra sürükle)
 - Sütunları başlığından tutup **sürükleyerek** sırala
-- "Bitti" benzeri sütuna taşınan görev otomatik tamamlanır
+- "Bitti" benzeri sütuna taşınan görev otomatik tamamlanır; başka bir sütunu da menüden **Bitti sütunu** yapabilirsin
+- **Kart sınırı (Kanban WIP):** sütun menüsünden "aynı anda en fazla şu kadar kart" sınırı; başlıkta 3/5 görünür,
+  sınır dolunca sarı, aşılınca kırmızı olur ve uyarı çıkar (kart yine de taşınır)
+- **Pano şablonları:** *Pano şablonu* menüsünde hazır sütun düzenleri (Kanban, Ödev takibi, Proje, Sınav dönemi,
+  Haftalık plan, Hata takibi, Okuma listesi). Kartı olan sütunlar yerinde kalır, boş sütunlar kaldırılır;
+  **Geri al** ile eski hâline döner. Kendi panonu da şablon olarak kaydedebilirsin (bu cihazda)
 
 ### Şema (SQLite tasarımcısı)
 - Serbest tuvalde tablolar; başlığından tutup istediğin yere taşı

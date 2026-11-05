@@ -566,7 +566,7 @@
   .c-title-row { display: flex; align-items: center; gap: 0.4rem; }
   .c-title-row .c-title { flex: 1; min-width: 0; }
   .c-tpl-btn { height: 30px; font-size: 0.8125rem; padding: 0 0.6rem; flex-shrink: 0; }
-  #tplMenu { right: 0; left: auto; min-width: 15rem; }
+  @media (min-width: 761px) { #tplMenu { right: 0; left: auto; min-width: 15rem; } }
   .tpl-mine { display: flex; align-items: stretch; }
   .tpl-mine button:first-child { flex: 1; }
   .tpl-mine .tpl-del { flex: 0 0 auto; width: 2.2rem; justify-content: center; color: var(--muted); }
@@ -848,6 +848,18 @@
     color: var(--muted); cursor: pointer; font-size: 0.9rem; font-weight: 560; padding: 0 0.9rem; text-align: left;
   }
   .add-column:hover { border-color: var(--muted); color: var(--ink); background: var(--col-bg); }
+  .add-col-wrap { display: flex; flex-direction: column; gap: 0.5rem; flex-shrink: 0; }
+  .add-column.tpl { min-height: 40px; font-size: 0.85rem; }
+  @media (min-width: 761px) { #boardTplMenu { left: 0; right: auto; min-width: 18rem; max-height: min(70vh, 34rem); overflow-y: auto; } }
+  .btpl { display: flex; flex-direction: column; padding: 0.3rem 0; line-height: 1.3; min-width: 0; }
+  .btpl small { font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 15.5rem; }
+  #boardTplMenu button { min-height: 40px; }
+  .column-count.full { color: var(--warn); background: var(--warn-soft); }
+  .column-count.over { color: var(--danger); background: var(--danger-soft); }
+  .column.lim.over { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--danger) 55%, transparent); }
+  .col-done-ico { color: var(--green); font-weight: 800; font-size: 0.8rem; margin-left: auto; }
+  .col-done-ico + .column-count { margin-left: 0; }
+  .col-menu button:disabled { color: var(--muted); cursor: default; background: transparent; }
 
   /* Sütun açılır menüsü (renk seç / yeniden adlandır / sil) */
   .col-menu {
@@ -932,6 +944,100 @@
   .cal-dots i.ghost { background: transparent; box-shadow: inset 0 0 0 1.5px var(--accent); }
   .cal-row.ghost { color: var(--muted); }
   .cal-row .rep-tag { font-size: 0.75rem; color: var(--muted); flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.25rem; }
+  .cal-t { font-weight: 700; font-variant-numeric: tabular-nums; }
+  /* Gün ve Program kipinde aylık ızgara ve gün listesi yerine kendi düzenleri */
+  .cal-grid.dayv, .cal-grid.ttv { display: block; background: var(--paper); }
+  .cal-wrap[data-mode="day"] .cal-day, .cal-wrap[data-mode="tt"] .cal-day { display: none; }
+  .cal-wrap[data-mode="tt"] #calPrev, .cal-wrap[data-mode="tt"] #calNext, .cal-wrap[data-mode="tt"] #calToday, .cal-wrap[data-mode="tt"] .cal-all { display: none; }
+  /* Sürükleme */
+  .cal-item[data-drag], .cal-item[data-sub], .cd-chip[data-drag], .cd-ev { cursor: grab; }
+  .cal-cell.drop { box-shadow: inset 0 0 0 2px var(--accent); background: var(--accent-soft); }
+  .cal-drag-ghost { position: fixed; z-index: 200; pointer-events: none; opacity: 0.92; box-shadow: var(--shadow-2); transform: rotate(-1.5deg); }
+  .cd-dragging { opacity: 0.55; }
+  .cd-ev.cd-dragging { opacity: 0.9; z-index: 5; box-shadow: var(--shadow-2); }
+  .cd-ev.to-allday { opacity: 0.35; }
+  .touch-armed { outline: 2px solid var(--accent); }
+  /* Gün görünümü */
+  .cd-allday { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--line); background: var(--paper-2); }
+  .cd-allday.drop { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
+  .cd-lbl { font-size: 0.72rem; font-weight: 700; color: var(--muted); width: 3.4rem; flex-shrink: 0; padding-top: 0.4rem; }
+  .cd-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; min-width: 0; flex: 1; align-items: center; }
+  .cd-chip { display: inline-flex; align-items: center; gap: 0.4rem; max-width: 100%; min-height: 32px; padding: 0.15rem 0.6rem 0.15rem 0.45rem; border-radius: 6px;
+    background: var(--accent-soft); border-left: 3px solid var(--accent); font-size: 0.85rem; cursor: pointer; }
+  .cd-chip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .cd-chip small { color: var(--muted); font-size: 0.72rem; }
+  .cd-chip.late { background: var(--danger-soft); border-left-color: var(--danger); }
+  .cd-chip.done { opacity: 0.6; border-left-color: var(--green); }
+  .cd-chip.done span { text-decoration: line-through; }
+  .cd-chip.note { background: var(--paper); border-left-color: var(--muted); }
+  .cd-chip.ghost { background: transparent; border: 1px dashed var(--line-2); border-left: 3px dashed var(--accent); color: var(--muted); }
+  .cd-chip.sub { font-style: italic; }
+  .cd-chip input { width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--accent); }
+  .cd-add { height: 32px; font-size: 0.8125rem; }
+  .cd-scroll { height: min(62vh, 640px); overflow-y: auto; position: relative; overscroll-behavior: contain; }
+  .cd-grid { position: relative; margin-left: 3.6rem; margin-right: 0.4rem; cursor: copy; }
+  .cd-hour { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid var(--line); }
+  .cd-hour span { position: absolute; left: -3.3rem; top: -0.55rem; font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .cd-hour::after { content: ''; position: absolute; left: 0; right: 0; top: 24px; border-top: 1px dashed color-mix(in srgb, var(--line) 70%, transparent); }
+  .cd-lesson { position: absolute; left: 0; right: 0; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 0.05rem;
+    padding: 0.15rem 0.5rem; border: 0; border-left: 3px solid var(--c, var(--muted)); border-radius: 4px; font: inherit; text-align: left; cursor: pointer; overflow: hidden;
+    color: var(--muted); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c, var(--muted)) 9%, var(--paper)) 0 8px, color-mix(in srgb, var(--c, var(--muted)) 14%, var(--paper)) 8px 16px); }
+  .cd-lesson b { font-size: 0.78rem; color: var(--ink-2); }
+  .cd-lesson span { font-size: 0.7rem; }
+  .cd-ev { position: absolute; z-index: 2; display: flex; align-items: flex-start; gap: 0.35rem; padding: 0.2rem 0.4rem; border-radius: 5px; overflow: hidden;
+    background: color-mix(in srgb, var(--accent) 16%, var(--paper)); border-left: 3px solid var(--accent); font-size: 0.8rem; line-height: 1.3; box-shadow: 0 1px 0 var(--line); }
+  .cd-ev.late { background: color-mix(in srgb, var(--danger) 14%, var(--paper)); border-left-color: var(--danger); }
+  .cd-ev.done { opacity: 0.6; border-left-color: var(--green); }
+  .cd-ev.done .cd-ev-t { text-decoration: line-through; }
+  .cd-ev.note { background: var(--paper-2); border-left-color: var(--muted); }
+  .cd-ev input { width: 15px; height: 15px; margin-top: 0.1rem; flex-shrink: 0; accent-color: var(--accent); }
+  .cd-ev-t { min-width: 0; overflow: hidden; }
+  .cd-ev-t b { font-variant-numeric: tabular-nums; }
+  .cd-now { position: absolute; left: -0.4rem; right: 0; height: 0; border-top: 2px solid var(--danger); z-index: 3; pointer-events: none; }
+  .cd-now::before { content: ''; position: absolute; left: -5px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); }
+  .cd-drop { position: absolute; left: 0; right: 0; height: 0; border-top: 2px dashed var(--accent); z-index: 4; pointer-events: none; font-size: 0.72rem; font-weight: 700; color: var(--accent); padding-left: 0.3rem; }
+  .cd-hint { font-size: 0.8125rem; color: var(--muted); padding: 0.6rem 0.8rem; border-top: 1px solid var(--line); }
+  /* Ders programı */
+  .tt-bar { display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center; padding: 0.6rem 0.7rem; border-bottom: 1px solid var(--line); background: var(--paper-2); }
+  .tt-bar .er-btn, .tt-bar .modal-select { height: calc(var(--ctl-h) - 4px); font-size: 0.8125rem; }
+  .tt-bar .tt-del { color: var(--danger); margin-left: auto; }
+  .tt-scroll { overflow-x: auto; }
+  table.tt { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.tt th, table.tt td { border-bottom: 1px solid var(--line); border-left: 1px solid var(--line); padding: 0.2rem; vertical-align: top; }
+  table.tt thead th { font-size: 0.75rem; font-weight: 680; color: var(--muted); padding: 0.45rem 0.3rem; text-align: left; background: var(--paper-2); }
+  table.tt th.today, table.tt td.today { background: color-mix(in srgb, var(--hl) 22%, var(--paper)); }
+  table.tt .tt-time { width: 3.8rem; border-left: 0; }
+  .tt-time button { width: 100%; border: 0; background: transparent; font: inherit; font-size: 0.78rem; font-weight: 700; color: var(--ink-2); text-align: left; padding: 0.3rem 0.2rem;
+    cursor: pointer; border-radius: 4px; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; }
+  .tt-time button span { font-weight: 500; color: var(--muted); font-size: 0.72rem; }
+  .tt-time button:hover { background: var(--accent-soft); }
+  .tt-cell { width: 100%; min-height: 3.1rem; border: 1px dashed transparent; border-radius: 5px; background: transparent; font: inherit; text-align: left; cursor: pointer;
+    display: flex; flex-direction: column; gap: 0.1rem; padding: 0.3rem 0.4rem; color: var(--ink); }
+  .tt-cell:hover { border-color: var(--line-2); background: var(--paper-2); }
+  .tt-cell.on { border: 0; border-left: 3px solid var(--c); background: color-mix(in srgb, var(--c) 12%, var(--paper)); }
+  .tt-cell b { font-size: 0.8rem; line-height: 1.25; overflow-wrap: break-word; hyphens: auto; }
+  .tt-cell small { font-size: 0.7rem; color: var(--muted); overflow-wrap: anywhere; }
+  .tt-plus { color: var(--line-2); font-size: 1.1rem; margin: auto; }
+  .tt-cell:hover .tt-plus { color: var(--muted); }
+  .tt-hint { font-size: 0.8rem; color: var(--muted); padding: 0.6rem 0.8rem; line-height: 1.5; }
+  .tt-empty { padding: 1.4rem 1.2rem; max-width: 40rem; }
+  .tt-empty h4 { font-size: 1.05rem; margin-bottom: 0.4rem; }
+  .tt-empty p { color: var(--ink-2); font-size: 0.9rem; line-height: 1.55; margin-bottom: 0.9rem; }
+  .tt-presets { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .tt-presets .er-btn { height: auto; flex-direction: column; align-items: flex-start; padding: 0.55rem 0.8rem; gap: 0.1rem; text-align: left; }
+  .tt-presets small { font-size: 0.75rem; color: var(--muted); font-weight: 500; }
+  .tt-colors { padding-left: 0; }
+  /* Takvim dosyası içe aktarma */
+  .ics-prev { border: 1px solid var(--line); border-radius: var(--r); margin: 0.2rem 0 0.8rem; max-height: 14rem; overflow-y: auto; }
+  .ics-prev:empty { display: none; }
+  .ics-row { display: flex; gap: 0.6rem; align-items: center; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
+  .ics-row:last-child { border-bottom: 0; }
+  .ics-row .d { color: var(--muted); font-size: 0.78rem; white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 6.5rem; }
+  .ics-row .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ics-row .r { font-size: 0.72rem; color: var(--accent); white-space: nowrap; }
+  .ics-more { font-size: 0.78rem; color: var(--muted); padding: 0.35rem 0.6rem; }
+  .ics-opts { margin-bottom: 0.5rem; }
+  .ics-opts label { font-size: 0.875rem; color: var(--ink-2); }
   /* Tekrar simgesi (son tarih rozetinde ve takvimde) */
   .rep-ico { width: 12px; height: 12px; flex-shrink: 0; }
   .due .rep-ico { margin-left: 0.05rem; }
@@ -975,6 +1081,8 @@
   }
   .modal-tags-input { width: 100%; }
   .modal-row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+  .due-row .due-hint { flex-basis: 100%; }
+  .due-row #modalTime { min-width: 6.6rem; }
   .modal-actions { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; margin-top: 1.4rem; flex-wrap: wrap; }
   .modal-actions-right { display: flex; gap: 0.5rem; flex-wrap: wrap; }
   .modal-note { font-size: 0.875rem; color: var(--muted); line-height: 1.6; margin-bottom: 0.85rem; }
@@ -2128,12 +2236,16 @@
               <div class="menu-group-label">Yedek</div>
               <button data-act="json-export">JSON yedeği indir</button>
               <button data-act="json-import">JSON yedeği yükle&hellip;</button>
+              <div class="sep"></div>
+              <div class="menu-group-label">Takvim</div>
+              <button data-act="ics-import">Takvim dosyası yükle (.ics)&hellip;</button>
               <div class="sep install-only"></div>
               <div class="menu-group-label install-only">Uygulama</div>
               <button data-act="install" class="install-only">Telefona / bilgisayara yükle&hellip;</button>
             </div>
             <!-- Gizli dosya seçici; "JSON yedeği yükle" tıklanınca tetiklenir -->
             <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+            <input type="file" id="icsFile" accept=".ics,text/calendar" style="display:none">
           </div>
         </div>
       </header>
@@ -2252,6 +2364,8 @@
             <div class="seg" role="group" aria-label="Takvim görünümü">
               <button type="button" id="calModeMonth" aria-pressed="true">Ay</button>
               <button type="button" id="calModeWeek" aria-pressed="false">Hafta</button>
+              <button type="button" id="calModeDay" aria-pressed="false">Gün</button>
+              <button type="button" id="calModeTT" aria-pressed="false" title="Haftalık ders programı">Program</button>
             </div>
             <button class="er-btn" id="calRemind" type="button" title="Son tarihi gelen görevler için bildirim">&#128276; Hatırlat</button>
             <label class="opt cal-all"><input type="checkbox" id="calAll"> Tüm projeler</label>
@@ -2523,8 +2637,13 @@
       </div>
 
       <div class="modal-section-label">Son tarih</div>
-      <div class="modal-row">
+      <div class="modal-row due-row">
         <input type="date" class="modal-select" id="modalDue" aria-label="Son tarih">
+        <input type="time" class="modal-select" id="modalTime" aria-label="Saat (isteğe bağlı)" title="Saat (isteğe bağlı)">
+        <select class="modal-select" id="modalDur" aria-label="Süre" title="Süre">
+          <option value="">Süre yok</option><option value="15">15 dk</option><option value="30">30 dk</option><option value="45">45 dk</option>
+          <option value="60">1 saat</option><option value="90">1,5 saat</option><option value="120">2 saat</option><option value="180">3 saat</option><option value="240">4 saat</option>
+        </select>
         <button class="modal-btn" id="modalDueClear" type="button">Tarihi kaldır</button>
         <span class="due-hint" id="modalDueHint"></span>
       </div>
@@ -2788,6 +2907,59 @@
       <div class="modal-actions">
         <button class="modal-btn" id="bkCancel">Vazgeç</button>
         <button class="modal-btn primary" id="bkGo">Ekle</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     DERS PROGRAMI: bir kutudaki dersi düzenle
+     =================================================================== -->
+<div class="modal-overlay" id="ttModal">
+  <div class="modal tt-modal" role="dialog" aria-modal="true" aria-labelledby="ttmTitle">
+    <div class="modal-head">
+      <div class="modal-heading" id="ttmTitle">Ders</div>
+      <button class="modal-close" id="ttmClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label class="modal-section-label" for="ttmName">Ders</label>
+      <input class="modal-tags-input" id="ttmName" maxlength="40" list="ttmNames" placeholder="ör. Matematik" autocomplete="off">
+      <datalist id="ttmNames"></datalist>
+      <label class="modal-section-label" for="ttmRoom">Derslik / öğretmen (isteğe bağlı)</label>
+      <input class="modal-tags-input" id="ttmRoom" maxlength="40" placeholder="ör. B12 · Ayşe Hoca" autocomplete="off">
+      <div class="modal-section-label">Renk</div>
+      <div class="color-dots tt-colors" id="ttmColors"></div>
+      <div class="modal-actions">
+        <div class="modal-actions-left">
+          <button class="modal-btn danger" id="ttmClear" type="button">Boşalt</button>
+          <button class="modal-btn" id="ttmHw" type="button" title="Teslim tarihi bir sonraki bu ders olan bir görev ekler">Bu derse ödev ekle</button>
+        </div>
+        <button class="modal-btn primary" id="ttmSave" type="button">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     TAKVİM DOSYASI (.ics) İÇE AKTAR
+     =================================================================== -->
+<div class="modal-overlay" id="icsModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Takvim dosyasını içe aktar">
+    <div class="modal-head">
+      <div class="modal-heading">Takvim dosyasını içe aktar</div>
+      <button class="modal-close" id="icsClose" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-note" id="icsInfo"></p>
+      <div class="ics-prev" id="icsPrev"></div>
+      <div class="modal-row ics-opts">
+        <label for="icsAs">Ne olarak eklensin?</label>
+        <select class="modal-select" id="icsAs"><option value="task">Görev (işaretlenebilir)</option><option value="note">Not</option></select>
+      </div>
+      <label class="opt"><input type="checkbox" id="icsPast"> Geçmiş tarihli olanları da al</label>
+      <div class="modal-actions">
+        <button class="modal-btn" id="icsCancel" type="button">Vazgeç</button>
+        <button class="modal-btn primary" id="icsGo" type="button">Ekle</button>
       </div>
     </div>
   </div>
@@ -4037,6 +4209,18 @@
     return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(t.getFullYear(), t.getMonth(), t.getDate())) / 86400000);
   }
   function parseDay(due) { const [y, m, d] = due.split('-').map(Number); return new Date(y, m - 1, d); }
+  /* Saat: 'SS:DD' metni; gün içindeki dakikaya çevrilir */
+  const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+  const tMin = t => +t.slice(0, 2) * 60 + +t.slice(3, 5);
+  const minT = m => pad2(Math.floor(m / 60)) + ':' + pad2(m % 60);
+  const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+  /* "14:30–15:15" (süre yoksa yalnız başlangıç) */
+  function timeRange(i) {
+    if (!i.time) return '';
+    if (!i.dur) return i.time;
+    const e = tMin(i.time) + i.dur;
+    return i.time + '–' + (e >= 1440 ? minT(e - 1440) + ' (+1)' : minT(e));
+  }
   function fmtDay(due) {
     const d = parseDay(due), sameYear = d.getFullYear() === new Date().getFullYear();
     return d.toLocaleDateString('tr-TR', sameYear ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' });
@@ -4049,9 +4233,10 @@
     let cls = 'later', txt = fmtDay(i.due);
     if (task && i.done) cls = 'done';
     else if (k < 0 && task) { cls = 'late'; txt = (-k) + ' gün gecikti'; }
-    else if (k === 0) { cls = 'today'; txt = 'Bugün'; }
+    else if (k === 0) { cls = task && i.time && tMin(i.time) < nowMin() ? 'late' : 'today'; txt = 'Bugün'; }
     else if (k === 1) { cls = 'soon'; txt = 'Yarın'; }
     else if (k > 1 && k <= 7) { cls = 'soon'; txt = k + ' gün kaldı'; }
+    if (i.time && !(cls === 'late' && k < 0)) txt += ' ' + i.time;
     return { cls: cls, txt: txt, k: k };
   }
   /* ---- ÖNCELİK ve ALT GÖREVLER ---- */
@@ -4130,8 +4315,7 @@
     if (!i || wasDone || !i.done || !isRepeating(i)) return null;
     if (i.repeatNext && items.some(x => x.id === i.repeatNext)) return null;   // bu tekrar zaten açılmış
     const cols = projectColumns(i.projectId);
-    const doneCol = c => /(bitti|tamam|done|complete|finish)/.test(c.name.toLowerCase());
-    const col = cols.find(c => c.id === i.columnId && !doneCol(c)) || cols.find(c => !doneCol(c)) || cols[0];
+    const col = cols.find(c => c.id === i.columnId && !isDoneCol(c)) || cols.find(c => !isDoneCol(c)) || cols[0];
     const colId = col ? col.id : null;
     const inCol = items.filter(x => x.projectId === i.projectId && x.columnId === colId);
     const n = { id: uid(), projectId: i.projectId, columnId: colId,
@@ -4140,6 +4324,9 @@
                 tags: (i.tags || []).slice(), cover: null, due: nextRepeatDue(i), done: false, pinned: !!i.pinned,
                 created: Date.now(), repeat: i.repeat };
     if (i.repeatDay) n.repeatDay = i.repeatDay;
+    if (i.time) { n.time = i.time; if (i.dur) n.dur = i.dur; }   // saat ve süre de taşınır
+    if (i.prio) n.prio = i.prio;
+    if (i.subs && i.subs.length) n.subs = i.subs.map(x => ({ id: uid(), t: x.t, d: false, due: null })); // alt görevler işaretsiz
     items.push(n);
     i.repeatNext = n.id;
     await saveItem(n); await saveItem(i);
@@ -4152,7 +4339,11 @@
     });
     return n;
   }
-  const isLate = i => i.type === 'task' && !i.done && i.due && dayDiff(i.due) < 0;
+  const isLate = i => {
+    if (i.type !== 'task' || i.done || !i.due) return false;
+    const k = dayDiff(i.due);
+    return k < 0 || (k === 0 && !!i.time && tMin(i.time) < nowMin()); // saati geçen bugünkü görev de gecikmiş
+  };
   let dueFilter = null; // liste süzgeci: null | 'late' | 'today' | 'week'
 
   /* ---- EN SON AÇIK PROJE ----
@@ -4227,7 +4418,7 @@
 
     // --- Sıralama: önce sabitlenmişler; sonra seçilen sıra (süzgeç açıkken varsayılan son tarih) ---
     const byNew = (a, b) => b.created - a.created;
-    const byDue = (a, b) => (a.due || '9999').localeCompare(b.due || '9999');
+    const byDue = (a, b) => ((a.due || '9999') + (a.time || '99')).localeCompare((b.due || '9999') + (b.time || '99'));
     const sortBy = { new: dueFilter ? (a, b) => byDue(a, b) || byNew(a, b) : byNew, due: (a, b) => byDue(a, b) || byNew(a, b),
       prio: (a, b) => ((a.prio || 9) - (b.prio || 9)) || byDue(a, b) || byNew(a, b),
       name: (a, b) => (a.title || a.body || '').localeCompare(b.title || b.body || '', 'tr', { sensitivity: 'base' }) || byNew(a, b) }[el('listSort').value] || byNew;
@@ -4391,16 +4582,22 @@
       );
 
       const color = safeColor(col.color);
-      html += '<div class="column" data-col="' + col.id + '">' +
+      const lim = colLimit(col), total = lim ? colCount(col.id) : cardsIn.length;
+      const cntCls = !lim ? '' : total > lim ? ' over' : total === lim ? ' full' : '';
+      const doneByName = DONE_NAME_RE.test(String(col.name || '').toLowerCase());
+      html += '<div class="column' + (cntCls ? ' lim' + cntCls : '') + '" data-col="' + col.id + '">' +
         '<div class="column-color-bar" style="background:' + color + '"></div>' +
         '<div class="column-head">' +
           '<div class="column-title" data-coltitle="' + col.id + '" title="Yeniden adlandırmak için tıkla">' + esc(col.name) + '</div>' +
-          '<span class="column-count">' + cardsIn.length + '</span>' +
+          (isDoneCol(col) ? '<span class="col-done-ico" title="Buraya taşınan görev tamamlanır" aria-label="Bitti sütunu">&#10003;</span>' : '') +
+          '<span class="column-count' + cntCls + '"' + (lim ? ' title="Kart sınırı: ' + lim + (total > lim ? ' (aşıldı)' : '') + '"' : '') + '>' + total + (lim ? '/' + lim : '') + '</span>' +
           '<button class="column-menu-btn" data-colmenu="' + col.id + '" title="Sütun seçenekleri">&#8943;</button>' +
         '</div>' +
         '<div class="col-menu" data-colmenubox="' + col.id + '">' +
           '<div class="color-dots" data-colcolors="' + col.id + '">' + colorDotsHTML(col) + '</div>' +
           '<button data-colrename="' + col.id + '">Yeniden adlandır</button>' +
+          '<button data-collimit="' + col.id + '">Kart sınırı' + (lim ? ': ' + lim : '…') + '</button>' +
+          '<button data-coldone="' + col.id + '"' + (doneByName ? ' disabled title="Adı bitti / tamam içerdiği için"' : '') + '>' + (isDoneCol(col) ? '&#10003; ' : '') + 'Bitti sütunu (görev tamamlanır)</button>' +
           '<button data-coldelete="' + col.id + '">Sütunu sil</button>' +
         '</div>' +
         '<div class="column-cards" data-cards="' + col.id + '">' +
@@ -4410,8 +4607,10 @@
       '</div>';
     });
 
-    // En sağda "yeni sütun ekle"
-    html += '<button class="add-column" id="addColumnBtn">+ Sütun ekle</button>';
+    // En sağda "yeni sütun ekle" ve pano şablonları
+    html += '<div class="add-col-wrap"><button class="add-column" id="addColumnBtn">+ Sütun ekle</button>' +
+      '<div class="er-menu-wrap board-tpl-wrap"><button class="add-column tpl" id="boardTplBtn" type="button" aria-haspopup="menu">&#9638; Pano şablonu</button>' +
+      '<div class="menu" id="boardTplMenu" role="menu"></div></div></div>';
     wrap.innerHTML = html;
     bindBoardEvents();
   }
@@ -4487,6 +4686,14 @@
     wrap.querySelectorAll('[data-coldelete]').forEach(b =>
       b.addEventListener('click', () => { closeAllColMenus(); deleteColumn(b.dataset.coldelete); })
     );
+    wrap.querySelectorAll('[data-collimit]').forEach(b =>
+      b.addEventListener('click', () => { closeAllColMenus(); setColumnLimit(b.dataset.collimit); })
+    );
+    wrap.querySelectorAll('[data-coldone]').forEach(b =>
+      b.addEventListener('click', () => { closeAllColMenus(); toggleDoneCol(b.dataset.coldone); })
+    );
+    const tplBtn = el('boardTplBtn');
+    if (tplBtn) tplBtn.addEventListener('click', e => { e.stopPropagation(); renderBoardTplMenu(); el('boardTplMenu').classList.toggle('open'); });
 
     // "+ Kart ekle" (sütun altı)
     wrap.querySelectorAll('[data-addcard]').forEach(b =>
@@ -4858,9 +5065,23 @@
   /* ---- KARTI BIRAK: sütun + yeni sıra ----
      Kartı hedef sütuna taşır ve "ordered" listesine göre order değerlerini
      yeniden numaralandırır (sürüklenen kart yer tutucunun konumuna girer). */
+  /* "Bitti" sütunu: adı bitti/tamam/done… olan ya da menüden işaretlenmiş sütun; buraya gelen görev tamamlanır */
+  const DONE_NAME_RE = /(bitti|tamam|done|complete|finish)/;
+  const isDoneCol = c => !!c && (c.doneCol === true || DONE_NAME_RE.test(String(c.name || '').toLowerCase()));
+  /* Sütun kart sınırı (WIP): 1–999, yoksa 0 */
+  const colLimit = c => (c && Number.isInteger(c.limit) && c.limit >= 1 && c.limit <= 999 ? c.limit : 0);
+  function colCount(colId) { return items.filter(x => x.columnId === colId).length; }
+  /* Kart sınırı aşıldıysa uyar (kart yine de taşınır; sınır hatırlatıcıdır) */
+  function warnColLimit(colId) {
+    const c = columns.find(x => x.id === colId), lim = colLimit(c);
+    if (!lim) return;
+    const n = colCount(colId);
+    if (n > lim) showSnack('“' + c.name + '” sütununun kart sınırı aşıldı (' + n + '/' + lim + '). Önce birini bitirmek iyi olur.');
+  }
   async function dropCard(itemId, targetColId, orderedIds) {
     const moved = items.find(x => x.id === itemId);
     if (!moved) return;
+    const fromCol = moved.columnId;
 
     // Sürüklenen kartı, yer tutucu işaretinin (__PH__) olduğu yere yerleştir
     const finalOrder = orderedIds.map(v => v === '__PH__' ? itemId : v);
@@ -4875,15 +5096,12 @@
       await saveItem(it);
     }
 
-    // Akıllı durum: hedef sütun adı "bitti"yi andırıyorsa görevi tamamla
+    // Akıllı durum: hedef sütun "Bitti" sütunuysa görevi tamamla
     const col = columns.find(c => c.id === targetColId);
-    if (moved.type === 'task' && col) {
-      const cn = col.name.toLowerCase();
-      if (/(bitti|tamam|done|complete|finish)/.test(cn) && !moved.done) {
-        moved.done = true; await saveItem(moved);
-        await afterTaskDone(moved, false);
-      }
-    }
+    if (moved.type === 'task' && isDoneCol(col) && !moved.done) {
+      moved.done = true; await saveItem(moved);
+      await afterTaskDone(moved, false);
+    } else if (fromCol !== targetColId) warnColLimit(targetColId);
   }
 
   /* Öğeyi başka bir sütunun SONUNA yerleştirir (kaydetmez). "Bitti" benzeri bir sütuna
@@ -4895,7 +5113,7 @@
     i.order = (inCol.length ? Math.max(...inCol.map(x => x.order ?? x.created)) : 0) + 10;
     i.columnId = colId;
     const col = columns.find(c => c.id === colId);
-    if (i.type === 'task' && col && /(bitti|tamam|done|complete|finish)/.test(col.name.toLowerCase())) i.done = true;
+    if (i.type === 'task' && isDoneCol(col)) i.done = true;
   }
 
   async function moveItemToColumn(itemId, colId) {
@@ -4905,8 +5123,123 @@
     placeInColumn(i, colId);
     await saveItem(i);
     await afterTaskDone(i, was);
+    if (!i.done || was) warnColLimit(colId);
     renderProjects(); renderMain(); renderBoard();
   }
+  /* Sütun menüsü: kart sınırı ve "Bitti sütunu" işareti */
+  async function setColumnLimit(colId) {
+    const c = columns.find(x => x.id === colId);
+    if (!c) return;
+    const v = prompt('“' + c.name + '” sütununda en çok kaç kart olsun?\n(Kanban\'daki "aynı anda en fazla şu kadar iş" sınırı. Boş bırakırsan sınır kalkar.)', colLimit(c) || '');
+    if (v === null) return;
+    const n = parseInt(String(v).trim(), 10);
+    if (String(v).trim() && !(n >= 1 && n <= 999)) { alert('1 ile 999 arasında bir sayı yaz (ya da boş bırak).'); return; }
+    if (n >= 1) c.limit = n; else delete c.limit;
+    await saveColumn(c);
+    renderBoard();
+  }
+  async function toggleDoneCol(colId) {
+    const c = columns.find(x => x.id === colId);
+    if (!c) return;
+    if (DONE_NAME_RE.test(c.name.toLowerCase())) { alert('Bu sütunun adı "bitti / tamam" içerdiği için buraya gelen görevler zaten tamamlanıyor.'); return; }
+    if (c.doneCol) delete c.doneCol; else c.doneCol = true;
+    await saveColumn(c);
+    renderBoard();
+    showSnack(c.doneCol ? '“' + c.name + '” sütununa taşınan görevler artık tamamlanmış sayılacak.' : '“' + c.name + '” artık normal bir sütun.');
+  }
+
+  /* ---- PANO ŞABLONLARI: [ad, renk, kart sınırı, bitti sütunu mu] ---- */
+  const BOARD_TEMPLATES = [
+    { name: 'Kanban', cols: [['Yapılacak', '#2747C9'], ['Yapılıyor', '#B35C00', 3], ['Bitti', '#23804A']] },
+    { name: 'Ödev takibi', cols: [['Verildi', '#2747C9'], ['Çalışıyorum', '#B35C00', 3], ['Kontrol', '#7A3FC2'], ['Teslim edildi', '#23804A', 0, true]] },
+    { name: 'Proje', cols: [['Fikirler', '#475569'], ['Planlandı', '#2747C9'], ['Yapılıyor', '#B35C00', 3], ['İncelemede', '#7A3FC2'], ['Bitti', '#23804A']] },
+    { name: 'Sınav dönemi', cols: [['Konular', '#2747C9'], ['Çalışılıyor', '#B35C00', 2], ['Tekrar', '#7A3FC2'], ['Hazır', '#23804A', 0, true]] },
+    { name: 'Haftalık plan', cols: [['Pazartesi', '#2747C9'], ['Salı', '#0E7C86'], ['Çarşamba', '#7A3FC2'], ['Perşembe', '#B35C00'], ['Cuma', '#BE185D'], ['Hafta sonu', '#475569'], ['Bitti', '#23804A']] },
+    { name: 'Hata takibi', cols: [['Yeni', '#C8322A'], ['İnceleniyor', '#B35C00'], ['Düzeltiliyor', '#2747C9', 2], ['Test', '#7A3FC2'], ['Kapandı', '#23804A', 0, true]] },
+    { name: 'Okuma listesi', cols: [['Okunacak', '#2747C9'], ['Okunuyor', '#B35C00', 2], ['Okundu', '#23804A', 0, true]] }
+  ];
+  function userBoardTemplates() {
+    const a = localJSON('pref:boardtpls', []);
+    return (Array.isArray(a) ? a : []).filter(t => t && typeof t.name === 'string' && Array.isArray(t.cols)).slice(0, 20).map(t => ({
+      name: t.name.slice(0, 40),
+      cols: t.cols.filter(c => Array.isArray(c) && typeof c[0] === 'string' && c[0].trim()).slice(0, 20)
+        .map(c => [c[0].slice(0, 60), /^#[0-9a-f]{6}$/i.test(c[1]) ? c[1] : '#2747C9', Number.isInteger(c[2]) && c[2] >= 1 && c[2] <= 999 ? c[2] : 0, c[3] === true])
+    })).filter(t => t.cols.length);
+  }
+  function renderBoardTplMenu() {
+    const mine = userBoardTemplates(), cols = t => esc(t.cols.map(c => c[0]).join(' · '));
+    el('boardTplMenu').innerHTML = '<div class="menu-group-label">Hazır pano şablonları</div>' +
+      BOARD_TEMPLATES.map((t, k) => '<button type="button" data-btpl="b' + k + '"><span class="btpl"><b>' + esc(t.name) + '</b><small>' + cols(t) + '</small></span></button>').join('') +
+      (mine.length ? '<div class="sep"></div><div class="menu-group-label">Benim şablonlarım</div>' +
+        mine.map((t, k) => '<div class="tpl-mine"><button type="button" data-btpl="u' + k + '"><span class="btpl"><b>' + esc(t.name) + '</b><small>' + cols(t) + '</small></span></button>' +
+          '<button type="button" class="tpl-del" data-btpldel="' + k + '" title="Şablonu sil" aria-label="Şablonu sil">&times;</button></div>').join('') : '') +
+      '<div class="sep"></div><button type="button" data-btplsave>&#9734; Bu panoyu şablon olarak kaydet</button>';
+  }
+  async function applyBoardTemplate(key) {
+    const t = key[0] === 'b' ? BOARD_TEMPLATES[+key.slice(1)] : userBoardTemplates()[+key.slice(1)];
+    el('boardTplMenu').classList.remove('open');
+    if (!t) return;
+    const pid = activeProject, cols = projectColumns(pid);
+    const used = new Set(items.filter(i => i.projectId === pid).map(i => i.columnId));
+    const byName = new Map(cols.map(c => [flFold(c.name), c]));
+    const tNames = new Set(t.cols.map(c => flFold(c[0])));
+    const drop = cols.filter(c => !used.has(c.id) && !tNames.has(flFold(c.name)));      // boş ve şablonda olmayan
+    const keepOther = cols.filter(c => used.has(c.id) && !tNames.has(flFold(c.name)));  // kartı olan, şablonda olmayan
+    if (!confirm('“' + t.name + '” şablonu uygulansın mı?\n\nSütunlar: ' + t.cols.map(c => c[0]).join(', ') +
+      (keepOther.length ? '\n\nKartı olan ' + keepOther.length + ' sütun (' + keepOther.map(c => c.name).join(', ') + ') sona alınır, kartlar yerinde kalır.' : '') +
+      (drop.length ? '\nBoş ' + drop.length + ' sütun kaldırılır.' : ''))) return;
+    const before = cols.map(c => JSON.parse(JSON.stringify(c)));
+    const created = [];
+    let order = 0;
+    for (const [name, color, limit, done] of t.cols) {
+      let c = byName.get(flFold(name));
+      if (!c) { c = { id: uid(), projectId: pid, name: name, color: color, order: 0, created: Date.now() + order }; columns.push(c); created.push(c.id); }
+      else c.color = color;
+      c.order = order++;
+      if (limit) c.limit = limit; else delete c.limit;
+      if (done && !DONE_NAME_RE.test(name.toLowerCase())) c.doneCol = true; else delete c.doneCol;
+      await saveColumn(c);
+    }
+    for (const c of keepOther) { c.order = order++; await saveColumn(c); }
+    for (const c of drop) { columns = columns.filter(x => x.id !== c.id); await deleteColumnStore(c.id); }
+    renderProjects(); renderMain(); renderBoard();
+    showSnack('“' + t.name + '” şablonu uygulandı.', async () => {
+      // Geri al: önceki sütunlar aynen geri gelir; şablonla eklenenler kalkar (içlerine kart konduysa ilk sütuna taşınır)
+      const first = before.slice().sort((a, b) => a.order - b.order)[0];
+      for (const id of created) {
+        for (const i of items.filter(x => x.columnId === id)) { i.columnId = first ? first.id : null; await saveItem(i); }
+        columns = columns.filter(x => x.id !== id); await deleteColumnStore(id);
+      }
+      for (const c of before) {
+        const at = columns.findIndex(x => x.id === c.id);
+        if (at >= 0) columns[at] = c; else columns.push(c);
+        await saveColumn(c);
+      }
+      renderProjects(); renderMain(); renderBoard();
+    });
+  }
+  function saveBoardTemplate() {
+    el('boardTplMenu').classList.remove('open');
+    const cols = projectColumns(activeProject);
+    const p = projects.find(x => x.id === activeProject);
+    const name = prompt('Pano şablonunun adı:', (p ? p.name : 'Panom').slice(0, 40));
+    if (name === null || !name.trim()) return;
+    const mine = userBoardTemplates().filter(t => t.name !== name.trim());
+    if (mine.length >= 20) { alert('En fazla 20 pano şablonu saklanabilir; önce birini sil.'); return; }
+    mine.push({ name: name.trim().slice(0, 40), cols: cols.slice(0, 20).map(c => [String(c.name).slice(0, 60), /^#[0-9a-f]{6}$/i.test(c.color) ? c.color : '#2747C9', colLimit(c), c.doneCol === true]) });
+    localSet('pref:boardtpls', JSON.stringify(mine));
+    showSnack('“' + name.trim() + '” pano şablonu kaydedildi (bu cihazda).');
+  }
+  document.addEventListener('click', e => {
+    const m = el('boardTplMenu');
+    if (!m || !m.classList.contains('open')) return;
+    const d = e.target.closest('[data-btpldel]');
+    if (d) { e.stopPropagation(); const mine = userBoardTemplates(); mine.splice(+d.dataset.btpldel, 1); localSet('pref:boardtpls', mine.length ? JSON.stringify(mine) : ''); renderBoardTplMenu(); return; }
+    const b = e.target.closest('[data-btpl]');
+    if (b) { applyBoardTemplate(b.dataset.btpl); return; }
+    if (e.target.closest('[data-btplsave]')) { saveBoardTemplate(); return; }
+    if (!e.target.closest('#boardTplMenu')) m.classList.remove('open');
+  });
 
   /* ---- SÜTUN: YENİ EKLE ---- */
   async function addColumn() {
@@ -5021,6 +5354,8 @@
     el('modalTags').value = (i.tags || []).join(', ');
     el('modalType').value = i.type || 'note';
     el('modalDue').value = i.due || '';
+    el('modalTime').value = i.time || '';
+    setModalDur(i.dur);
     el('modalRepeat').value = repName(i.repeat) ? i.repeat : '';
     el('modalPrio').value = i.prio ? String(i.prio) : '';
     modalSubs = cleanSubs(i.subs || []);
@@ -5057,9 +5392,22 @@
   }
 
   /* Penceredeki son tarihin yanındaki açıklama: "3 gün kaldı", "2 gün gecikti" */
+  /* Süre seçicisi: listede olmayan süre (ör. takvimden gelen 50 dk) için seçenek eklenir */
+  function setModalDur(d) {
+    const s = el('modalDur');
+    s.querySelectorAll('option[data-extra]').forEach(o => o.remove());
+    if (Number.isInteger(d) && d >= 5 && d <= 1440 && ![...s.options].some(o => +o.value === d)) {
+      const o = document.createElement('option'); o.value = d; o.dataset.extra = '1';
+      o.textContent = d % 60 ? d + ' dk' : (d / 60) + ' saat';
+      s.appendChild(o);
+    }
+    s.value = Number.isInteger(d) ? String(d) : '';
+  }
   function updateModalDueHint() {
     const v = el('modalDue').value;
     el('modalDueClear').style.display = v ? '' : 'none';
+    el('modalTime').style.display = v ? '' : 'none';
+    el('modalDur').style.display = v && el('modalTime').value ? '' : 'none';
     el('modalRepeatHint').textContent = el('modalRepeat').value && v ? 'Tamamlayınca bir sonraki tarihe yenisi açılır' : '';
     if (!v) { el('modalDueHint').textContent = ''; return; }
     const k = dayDiff(v);
@@ -5118,6 +5466,9 @@
     i.type = newType;
     i.done = (newType === 'task') ? el('modalCheck').checked : false;
     i.due = el('modalDue').value || null;
+    const tm = el('modalTime').value.slice(0, 5), du = +el('modalDur').value;
+    if (i.due && TIME_RE.test(tm)) { i.time = tm; if (du >= 5 && du <= 1440) i.dur = du; else delete i.dur; }
+    else { delete i.time; delete i.dur; }
     const rep = el('modalRepeat').value;
     if (newType === 'task' && i.due && repName(rep)) {
       if (rep !== oldRep || i.due !== oldDue || !i.repeatDay) i.repeatDay = parseDay(i.due).getDate();   // asıl gün
@@ -5388,7 +5739,8 @@
   let calMonth = null;   // { y, m } gösterilen ay
   let calSel = null;     // seçili gün 'YYYY-AA-GG'
   let calAll = false;    // tüm projeler mi
-  let calMode = 'month'; // 'month' (ay) | 'week' (hafta) — tercih cihazda kalır
+  let calMode = 'month'; // 'month' (ay) | 'week' (hafta) | 'day' (gün) | 'tt' (ders programı) — tercih cihazda kalır
+  const CAL_MODES = ['month', 'week', 'day', 'tt'];
   const CAL_DOW = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
   function calItems() {
@@ -5406,17 +5758,9 @@
     const days = new Date(calMonth.y, calMonth.m + 1, 0).getDate();
     return { start: new Date(calMonth.y, calMonth.m, 1 - lead), total: Math.ceil((lead + days) / 7) * 7 };
   }
-  function renderCalendar() {
-    if (currentView !== 'calendar') return;
-    const t = new Date();
-    if (!calSel) calSel = todayStr();
-    if (!calMonth) calMonth = { y: t.getFullYear(), m: t.getMonth() };
-    const week = calMode === 'week';
-    const { start, total } = calRange();
-    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + total - 1);
-    const todayD = parseDay(todayStr());
-    // Her gün: { i: öğe, ghost: tekrarlayan görevin ileriki günü mü }
-    const byDay = {};
+  /* Tarih aralığındaki her günün öğeleri: { i: öğe, sub: alt görev, ghost: tekrarlayan görevin ileriki günü } */
+  function calByDay(start, end) {
+    const todayD = parseDay(todayStr()), byDay = {};
     const put = (ds, e) => { (byDay[ds] = byDay[ds] || []).push(e); };
     calItems().forEach(i => put(i.due, { i: i, ghost: false }));
     items.filter(i => (calAll || i.projectId === activeProject) && i.subs).forEach(i => i.subs.forEach(x => { if (x.due) put(x.due, { i: i, sub: x, ghost: false }); }));
@@ -5429,20 +5773,41 @@
         if (d >= start && d >= todayD) put(dateStr(d), { i: i, ghost: true });
       }
     });
-    const eCls = e => (e.sub ? (e.sub.d ? 'done' : dayDiff(e.sub.due) < 0 ? 'late' : '') : calCls(e.i));
-    Object.values(byDay).forEach(l => l.sort((a, b) => (a.ghost - b.ghost) || (eCls(a) === 'done') - (eCls(b) === 'done') || !!a.sub - !!b.sub || a.i.created - b.i.created));
+    // Saatliler saat sırasıyla önce, sonra saatsizler; tekrar kopyaları ve bitenler sona
+    const tk = e => (!e.sub && e.i.time ? e.i.time : '99');
+    Object.values(byDay).forEach(l => l.sort((a, b) => (a.ghost - b.ghost) || (calECls(a) === 'done') - (calECls(b) === 'done') || tk(a).localeCompare(tk(b)) || !!a.sub - !!b.sub || a.i.created - b.i.created));
+    return byDay;
+  }
+  const calECls = e => (e.sub ? (e.sub.d ? 'done' : dayDiff(e.sub.due) < 0 ? 'late' : '') : calCls(e.i));
+  const calName = i => i.title || i.body || '(başlıksız)';
+  function renderCalendar() {
+    if (currentView !== 'calendar') return;
+    const t = new Date();
+    if (!calSel) calSel = todayStr();
+    if (!calMonth) calMonth = { y: t.getFullYear(), m: t.getMonth() };
+    const week = calMode === 'week', day = calMode === 'day', tt = calMode === 'tt';
     const fmt = (d, o) => d.toLocaleDateString('tr-TR', o);
+    const unit = week ? 'hafta' : day ? 'gün' : 'ay';
+    ['calPrev', 'calNext'].forEach((id, n) => { const t = (n ? 'Sonraki ' : 'Önceki ') + unit; el(id).title = t; el(id).setAttribute('aria-label', t); });
+    [['calModeMonth', 'month'], ['calModeWeek', 'week'], ['calModeDay', 'day'], ['calModeTT', 'tt']].forEach(([id, m]) => el(id).setAttribute('aria-pressed', calMode === m));
+    el('calWrap').dataset.mode = calMode;
+    el('calGrid').className = 'cal-grid' + (week ? ' week' : day ? ' dayv' : tt ? ' ttv' : '');
+    el('calAll').checked = calAll;
+    updateRemindBtn();
+    if (tt) { el('calTitle').textContent = 'Ders programı'; renderTimetable(); return; }
+    if (day) {
+      const d = parseDay(calSel);
+      el('calTitle').textContent = fmt(d, { day: 'numeric', month: 'long', weekday: 'long' });
+      renderCalDayView(calByDay(d, d)[calSel] || []);
+      return;
+    }
+    const { start, total } = calRange();
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + total - 1);
+    const byDay = calByDay(start, end);
     el('calTitle').textContent = !week ? fmt(new Date(calMonth.y, calMonth.m, 1), { month: 'long', year: 'numeric' })
       : start.getMonth() === end.getMonth() ? start.getDate() + ' – ' + fmt(end, { day: 'numeric', month: 'long', year: 'numeric' })
       : fmt(start, start.getFullYear() === end.getFullYear() ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' }) + ' – ' + fmt(end, { day: 'numeric', month: 'short', year: 'numeric' });
-    ['calPrev', 'calNext'].forEach((id, n) => { const t = (n ? 'Sonraki ' : 'Önceki ') + (week ? 'hafta' : 'ay'); el(id).title = t; el(id).setAttribute('aria-label', t); });
-    el('calModeMonth').setAttribute('aria-pressed', !week);
-    el('calModeWeek').setAttribute('aria-pressed', week);
-    el('calGrid').classList.toggle('week', week);
-    el('calAll').checked = calAll;
-    updateRemindBtn();
     const today = todayStr(), lim = week ? 50 : 3;
-    const name = i => i.title || i.body || '(başlıksız)';
     let h = CAL_DOW.map(d => '<div class="cal-dow" role="columnheader">' + d + '</div>').join('');
     for (let k = 0; k < total; k++) {
       const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + k), ds = dateStr(d), list = byDay[ds] || [];
@@ -5451,20 +5816,86 @@
       h += '<button class="' + cls + '" type="button" role="gridcell" data-day="' + ds + '" aria-label="' + escAttr(label) + '">' +
         '<span class="cal-num">' + d.getDate() + '</span>' +
         list.slice(0, lim).map(e => e.sub
-          ? '<span class="cal-item sub ' + eCls(e) + '" data-open="' + e.i.id + '" title="' + escAttr(e.sub.t + ' · ' + name(e.i)) + '">&#8627; ' + esc(e.sub.t) + '</span>'
-          : '<span class="cal-item ' + (e.ghost ? 'ghost' : calCls(e.i)) + '" data-open="' + e.i.id + '" title="' + escAttr(name(e.i) + (e.ghost ? ' · ' + repName(e.i.repeat) : '')) + '">' +
-          (e.ghost ? REP_ICO + ' ' : '') + esc(name(e.i)) + '</span>').join('') +
+          ? '<span class="cal-item sub ' + calECls(e) + '" data-open="' + e.i.id + '" data-sub="' + e.sub.id + '" title="' + escAttr(e.sub.t + ' · ' + calName(e.i) + ' (sürükleyerek başka güne taşı)') + '">&#8627; ' + esc(e.sub.t) + '</span>'
+          : '<span class="cal-item ' + (e.ghost ? 'ghost' : calCls(e.i)) + '" data-open="' + e.i.id + '"' + (e.ghost ? '' : ' data-drag="1"') + ' title="' + escAttr(calName(e.i) + (e.i.time ? ' · ' + timeRange(e.i) : '') + (e.ghost ? ' · ' + repName(e.i.repeat) : ' (sürükleyerek başka güne taşı)')) + '">' +
+          (e.ghost ? REP_ICO + ' ' : '') + (e.i.time && !e.ghost ? '<b class="cal-t">' + e.i.time + '</b> ' : '') + esc(calName(e.i)) + '</span>').join('') +
         (list.length > lim ? '<span class="cal-more">+' + (list.length - lim) + ' daha</span>' : '') +
-        (list.length ? '<span class="cal-dots">' + list.slice(0, 6).map(e => '<i class="' + (e.ghost ? 'ghost' : eCls(e)) + '"></i>').join('') + '</span>' : '') +
+        (list.length ? '<span class="cal-dots">' + list.slice(0, 6).map(e => '<i class="' + (e.ghost ? 'ghost' : calECls(e)) + '"></i>').join('') + '</span>' : '') +
       '</button>';
     }
     el('calGrid').innerHTML = h;
     renderCalDay(byDay[calSel] || []);
   }
+
+  /* ---- GÜN GÖRÜNÜMÜ: üstte "Tüm gün", altta saat çizelgesi (saatli görevler, o günün dersleri, şimdiki zaman) ---- */
+  const CD_HOUR = 48;                 // bir saatin yüksekliği (px)
+  const CD_PX = CD_HOUR / 60;         // dakika başına px
+  let cdScrollDay = null;             // çizelge en son hangi gün için kaydırıldı (aynı günde kaydırma korunur)
+  function cdLayout(evs) {            // üst üste binenler yan yana: { s, e } → col, n
+    let group = [], gEnd = -1;
+    const colEnd = [], flush = () => { const n = Math.max(...group.map(g => g.col)) + 1; group.forEach(g => { g.n = n; }); group = []; colEnd.length = 0; };
+    evs.forEach(ev => {
+      if (group.length && ev.s >= gEnd) flush();
+      let c = colEnd.findIndex(x => x <= ev.s);
+      if (c < 0) { c = colEnd.length; colEnd.push(ev.e); } else colEnd[c] = ev.e;
+      ev.col = c; group.push(ev); gEnd = Math.max(gEnd, ev.e);
+    });
+    if (group.length) flush();
+    return evs;
+  }
+  function renderCalDayView(list) {
+    const ds = calSel, isToday = ds === todayStr();
+    const pname = id => (projects.find(p => p.id === id) || {}).name || '';
+    const allDay = list.filter(e => e.sub || e.ghost || !e.i.time);
+    const evs = cdLayout(list.filter(e => !e.sub && !e.ghost && e.i.time).map(e => {
+      const s = tMin(e.i.time);
+      return { e: Math.min(1440, s + Math.max(e.i.dur || 60, 25)), s: s, i: e.i };
+    }).sort((a, b) => a.s - b.s || b.e - a.e));
+    const lessons = ttLessonsOn(activeProject, parseDay(ds));
+    const sc = el('calGrid').querySelector('.cd-scroll'), keep = sc && cdScrollDay === ds ? sc.scrollTop : null;
+    let h = '<div class="cd-allday" data-cdallday="1"><span class="cd-lbl">Tüm gün</span><div class="cd-chips">' +
+      allDay.map(e => {
+        const sub = e.sub, i = e.i;
+        const cls = 'cd-chip ' + (sub ? 'sub ' + calECls(e) : e.ghost ? 'ghost' : calCls(i));
+        return '<div class="' + cls + '" data-open="' + i.id + '"' + (sub ? ' data-sub="' + sub.id + '"' : e.ghost ? '' : ' data-drag="1"') +
+          ' title="' + escAttr(sub ? 'Alt görev · ' + calName(i) : e.ghost ? 'Tekrarlayan görevin bu günkü kopyası' : 'Saat vermek için çizelgeye sürükle') + '">' +
+          (sub ? '<input type="checkbox" data-calsub="' + i.id + ':' + sub.id + '"' + (sub.d ? ' checked' : '') + ' aria-label="Alt görev tamamlandı"><span>&#8627; ' + esc(sub.t) + '</span>'
+            : e.ghost ? REP_ICO + '<span>' + esc(calName(i)) + '</span>'
+            : (i.type === 'task' ? '<input type="checkbox" data-caldone="' + i.id + '"' + (i.done ? ' checked' : '') + ' aria-label="Tamamlandı">' : '<span aria-hidden="true">&#9998;</span>') +
+              '<span>' + esc(calName(i)) + '</span>' + (calAll ? '<small>' + esc(pname(i.projectId)) + '</small>' : '')) +
+          '</div>';
+      }).join('') +
+      '<button class="er-btn cd-add" type="button" data-caladd>+ Görev</button></div></div>';
+    h += '<div class="cd-scroll"><div class="cd-grid" data-cdgrid="1" style="height:' + (24 * CD_HOUR) + 'px">';
+    for (let k = 0; k < 24; k++) h += '<div class="cd-hour" style="top:' + (k * CD_HOUR) + 'px"><span>' + pad2(k) + ':00</span></div>';
+    lessons.forEach(l => {
+      h += '<button type="button" class="cd-lesson" data-cdlesson="' + escAttr(l.n) + '" data-t="' + l.s + '" style="top:' + (tMin(l.s) * CD_PX) + 'px;height:' + Math.max(18, (tMin(l.e) - tMin(l.s)) * CD_PX - 2) + 'px;--c:' + l.c + '" title="' + escAttr(l.n + ' dersi · ' + l.s + '–' + l.e + ' (dokun: bu derse ödev ekle)') + '">' +
+        '<b>' + esc(l.n) + '</b><span>' + l.s + '–' + l.e + (l.r ? ' · ' + esc(l.r) : '') + '</span></button>';
+    });
+    evs.forEach(ev => {
+      const i = ev.i, w = 100 / ev.n;
+      h += '<div class="cd-ev ' + calCls(i) + '" data-open="' + i.id + '" data-drag="1" style="top:' + (ev.s * CD_PX) + 'px;height:' + Math.max(22, (ev.e - ev.s) * CD_PX - 2) + 'px;left:calc(' + (ev.col * w) + '% + 2px);width:calc(' + w + '% - 4px)" title="' + escAttr(calName(i) + ' · ' + timeRange(i) + ' (sürükleyerek saatini değiştir)') + '">' +
+        (i.type === 'task' ? '<input type="checkbox" data-caldone="' + i.id + '"' + (i.done ? ' checked' : '') + ' aria-label="Tamamlandı">' : '') +
+        '<span class="cd-ev-t"><b data-cdtime>' + esc(timeRange(i)) + '</b> ' + esc(calName(i)) + (calAll ? ' · ' + esc(pname(i.projectId)) : '') + '</span></div>';
+    });
+    if (isToday) h += '<div class="cd-now" style="top:' + (nowMin() * CD_PX) + 'px" aria-hidden="true"></div>';
+    h += '</div></div>';
+    if (!evs.length && !lessons.length) h += '<p class="cd-hint">Çizelgede boş bir yere dokunup saatli görev ekle; "Tüm gün"deki bir kartı çizelgeye sürükleyince saat alır.</p>';
+    el('calGrid').innerHTML = h;
+    el('calDay').innerHTML = '';
+    const s2 = el('calGrid').querySelector('.cd-scroll');
+    if (keep != null) s2.scrollTop = keep;
+    else {
+      const firsts = evs.map(e => e.s).concat(lessons.map(l => tMin(l.s)));
+      const at = firsts.length ? Math.min(...firsts) - 30 : isToday ? nowMin() - 90 : 7 * 60 + 30;
+      s2.scrollTop = Math.max(0, at * CD_PX);
+      cdScrollDay = ds;
+    }
+  }
   function setCalMode(m) {
-    calMode = m === 'week' ? 'week' : 'month';
-    localSet('pref:calmode', calMode === 'week' ? 'week' : null);
-    if (calMode === 'week') {
+    calMode = CAL_MODES.includes(m) ? m : 'month';
+    localSet('pref:calmode', calMode === 'month' ? null : calMode);
+    if (calMode === 'week' || calMode === 'day') {
       // Ay görünümünde başka bir aya geçilmişse o ayın ilk haftası (bugün o aydaysa bugünün haftası) açılır
       const s = parseDay(calSel || todayStr());
       if (calMonth && (s.getMonth() !== calMonth.m || s.getFullYear() !== calMonth.y)) {
@@ -5551,6 +5982,20 @@
     const today = todayStr();
     let rec = localJSON('pref:reminded', null);
     if (!rec || rec.d !== today || !Array.isArray(rec.ids)) rec = { d: today, ids: [] };
+    // Gösterilen bildirim kaydedilir (her seferinde son kayıt okunur: iki bildirim birbirinin kaydını silmesin)
+    const remember = keys => {
+      const r = localJSON('pref:reminded', null), cur = r && r.d === today && Array.isArray(r.ids) ? r : { d: today, ids: [] };
+      keys.forEach(k => { if (!cur.ids.includes(k)) cur.ids.push(k); });
+      localSet('pref:reminded', JSON.stringify(cur));
+    };
+    // Saatli görevler: 15 dakika kala (ya da saati yeni geçtiyse) ayrıca bildirim
+    const nm = nowMin();
+    items.filter(i => i.type === 'task' && !i.done && i.due === today && i.time && tMin(i.time) - nm <= 15 && tMin(i.time) - nm >= -30 && !rec.ids.includes(i.id + '@' + i.time))
+      .slice(0, 5).forEach(i => {
+        const k = tMin(i.time) - nm;
+        showNotice((i.title || i.body || '(başlıksız)').slice(0, 80) + ' · ' + timeRange(i), k > 0 ? k + ' dakika sonra' : k === 0 ? 'Şimdi' : 'Saati ' + (-k) + ' dakika önce geldi', 'wn-' + i.id)
+          .then(ok => { if (ok) remember([i.id + '@' + i.time]); });
+      });
     const list = items.filter(i => i.type === 'task' && !i.done && i.due && dayDiff(i.due) <= 1 && !rec.ids.includes(i.id))
                       .sort((a, b) => a.due.localeCompare(b.due));
     if (!list.length) return;
@@ -5559,26 +6004,590 @@
     const head = [tod ? tod + ' görev bugün' : '', tom ? tom + ' görev yarın' : '', late ? late + ' görev gecikmiş' : ''].filter(Boolean).join(', ');
     const body = list.slice(0, 4).map(i => '• ' + (i.title || i.body || '(başlıksız)').slice(0, 60) + ' (' + dueInfo(i).txt + ')').join('\n') +
                  (list.length > 4 ? '\n+' + (list.length - 4) + ' görev daha' : '');
-    showNotice('White Note: ' + head, body, 'wn-hatirlatma').then(ok => {
-      if (!ok) return;
-      rec.ids = rec.ids.concat(list.map(i => i.id));
-      localSet('pref:reminded', JSON.stringify(rec));
-    });
+    showNotice('White Note: ' + head, body, 'wn-hatirlatma').then(ok => { if (ok) remember(list.map(i => i.id)); });
   }
-  setInterval(() => checkReminders(), 5 * 60000);
+  setInterval(() => {   // dakikada bir: hatırlatmalar ve gün görünümündeki "şimdi" çizgisi
+    checkReminders();
+    if (currentView === 'calendar' && calMode === 'day') { const n = document.querySelector('#calGrid .cd-now'); if (n) n.style.top = (nowMin() * CD_PX) + 'px'; }
+  }, 60000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkReminders(); });
 
-  async function calAddTask() {
-    const title = prompt(fmtLongDay(calSel) + ' için yeni görev:', '');
+  async function calAddTask(time) {
+    const tm = TIME_RE.test(time || '') ? time : null;
+    const title = prompt(fmtLongDay(calSel) + (tm ? ' ' + tm : '') + ' için yeni görev:', '');
     if (title === null || !title.trim()) return;
     const cols = projectColumns(activeProject);
     const colId = cols.length ? cols[0].id : null;
     const inCol = items.filter(x => x.columnId === colId);
     const item = { id: uid(), projectId: activeProject, columnId: colId, order: (inCol.length ? Math.max(...inCol.map(x => x.order ?? x.created)) : 0) + 10,
-                   type: 'task', title: title.trim(), body: '', tags: [], cover: null, due: calSel, done: false, pinned: false, created: Date.now() };
+                   type: 'task', title: title.trim().slice(0, 300), body: '', tags: [], cover: null, due: calSel, done: false, pinned: false, created: Date.now() };
+    if (tm) item.time = tm;
     items.push(item);
     await saveItem(item);
     renderProjects(); renderMain(); renderBoard();
+  }
+
+  /* ---- TAKVİMDE SÜRÜKLE ----
+     Ay / hafta: kartı başka güne bırak → son tarih değişir (alt görev de taşınır).
+     Gün: saatli kartı yukarı / aşağı sürükle → saat değişir (15 dakikalık adımlar); "Tüm gün"e bırakınca saat kalkar;
+     "Tüm gün"deki kartı çizelgeye bırakınca saat alır. Telefonda karta kısa süre basılı tutup sürüklenir.
+     Her taşımadan sonra alttaki bildirimden Geri al. */
+  const cdrag = { node: null, id: null, subId: null, kind: null, sx: 0, sy: 0, active: false, armed: false, touch: false, hold: 0, ghost: null, origMin: 0, min: 0, drop: null, scroller: null };
+  let calJustDragged = false;
+  function calDragDown(e) {
+    // (ay / hafta hücresinin kendisi düğmedir; içindeki kart sürüklenebilir)
+    if (calMode === 'tt' || (e.button != null && e.button !== 0) || e.target.closest('input, button:not(.cal-cell)')) return;
+    const n = e.target.closest('[data-drag], [data-sub]');
+    if (!n || !n.dataset.open || !el('calGrid').contains(n)) return;
+    const kind = n.classList.contains('cd-ev') ? 'ev' : n.classList.contains('cd-chip') ? 'chip' : 'cell';
+    const it = items.find(x => x.id === n.dataset.open);
+    if (!it || (kind === 'chip' && n.dataset.sub)) return;              // alt görevin saati olmaz
+    calDragReset();
+    Object.assign(cdrag, { node: n, id: it.id, subId: n.dataset.sub || null, sx: e.clientX, sy: e.clientY, active: false, drop: null, min: 0,
+      kind: kind, touch: e.pointerType === 'touch', grabOff: e.clientY - n.getBoundingClientRect().top, origMin: it.time ? tMin(it.time) : 0 });
+    cdrag.armed = !cdrag.touch;
+    if (cdrag.touch) {
+      cdrag.hold = setTimeout(() => { cdrag.armed = true; n.classList.add('touch-armed'); if (navigator.vibrate) navigator.vibrate(20); }, TOUCH_HOLD_MS);
+      document.addEventListener('touchmove', calBlockTouch, { passive: false });
+    }
+    document.addEventListener('pointermove', calDragMove, { passive: false });
+    document.addEventListener('pointerup', calDragEnd);
+    document.addEventListener('pointercancel', calDragEnd);
+  }
+  function calBlockTouch(e) { if (cdrag.armed && cdrag.touch) e.preventDefault(); }
+  function calDragMove(e) {
+    if (!cdrag.node) return;
+    const dx = e.clientX - cdrag.sx, dy = e.clientY - cdrag.sy;
+    if (!cdrag.active) {
+      if (!cdrag.armed) { if (Math.hypot(dx, dy) >= DRAG_THRESHOLD) calDragReset(); return; }
+      if (!cdrag.touch && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+      cdrag.active = true;
+      document.body.classList.add('dragging-active');
+      cdrag.node.classList.add('cd-dragging');
+      if (cdrag.kind !== 'ev') {
+        const g = cdrag.node.cloneNode(true), r = cdrag.node.getBoundingClientRect();
+        g.classList.add('cal-drag-ghost'); g.style.width = Math.min(r.width, 260) + 'px';
+        document.body.appendChild(g); cdrag.ghost = g;
+      }
+      cdrag.scroller = el('calGrid').querySelector('.cd-scroll');
+    }
+    e.preventDefault();
+    cdrag.lx = e.clientX; cdrag.ly = e.clientY;
+    if (cdrag.ghost) { cdrag.ghost.style.left = (e.clientX + 8) + 'px'; cdrag.ghost.style.top = (e.clientY + 8) + 'px'; }
+    cdAutoScroll();
+    cdUpdate();
+  }
+  /* Çizelgenin üst / alt kenarında bir süre durunca kendiliğinden kayar (yalnızca geçerken kaymaz) */
+  function cdAutoScroll() {
+    const sc = cdrag.scroller;
+    if (!sc) return;
+    const r = sc.getBoundingClientRect(), y = cdrag.ly, x = cdrag.lx, inX = x >= r.left && x <= r.right;
+    const dir = inX && y > r.top && y < r.top + 40 ? -1 : inX && y < r.bottom && y > r.bottom - 40 ? 1 : 0;
+    if (dir !== cdrag.asDir) { cdrag.asDir = dir; cdrag.asSince = performance.now(); }
+    if (!dir || cdrag.asRaf) return;
+    const step = () => {
+      if (!cdrag.active || !cdrag.asDir) { cdrag.asRaf = 0; return; }
+      if (performance.now() - cdrag.asSince > 350) { sc.scrollTop += cdrag.asDir * 9; cdUpdate(); }
+      cdrag.asRaf = requestAnimationFrame(step);
+    };
+    cdrag.asRaf = requestAnimationFrame(step);
+  }
+  /* İmlecin son konumuna göre bırakılacak yeri hesaplar ve gösterir */
+  function cdUpdate() {
+    const x = cdrag.lx, y = cdrag.ly;
+    document.querySelectorAll('#calGrid .drop').forEach(n => n.classList.remove('drop'));
+    const hit = document.elementFromPoint(x, y);
+    cdrag.drop = null;
+    if (cdrag.kind === 'cell') {
+      const c = hit && hit.closest('#calGrid .cal-cell');
+      if (c) { c.classList.add('drop'); cdrag.drop = { day: c.dataset.day }; }
+      return;
+    }
+    // Gün görünümü: "Tüm gün" şeridi ya da çizelge
+    const strip = hit && hit.closest('#calGrid [data-cdallday]'), grid = el('calGrid').querySelector('[data-cdgrid]');
+    if (strip && cdrag.kind === 'ev') { strip.classList.add('drop'); cdrag.drop = { allDay: true }; cdrag.node.classList.add('to-allday'); return; }
+    cdrag.node.classList.remove('to-allday');
+    const gr = grid.getBoundingClientRect(), vr = cdrag.scroller ? cdrag.scroller.getBoundingClientRect() : gr;
+    if (x < gr.left || x > gr.right || y < Math.max(gr.top, vr.top) || y > Math.min(gr.bottom, vr.bottom)) {
+      if (cdrag.kind === 'chip') { const ind = grid.querySelector('.cd-drop'); if (ind) ind.remove(); }
+      return;
+    }
+    // Saatli kart: tutulan nokta korunur (kaydırınca da doğru kalır, çünkü çizelgenin konumu ölçülür)
+    let m = cdrag.kind === 'ev' ? Math.round((y - cdrag.grabOff - gr.top) / CD_PX / 15) * 15
+                                : Math.floor((y - gr.top) / CD_PX / 15) * 15;
+    m = Math.max(0, Math.min(1440 - 15, m));
+    cdrag.min = m; cdrag.drop = { min: m };
+    if (cdrag.kind === 'ev') {
+      cdrag.node.style.top = (m * CD_PX) + 'px';
+      const b = cdrag.node.querySelector('[data-cdtime]'), it = items.find(x => x.id === cdrag.id);
+      if (b && it) b.textContent = timeRange(Object.assign({}, it, { time: minT(m) }));
+    } else {
+      let ind = grid.querySelector('.cd-drop');
+      if (!ind) { ind = document.createElement('div'); ind.className = 'cd-drop'; grid.appendChild(ind); }
+      ind.style.top = (m * CD_PX) + 'px'; ind.textContent = minT(m);
+    }
+  }
+  function calDragReset() {
+    clearTimeout(cdrag.hold);
+    if (cdrag.asRaf) cancelAnimationFrame(cdrag.asRaf);
+    cdrag.asRaf = 0; cdrag.asDir = 0;
+    document.removeEventListener('pointermove', calDragMove);
+    document.removeEventListener('pointerup', calDragEnd);
+    document.removeEventListener('pointercancel', calDragEnd);
+    document.removeEventListener('touchmove', calBlockTouch);
+    document.body.classList.remove('dragging-active');
+    if (cdrag.ghost) cdrag.ghost.remove();
+    if (cdrag.node) cdrag.node.classList.remove('touch-armed', 'cd-dragging', 'to-allday');
+    document.querySelectorAll('#calGrid .drop, #calGrid .cd-drop').forEach(x => x.classList.contains('cd-drop') ? x.remove() : x.classList.remove('drop'));
+    Object.assign(cdrag, { node: null, id: null, subId: null, active: false, armed: false, ghost: null, drop: null, scroller: null });
+  }
+  async function calDragEnd(e) {
+    const was = cdrag.active, drop = cdrag.drop, id = cdrag.id, subId = cdrag.subId, kind = cdrag.kind, orig = cdrag.origMin;
+    calDragReset();
+    if (!was) return;
+    calJustDragged = true; setTimeout(() => { calJustDragged = false; }, 60);
+    const it = items.find(x => x.id === id);
+    if (!it || !drop) { renderCalendar(); return; }
+    if (kind === 'cell') {
+      if (subId) { const s = (it.subs || []).find(x => x.id === subId); if (s && drop.day !== s.due) await calApplyMove(it, s, { due: drop.day }); else renderCalendar(); }
+      else if (drop.day !== it.due) await calApplyMove(it, null, { due: drop.day }); else renderCalendar();
+    } else if (drop.allDay) await calApplyMove(it, null, { time: null });
+    else if (drop.min != null && (kind === 'chip' || drop.min !== orig)) await calApplyMove(it, null, { time: minT(drop.min) });
+    else renderCalendar();
+  }
+  /* ---- HAFTALIK DERS PROGRAMI (projeye kayıtlı: p.tt = { days, slots: [{s, e}], cells: {'gün-saat': {n, r, c}} }) ---- */
+  const TT_DAYS = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+  const TT_COLORS = COLUMN_COLORS;
+  const TT_PRESETS = {
+    lise: ['08:30-09:10', '09:20-10:00', '10:10-10:50', '11:00-11:40', '11:50-12:30', '13:10-13:50', '14:00-14:40', '14:50-15:30'],
+    uni: ['09:00-09:50', '10:00-10:50', '11:00-11:50', '12:00-12:50', '13:00-13:50', '14:00-14:50', '15:00-15:50', '16:00-16:50'],
+    bos: ['09:00-09:40']
+  };
+  function ttClean(tt) {
+    if (!tt || typeof tt !== 'object') return null;
+    const days = [5, 6, 7].includes(tt.days) ? tt.days : 5;
+    const slots = (Array.isArray(tt.slots) ? tt.slots : []).filter(s => s && TIME_RE.test(s.s) && TIME_RE.test(s.e) && tMin(s.s) < tMin(s.e))
+      .slice(0, 16).map(s => ({ s: s.s, e: s.e }));
+    const cells = {};
+    if (tt.cells && typeof tt.cells === 'object' && !Array.isArray(tt.cells)) {
+      for (const k of Object.keys(tt.cells).slice(0, 300)) {
+        const m = /^([0-6])-(\d{1,2})$/.exec(k), v = tt.cells[k];
+        if (!m || +m[1] >= days || +m[2] >= slots.length || !v || typeof v !== 'object') continue;
+        const n = String(v.n == null ? '' : v.n).replace(/\s+/g, ' ').trim().slice(0, 40);
+        if (!n) continue;
+        cells[k] = { n: n, r: String(v.r == null ? '' : v.r).replace(/\s+/g, ' ').trim().slice(0, 40), c: TT_COLORS.includes(v.c) ? v.c : TT_COLORS[0] };
+      }
+    }
+    return { days: days, slots: slots, cells: cells };
+  }
+  function ttGet(pid) { const p = projects.find(x => x.id === pid); return p && p.tt ? ttClean(p.tt) : null; }
+  async function ttSave(pid, tt) {
+    const p = projects.find(x => x.id === pid);
+    if (!p) return;
+    if (tt && tt.slots.length) p.tt = ttClean(tt); else delete p.tt;
+    await saveProject(p);
+  }
+  /* O günün dersleri (gün görünümü için): [{ n, r, c, s, e }] */
+  function ttLessonsOn(pid, date) {
+    const tt = ttGet(pid);
+    if (!tt) return [];
+    const d = (date.getDay() + 6) % 7, out = [];
+    if (d >= tt.days) return out;
+    tt.slots.forEach((s, k) => { const c = tt.cells[d + '-' + k]; if (c) out.push(Object.assign({ s: s.s, e: s.e }, c)); });
+    return out;
+  }
+  /* Saatler sıralanır, dersler yeni sıralarına taşınır */
+  function ttSortSlots(tt) {
+    const idx = tt.slots.map((s, k) => k).sort((a, b) => tMin(tt.slots[a].s) - tMin(tt.slots[b].s));
+    const cells = {};
+    Object.keys(tt.cells).forEach(key => { const [d, k] = key.split('-').map(Number); cells[d + '-' + idx.indexOf(k)] = tt.cells[key]; });
+    tt.slots = idx.map(k => tt.slots[k]); tt.cells = cells;
+    return tt;
+  }
+  const ttColorFor = (tt, name) => {
+    const same = Object.values(tt.cells).find(c => flFold(c.n) === flFold(name));
+    if (same) return same.c;
+    let h = 0; for (const ch of flFold(name)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return TT_COLORS[h % TT_COLORS.length];
+  };
+  function renderTimetable() {
+    const tt = ttGet(activeProject);
+    el('calDay').innerHTML = '';
+    if (!tt) {
+      el('calGrid').innerHTML = '<div class="tt-empty"><h4>Haftalık ders programı</h4>' +
+        '<p>Derslerini bir kez yaz: Gün görünümünde o günün dersleri çıkar, bir derse dokununca bir sonraki derse teslim edilecek ödev eklenir. Önce ders saatlerini seç:</p>' +
+        '<div class="tt-presets"><button class="er-btn" type="button" data-ttpreset="lise"><b>Okul</b><small>40 dk ders, 10 dk teneffüs · 08:30\'dan</small></button>' +
+        '<button class="er-btn" type="button" data-ttpreset="uni"><b>Üniversite</b><small>50 dk ders · 09:00\'dan</small></button>' +
+        '<button class="er-btn" type="button" data-ttpreset="bos"><b>Boş</b><small>Saatleri kendim eklerim</small></button></div></div>';
+      return;
+    }
+    const today = (new Date().getDay() + 6) % 7;
+    let h = '<div class="tt-bar"><select class="modal-select" data-ttdays aria-label="Hangi günler">' +
+      [[5, 'Pazartesi–Cuma'], [6, 'Pazartesi–Cumartesi'], [7, 'Bütün hafta']].map(([n, t]) => '<option value="' + n + '"' + (tt.days === n ? ' selected' : '') + '>' + t + '</option>').join('') + '</select>' +
+      '<button class="er-btn" type="button" data-tt="addslot">+ Ders saati</button>' +
+      '<button class="er-btn" type="button" data-tt="print">Yazdır</button>' +
+      '<button class="er-btn tt-del" type="button" data-tt="clear">Programı sil</button></div>';
+    h += '<div class="tt-scroll"><table class="tt" style="min-width:' + (3.8 + tt.days * 6.6) + 'rem"><thead><tr><th class="tt-time">Saat</th>' +
+      TT_DAYS.slice(0, tt.days).map((d, k) => '<th' + (k === today ? ' class="today"' : '') + '>' + d + '</th>').join('') + '</tr></thead><tbody>';
+    tt.slots.forEach((s, k) => {
+      h += '<tr><th class="tt-time"><button type="button" data-ttslot="' + k + '" title="Saati değiştir ya da sil">' + s.s + '<span>' + s.e + '</span></button></th>';
+      for (let d = 0; d < tt.days; d++) {
+        const c = tt.cells[d + '-' + k];
+        h += '<td' + (d === today ? ' class="today"' : '') + '><button type="button" class="tt-cell' + (c ? ' on' : '') + '" data-ttcell="' + d + '-' + k + '"' + (c ? ' style="--c:' + c.c + '"' : '') +
+          ' aria-label="' + escAttr(TT_DAYS[d] + ' ' + s.s + (c ? ', ' + c.n : ', boş')) + '">' +
+          (c ? '<b>' + esc(c.n) + '</b>' + (c.r ? '<small>' + esc(c.r) + '</small>' : '') : '<span class="tt-plus" aria-hidden="true">+</span>') + '</button></td>';
+      }
+      h += '</tr>';
+    });
+    h += '</tbody></table></div><p class="tt-hint">Kutuya dokunup dersi yaz, saat kutusuna dokunup saati değiştir. Dersler <b>Gün</b> görünümünde de çıkar; ' +
+      'oradan ya da ders penceresinden <b>ödev eklenince</b> teslim tarihi bir sonraki o dersin günü olur.</p>';
+    el('calGrid').innerHTML = h;
+  }
+  async function ttApplyPreset(k) {
+    const list = TT_PRESETS[k];
+    if (!list) return;
+    await ttSave(activeProject, { days: 5, slots: list.map(x => ({ s: x.slice(0, 5), e: x.slice(6) })), cells: {} });
+    renderTimetable();
+  }
+  async function ttEditSlot(k) {
+    const tt = ttGet(activeProject), s = tt && tt.slots[k];
+    if (!s) return;
+    const v = prompt('Ders saati (ör. 08:30-09:10).\nBu saati silmek için kutuyu boşalt:', s.s + '-' + s.e);
+    if (v === null) return;
+    if (!v.trim()) {
+      const has = Object.keys(tt.cells).some(key => +key.split('-')[1] === k);
+      if (has && !confirm(s.s + ' saatindeki dersler de silinsin mi?')) return;
+      const cells = {};
+      Object.keys(tt.cells).forEach(key => { const [d, x] = key.split('-').map(Number); if (x !== k) cells[d + '-' + (x > k ? x - 1 : x)] = tt.cells[key]; });
+      tt.slots.splice(k, 1); tt.cells = cells;
+      if (!tt.slots.length && !confirm('Son ders saati de silinirse program boşalır. Devam edilsin mi?')) return;
+    } else {
+      const m = /^\s*(\d{1,2})[:.](\d{2})\s*[-–—]\s*(\d{1,2})[:.](\d{2})\s*$/.exec(v);
+      const a = m && pad2(+m[1]) + ':' + m[2], b = m && pad2(+m[3]) + ':' + m[4];
+      if (!m || !TIME_RE.test(a) || !TIME_RE.test(b) || tMin(a) >= tMin(b)) { alert('Saat "08:30-09:10" biçiminde olmalı ve bitiş başlangıçtan sonra gelmeli.'); return; }
+      tt.slots[k] = { s: a, e: b };
+      ttSortSlots(tt);
+    }
+    await ttSave(activeProject, tt);
+    renderTimetable();
+  }
+  async function ttAddSlot() {
+    const tt = ttGet(activeProject);
+    if (!tt) return;
+    if (tt.slots.length >= 16) { alert('En fazla 16 ders saati eklenebilir.'); return; }
+    const last = tt.slots[tt.slots.length - 1];
+    const len = last ? tMin(last.e) - tMin(last.s) : 40, s = last ? tMin(last.e) + 10 : 9 * 60;
+    if (s + len > 1439) { alert('Gün bitti: daha geç bir ders saati eklenemiyor. Saat kutusuna dokunup saatleri düzenleyebilirsin.'); return; }
+    tt.slots.push({ s: minT(s), e: minT(s + len) });
+    await ttSave(activeProject, tt);
+    renderTimetable();
+  }
+  async function ttSetDays(n) {
+    const tt = ttGet(activeProject);
+    if (!tt || ![5, 6, 7].includes(n)) return;
+    const lost = Object.keys(tt.cells).filter(k => +k.split('-')[0] >= n);
+    if (lost.length && !confirm(TT_DAYS.slice(n).join(' ve ') + ' günlerindeki ' + lost.length + ' ders silinsin mi?')) { renderTimetable(); return; }
+    lost.forEach(k => { delete tt.cells[k]; });
+    tt.days = n;
+    await ttSave(activeProject, tt);
+    renderTimetable();
+  }
+  async function ttClear() {
+    if (!ttGet(activeProject) || !confirm('Bu projenin ders programı tamamen silinsin mi?')) return;
+    const p = projects.find(x => x.id === activeProject), old = p && p.tt;
+    await ttSave(activeProject, null);
+    renderTimetable();
+    showSnack('Ders programı silindi.', async () => { const q = projects.find(x => x.id === p.id); if (q) { q.tt = old; await saveProject(q); } renderCalendar(); });
+  }
+  /* Ders kutusu penceresi */
+  let ttEditKey = null, ttEditColor = null, ttColorPicked = false;
+  function ttOpenCell(key) {
+    const tt = ttGet(activeProject);
+    const m = /^(\d)-(\d{1,2})$/.exec(key || '');
+    if (!tt || !m || !tt.slots[+m[2]]) return;
+    ttEditKey = key;
+    const c = tt.cells[key], s = tt.slots[+m[2]];
+    el('ttmTitle').textContent = TT_DAYS[+m[1]] + ' · ' + s.s + '–' + s.e;
+    el('ttmName').value = c ? c.n : '';
+    el('ttmRoom').value = c ? c.r : '';
+    ttEditColor = c ? c.c : null; ttColorPicked = false;
+    const names = [...new Set(Object.values(tt.cells).map(x => x.n))].sort((a, b) => a.localeCompare(b, 'tr'));
+    el('ttmNames').innerHTML = names.map(n => '<option value="' + escAttr(n) + '"></option>').join('');
+    ttRenderColors();
+    el('ttmClear').style.display = c ? '' : 'none';
+    el('ttmHw').style.display = c ? '' : 'none';
+    el('ttModal').classList.add('open');
+    setTimeout(() => el('ttmName').focus(), 30);
+  }
+  /* Rengi seçilmediyse: aynı adlı ders başka kutuda varsa onun rengi, yoksa addan türetilen renk */
+  function ttCellColor(tt, key, name) {
+    if (ttColorPicked && ttEditColor) return ttEditColor;
+    const orig = tt.cells[key];
+    if (orig && flFold(orig.n) === flFold(name)) return orig.c;
+    const others = Object.assign({}, tt.cells); delete others[key];
+    return name ? ttColorFor({ cells: others }, name) : TT_COLORS[0];
+  }
+  function ttRenderColors() {
+    const tt = ttGet(activeProject), cur = tt ? ttCellColor(tt, ttEditKey, el('ttmName').value.trim()) : TT_COLORS[0];
+    el('ttmColors').innerHTML = TT_COLORS.map(c => '<button type="button" class="color-dot' + (c === cur ? ' sel' : '') + '" data-ttcolor="' + c + '" style="background:' + c + '" aria-label="Renk"></button>').join('');
+  }
+  function ttCloseCell() { el('ttModal').classList.remove('open'); ttEditKey = null; }
+  async function ttSaveCell(clear) {
+    const tt = ttGet(activeProject), key = ttEditKey;
+    if (!tt || !key) { ttCloseCell(); return; }
+    const n = el('ttmName').value.replace(/\s+/g, ' ').trim().slice(0, 40);
+    if (clear || !n) delete tt.cells[key];
+    else {
+      const same = Object.keys(tt.cells).filter(k => k !== key).map(k => tt.cells[k]).find(c => flFold(c.n) === flFold(n));
+      const room = el('ttmRoom').value.replace(/\s+/g, ' ').trim().slice(0, 40);
+      tt.cells[key] = { n: n, r: room || (same && !tt.cells[key] ? same.r : ''), c: ttCellColor(tt, key, n) };
+    }
+    await ttSave(activeProject, tt);
+    ttCloseCell();
+    renderTimetable();
+  }
+  /* Bir derse ödev: teslim tarihi, (taban günden) sonraki ilk o ders */
+  function ttNextLesson(tt, name, baseDs) {
+    const key = flFold(name), occ = [];
+    Object.keys(tt.cells).forEach(k => { if (flFold(tt.cells[k].n) === key) occ.push(k.split('-').map(Number)); });
+    if (!occ.length) return null;
+    const b = parseDay(baseDs || todayStr());
+    for (let add = 1; add <= 7; add++) {
+      const d = new Date(b.getFullYear(), b.getMonth(), b.getDate() + add), di = (d.getDay() + 6) % 7;
+      const hit = occ.filter(o => o[0] === di).sort((x, y) => x[1] - y[1])[0];
+      if (hit) return { date: dateStr(d), time: tt.slots[hit[1]].s };
+    }
+    return null;
+  }
+  async function ttAddHomework(name, baseDs) {
+    const tt = ttGet(activeProject);
+    if (!tt || !name) return;
+    const nx = ttNextLesson(tt, name, baseDs || (calMode === 'day' ? calSel : todayStr()));
+    const title = prompt(name + ' ödevi' + (nx ? ' — teslim: ' + fmtLongDay(nx.date) + ' ' + nx.time + ' (bir sonraki ' + name + ' dersi)' : '') + '\nÖdevin adı:', name + ' ödevi');
+    if (title === null || !title.trim()) return;
+    const cols = projectColumns(activeProject), colId = cols.length ? cols[0].id : null;
+    const it = { id: uid(), projectId: activeProject, columnId: colId, order: Date.now(), type: 'task', title: title.trim().slice(0, 300), body: '',
+                 tags: ['ödev', name.slice(0, 40)], cover: null, due: nx ? nx.date : null, done: false, pinned: false, created: Date.now() };
+    if (nx) it.time = nx.time;
+    items.push(it); await saveItem(it);
+    renderProjects(); renderMain(); renderBoard();
+    showSnack('“' + it.title + '” eklendi' + (nx ? ' · teslim ' + fmtLongDay(nx.date) : '') + '.', async () => {
+      if (items.some(x => x.id === it.id)) { await deleteItemStore(it.id); items = items.filter(x => x.id !== it.id); renderProjects(); renderMain(); renderBoard(); }
+    });
+  }
+  function ttPrint() {
+    const tt = ttGet(activeProject), p = projects.find(x => x.id === activeProject);
+    if (!tt) return;
+    const rows = tt.slots.map((s, k) => '<tr><th>' + s.s + '<br><small>' + s.e + '</small></th>' + TT_DAYS.slice(0, tt.days).map((d, di) => {
+      const c = tt.cells[di + '-' + k];
+      return '<td' + (c ? ' style="border-left:4px solid ' + c.c + '"' : '') + '>' + (c ? '<b>' + esc(c.n) + '</b>' + (c.r ? '<br><small>' + esc(c.r) + '</small>' : '') : '') + '</td>';
+    }).join('') + '</tr>').join('');
+    const html = '<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>' + esc('Ders programı' + (p ? ' · ' + p.name : '')) + '</title><style>' + PRINT_FONTS +
+      'body{font-family:"Recursive WN",system-ui,sans-serif;color:#172036;margin:1.5rem;}h1{font-size:1.3rem;margin:0 0 1rem;}' +
+      'table{border-collapse:collapse;width:100%;table-layout:fixed;}th,td{border:1px solid #C9D0DE;padding:.45rem .5rem;font-size:.85rem;vertical-align:top;}' +
+      'thead th{background:#F1F4FA;}tbody th{width:4.5rem;text-align:left;font-variant-numeric:tabular-nums;}small{color:#5A6680;}' +
+      '@page{size:landscape;margin:12mm;}@media print{body{margin:0;}}</style></head><body><h1>' + esc('Ders programı' + (p ? ' · ' + p.name : '')) + '</h1>' +
+      '<table><thead><tr><th>Saat</th>' + TT_DAYS.slice(0, tt.days).map(d => '<th>' + d + '</th>').join('') + '</tr></thead><tbody>' + rows + '</tbody></table></body></html>';
+    const w = window.open('', '_blank');
+    if (!w) { alert('Yazdırmak için açılır pencereye izin verin.'); return; }
+    w.document.write(html); w.document.close(); w.focus();
+    setTimeout(() => w.print(), 350);
+  }
+
+  /* ---- TAKVİM DOSYASI İÇE AKTAR (.ics: Google Takvim, Outlook, okulun takvimi…) ----
+     Etkinlikler ve görevler (VEVENT / VTODO) açık projeye eklenir; saat, süre, tekrar, yer ve kategoriler alınır.
+     Aynı dosya ikinci kez yüklenirse daha önce eklenenler (UID) tekrar eklenmez. */
+  let icsPending = null;
+  const icsUnesc = v => String(v || '').replace(/\\([nN,;\\])/g, (m, c) => (c === 'n' || c === 'N' ? '\n' : c));
+  function icsSplit(line) {   // AD;PARAMETRELER:DEĞER — tırnak içindeki ":" ayırmaz
+    let q = false;
+    for (let k = 0; k < line.length; k++) { const ch = line[k]; if (ch === '"') q = !q; else if (ch === ':' && !q) return [line.slice(0, k), line.slice(k + 1)]; }
+    return null;
+  }
+  function icsTzWall(y, mo, d, h, mi, tz) {   // TZID saat diliminde duvar saati → bu cihazın saati
+    const guess = Date.UTC(y, mo - 1, d, h, mi);
+    try {
+      const f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' });
+      const p = {}; f.formatToParts(new Date(guess)).forEach(x => { p[x.type] = +x.value; });
+      return new Date(guess - (Date.UTC(p.year, p.month - 1, p.day, p.hour % 24, p.minute) - guess));
+    } catch (e) { return new Date(y, mo - 1, d, h, mi); }
+  }
+  function icsDate(prop) {
+    if (!prop) return null;
+    const v = prop.value.trim();
+    let m = /^(\d{4})(\d{2})(\d{2})$/.exec(v);
+    if (m) return +m[2] >= 1 && +m[2] <= 12 && +m[3] >= 1 && +m[3] <= 31 ? { date: m[1] + '-' + m[2] + '-' + m[3], time: null } : null;
+    m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})?(Z)?$/.exec(v);
+    if (!m) return null;
+    const y = +m[1], mo = +m[2], d = +m[3], h = +m[4], mi = +m[5];
+    if (mo < 1 || mo > 12 || d < 1 || d > 31 || h > 23 || mi > 59) return null;
+    const tz = /;TZID=("?)([^;":]{1,64})\1(?:;|$)/i.exec(prop.params);
+    const dt = m[7] ? new Date(Date.UTC(y, mo - 1, d, h, mi)) : tz ? icsTzWall(y, mo, d, h, mi, tz[2]) : new Date(y, mo - 1, d, h, mi);
+    if (isNaN(dt) || dt.getFullYear() < 1900 || dt.getFullYear() > 2999) return null;
+    return { date: dateStr(dt), time: pad2(dt.getHours()) + ':' + pad2(dt.getMinutes()), ms: dt.getTime() };
+  }
+  function icsDurMin(v) {
+    const m = /^P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:\d+S)?)?$/.exec(String(v || '').trim());
+    return m ? (+m[1] || 0) * 10080 + (+m[2] || 0) * 1440 + (+m[3] || 0) * 60 + (+m[4] || 0) : null;
+  }
+  function icsRepeat(rr) {
+    if (!rr) return null;
+    const p = {};
+    String(rr).split(';').forEach(kv => { const [k, v] = kv.split('='); if (k && v) p[k.trim().toUpperCase()] = v.trim().toUpperCase(); });
+    if (p.UNTIL) { const u = icsDate({ value: p.UNTIL, params: '' }); if (u && u.date < todayStr()) return 'ended'; }
+    if ((p.INTERVAL && p.INTERVAL !== '1') || p.COUNT) return null;              // desteklenmeyen tekrar: tek seferlik alınır
+    const days = (p.BYDAY || '').split(',').filter(Boolean);
+    if (p.FREQ === 'DAILY') return 'daily';
+    if (p.FREQ === 'WEEKLY') return days.length <= 1 ? 'weekly' : days.slice().sort().join(',') === 'FR,MO,TH,TU,WE' ? 'weekdays' : null;
+    if (p.FREQ === 'MONTHLY' && !p.BYDAY) return 'monthly';
+    if (p.FREQ === 'YEARLY') return 'yearly';
+    return null;
+  }
+  function icsParse(text) {
+    const lines = String(text).replace(/\r\n?/g, '\n').replace(/\n[ \t]/g, '').split('\n');
+    const comps = [];
+    let cur = null, inner = 0;
+    for (const line of lines) {
+      if (comps.length >= 3000) break;
+      const up = line.trim().toUpperCase();
+      if (up === 'BEGIN:VEVENT' || up === 'BEGIN:VTODO') { cur = { kind: up === 'BEGIN:VTODO' ? 'todo' : 'event', p: Object.create(null) }; inner = 0; continue; }
+      if (!cur) continue;
+      if (up === 'END:VEVENT' || up === 'END:VTODO') { comps.push(cur); cur = null; continue; }
+      if (up.startsWith('BEGIN:')) { inner++; continue; }     // içteki hatırlatıcı (VALARM) vb.
+      if (up.startsWith('END:')) { inner = Math.max(0, inner - 1); continue; }
+      if (inner) continue;
+      const sp = icsSplit(line);
+      if (!sp) continue;
+      const name = sp[0].split(';')[0].trim().toUpperCase();
+      if (/^[A-Z0-9-]{1,40}$/.test(name) && !(name in cur.p)) cur.p[name] = { params: sp[0].slice(name.length), value: sp[1] };
+    }
+    return comps.map(c => {
+      const P = c.p, txt = k => (P[k] ? icsUnesc(P[k].value).trim() : '');
+      if (/CANCELLED/i.test(txt('STATUS'))) return null;
+      const st = icsDate(c.kind === 'todo' ? (P.DUE || P.DTSTART) : P.DTSTART);
+      if (!st && c.kind === 'event') return null;
+      let dur = null;
+      if (st && st.time) {
+        const en = icsDate(P.DTEND);
+        dur = en && en.ms ? Math.round((en.ms - st.ms) / 60000) : P.DURATION ? icsDurMin(P.DURATION.value) : null;
+        if (!(dur >= 5 && dur <= 1440)) dur = null;
+      }
+      const rep = icsRepeat(P.RRULE && P.RRULE.value);
+      const loc = txt('LOCATION').slice(0, 200), desc = txt('DESCRIPTION').slice(0, 5000);
+      return {
+        uid: txt('UID').slice(0, 200), kind: c.kind, title: txt('SUMMARY').replace(/\s+/g, ' ').slice(0, 300) || '(başlıksız)',
+        body: [loc ? 'Yer: ' + loc : '', desc].filter(Boolean).join('\n\n'),
+        due: st ? st.date : null, time: st ? st.time : null, dur: dur,
+        repeat: rep && rep !== 'ended' ? rep : null, ended: rep === 'ended', multi: !!(P.RRULE && !rep),
+        done: c.kind === 'todo' && (/COMPLETED/i.test(txt('STATUS')) || !!P.COMPLETED),
+        tags: txt('CATEGORIES').split(',').map(t => t.trim().slice(0, 40)).filter(Boolean).slice(0, 10)
+      };
+    }).filter(Boolean);
+  }
+  /* Tekrarlayan etkinliğin bugünden önceki başlangıcı ilk gelecek tekrarına kaydırılır */
+  function icsRollForward(ev) {
+    const t = todayStr();
+    if (!ev.repeat || !ev.due || ev.due >= t) return ev.due;
+    if (ev.repeat === 'daily') return t;
+    let d = parseDay(ev.due), g = 0;
+    const rd = d.getDate();
+    if (ev.repeat === 'weekly' || ev.repeat === 'weekdays') {   // haftalarca ileri atla (çok eski başlangıçta döngü uzamasın)
+      const days = Math.round((parseDay(t) - d) / 864e5);
+      d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + Math.floor(days / 7) * 7);
+    }
+    while (dateStr(d) < t && ++g < 3000) d = repeatStep(d, ev.repeat, rd);
+    return dateStr(d);
+  }
+  function icsPlan() {   // seçeneklere göre hangileri eklenecek
+    const past = el('icsPast').checked, t = todayStr(), pid = activeProject;
+    const have = new Set(items.filter(i => i.projectId === pid && i.icsUid).map(i => i.icsUid));
+    const out = [], seen = new Set();
+    let dup = 0, old = 0;
+    icsPending.evs.forEach(ev => {
+      if (ev.uid && (have.has(ev.uid) || seen.has(ev.uid))) { dup++; return; }
+      const due = icsRollForward(ev);
+      if (!past && ((due && due < t) || ev.ended || (!due && ev.kind === 'event'))) { old++; return; }
+      if (ev.uid) seen.add(ev.uid);
+      out.push(Object.assign({}, ev, { due: due }));
+    });
+    return { list: out, dup: dup, old: old };
+  }
+  async function importICS(file) {
+    if (file.size > 5 * 1024 * 1024) { alert('Takvim dosyası çok büyük (en fazla 5 MB).'); return; }
+    let text;
+    try { text = await file.text(); } catch (e) { alert('Dosya okunamadı.'); return; }
+    if (!/BEGIN:VCALENDAR/i.test(text.slice(0, 5000))) { alert('Bu bir takvim dosyası (.ics) değil gibi görünüyor.'); return; }
+    const evs = icsParse(text);
+    if (!evs.length) { alert('Bu dosyada etkinlik ya da görev bulunamadı.'); return; }
+    icsPending = { evs: evs, name: String(file.name || 'takvim.ics').slice(0, 80) };
+    el('icsPast').checked = false;
+    el('icsAs').value = 'task';
+    icsRenderInfo();
+    el('icsModal').classList.add('open');
+  }
+  function icsRenderInfo() {
+    if (!icsPending) return;
+    const pl = icsPlan(), p = projects.find(x => x.id === activeProject), evs = icsPending.evs;
+    const rep = evs.filter(e => e.repeat).length, multi = evs.filter(e => e.multi).length;
+    el('icsInfo').textContent = '“' + icsPending.name + '” içinde ' + evs.length + ' etkinlik / görev var' + (rep ? ' (' + rep + ' tanesi tekrarlıyor)' : '') + '. ' +
+      pl.list.length + ' tanesi “' + (p ? p.name : '') + '” projesine eklenecek' +
+      (pl.old ? '; ' + pl.old + ' geçmiş tarihli atlanacak' : '') + (pl.dup ? '; ' + pl.dup + ' tanesi zaten var' : '') + '.' +
+      (multi ? ' Haftanın birkaç gününde tekrarlayan ' + multi + ' etkinlik tek seferlik alınır.' : '');
+    el('icsPrev').innerHTML = pl.list.slice().sort((a, b) => ((a.due || '9') + (a.time || '')).localeCompare((b.due || '9') + (b.time || ''))).slice(0, 6).map(ev =>
+      '<div class="ics-row"><span class="d">' + (ev.due ? esc(fmtDay(ev.due)) + (ev.time ? ' ' + ev.time : '') : '—') + '</span><span class="t">' + esc(ev.title) + '</span>' +
+      (ev.repeat ? '<span class="r">' + esc(repName(ev.repeat)) + '</span>' : '') + '</div>').join('') +
+      (pl.list.length > 6 ? '<div class="ics-more">+' + (pl.list.length - 6) + ' tane daha</div>' : '');
+    el('icsGo').textContent = pl.list.length ? 'Ekle (' + pl.list.length + ')' : 'Eklenecek bir şey yok';
+    el('icsGo').disabled = !pl.list.length;
+  }
+  async function icsDoImport() {
+    if (!icsPending) return;
+    const pl = icsPlan(), asNote = el('icsAs').value === 'note', pid = activeProject;
+    const cols = projectColumns(pid), colId = cols.length ? cols[0].id : null, added = [];
+    let k = 0;
+    for (const ev of pl.list) {
+      const it = { id: uid(), projectId: pid, columnId: colId, order: Date.now() + k, type: asNote ? 'note' : 'task', title: ev.title, body: ev.body,
+                   tags: ev.tags, cover: null, due: ev.due || null, done: !asNote && ev.done, pinned: false, created: Date.now() + k++ };
+      if (it.due && ev.time) { it.time = ev.time; if (ev.dur) it.dur = ev.dur; }
+      if (!asNote && ev.repeat && it.due) { it.repeat = ev.repeat; it.repeatDay = parseDay(it.due).getDate(); }
+      if (ev.uid) it.icsUid = ev.uid;
+      const n = normalizeItems([it])[0];
+      items.push(n); await saveItem(n); added.push(n.id);
+    }
+    el('icsModal').classList.remove('open');
+    icsPending = null;
+    renderProjects(); renderMain(); renderBoard();
+    showSnack(added.length + ' öğe takvim dosyasından eklendi.', async () => {
+      for (const id of added) { if (items.some(x => x.id === id)) await deleteItemStore(id); }
+      items = items.filter(x => !added.includes(x.id));
+      renderProjects(); renderMain(); renderBoard();
+    });
+  }
+
+  /* Taşımayı uygular ve geri alınabilir bildirim gösterir */
+  async function calApplyMove(it, sub, patch) {
+    const snap = { due: it.due, time: it.time, dur: it.dur, repeatDay: it.repeatDay, subDue: sub ? sub.due : null };
+    let msg;
+    if (sub) { sub.due = patch.due; msg = '“' + sub.t + '” → ' + fmtLongDay(patch.due); }
+    else if (patch.due !== undefined) {
+      it.due = patch.due;
+      if (it.repeat) it.repeatDay = parseDay(it.due).getDate();
+      msg = '“' + calName(it) + '” → ' + fmtLongDay(patch.due);
+    } else if (patch.time) { it.time = patch.time; msg = '“' + calName(it) + '” → ' + timeRange(it); }
+    else { delete it.time; delete it.dur; msg = '“' + calName(it) + '” saatsiz (tüm gün) oldu'; }
+    await saveItem(it);
+    renderProjects(); renderMain(); renderBoard();
+    showSnack(msg, async () => {
+      const cur = items.find(x => x.id === it.id);
+      if (!cur) return;
+      if (sub) { const s = (cur.subs || []).find(x => x.id === sub.id); if (s) s.due = snap.subDue; }
+      else {
+        cur.due = snap.due;
+        ['time', 'dur', 'repeatDay'].forEach(k => { if (snap[k] === undefined) delete cur[k]; else cur[k] = snap[k]; });
+      }
+      await saveItem(cur);
+      renderProjects(); renderMain(); renderBoard();
+    });
   }
 
   /* ===================================================================
@@ -16165,6 +17174,8 @@
       else if (el('trashModal').classList.contains('open')) el('trashModal').classList.remove('open');
       else if (el('installModal').classList.contains('open')) el('installModal').classList.remove('open');
       else if (el('backupModal').classList.contains('open')) closeBackupModal();
+      else if (el('ttModal').classList.contains('open')) ttCloseCell();
+      else if (el('icsModal').classList.contains('open')) { el('icsModal').classList.remove('open'); icsPending = null; }
       else if (el('flAlgoModal').classList.contains('open')) el('flAlgoModal').classList.remove('open');
       else if (currentView === 'flow' && flSel && !document.querySelector('.modal-overlay.open')) flSelect(null);
       else if (currentView === 'list' && listSelOn && !document.querySelector('.modal-overlay.open')) setListSel(false);
@@ -16804,11 +17815,17 @@
     const pname = id => (projects.find(p => p.id === id) || {}).name || '';
     const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//White Note//TR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
                'X-WR-CALNAME:' + icsText(scope === 'all' ? 'White Note' : 'White Note · ' + pname(activeProject))];
+    const utc = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
     list.forEach(i => {
-      const end = parseDay(i.due); end.setDate(end.getDate() + 1);
-      L.push('BEGIN:VEVENT', 'UID:' + i.id + '@white-note', 'DTSTAMP:' + stamp,
-             'DTSTART;VALUE=DATE:' + ymd(i.due), 'DTEND;VALUE=DATE:' + ymd(dateStr(end)),
-             'SUMMARY:' + icsText(i.title || String(i.body || '').slice(0, 60) || '(başlıksız)'));
+      L.push('BEGIN:VEVENT', 'UID:' + i.id + '@white-note', 'DTSTAMP:' + stamp);
+      if (i.time) {   // saatli: başlangıç ve bitiş (süre yoksa 1 saat), evrensel saatle
+        const s = parseDay(i.due); s.setHours(+i.time.slice(0, 2), +i.time.slice(3, 5), 0, 0);
+        L.push('DTSTART:' + utc(s), 'DTEND:' + utc(new Date(s.getTime() + (i.dur || 60) * 60000)));
+      } else {
+        const end = parseDay(i.due); end.setDate(end.getDate() + 1);
+        L.push('DTSTART;VALUE=DATE:' + ymd(i.due), 'DTEND;VALUE=DATE:' + ymd(dateStr(end)));
+      }
+      L.push('SUMMARY:' + icsText(i.title || String(i.body || '').slice(0, 60) || '(başlıksız)'));
       const desc = [scope === 'all' ? 'Proje: ' + pname(i.projectId) : '', i.type === 'task' ? '' : 'Not', i.body || ''].filter(Boolean).join('\n\n');
       if (desc) L.push('DESCRIPTION:' + icsText(desc));
       if (i.tags && i.tags.length) L.push('CATEGORIES:' + i.tags.map(icsText).join(','));
@@ -16933,6 +17950,9 @@
       if (i.cover && !(typeof i.cover === 'string' && SAFE_COVER.test(i.cover))) i.cover = null;
       if (![1, 2, 3].includes(i.prio)) delete i.prio;                                      // öncelik: 1 yüksek, 2 orta, 3 düşük
       if (Array.isArray(i.subs) && i.subs.length) i.subs = cleanSubs(i.subs); else delete i.subs; // alt görevler
+      if (!i.due || !(typeof i.time === 'string' && TIME_RE.test(i.time))) delete i.time;      // saat: 'SS:DD' (yalnız tarihliyse)
+      if (!i.time || !(Number.isInteger(i.dur) && i.dur >= 5 && i.dur <= 1440)) delete i.dur;  // süre (dakika)
+      if (!(typeof i.icsUid === 'string' && i.icsUid.length <= 200)) delete i.icsUid;         // takvimden gelenin kimliği
       i.created = +i.created || Date.now();
       return i;
     });
@@ -17203,6 +18223,7 @@
       case 'all-ics': exportICS('all'); break;
       case 'json-export': exportJSON(); break;
       case 'json-import': el('importFile').click(); break; // gizli dosya seçiciyi aç
+      case 'ics-import': el('icsFile').click(); break;     // Google Takvim / Outlook / okul takvimi
       case 'install': installApp(); break;
     }
   }
@@ -17298,29 +18319,51 @@
 
   /* ---- TAKVİM olayları ---- */
   const calShift = d => {
-    if (calMode === 'week') {   // haftalık görünüm: 7 gün ileri / geri
-      const s = parseDay(calSel); s.setDate(s.getDate() + 7 * d); calSel = dateStr(s); calMonth = { y: s.getFullYear(), m: s.getMonth() };
+    if (calMode === 'week' || calMode === 'day') {   // hafta: 7 gün, gün: 1 gün ileri / geri
+      const s = parseDay(calSel); s.setDate(s.getDate() + (calMode === 'week' ? 7 : 1) * d); calSel = dateStr(s); calMonth = { y: s.getFullYear(), m: s.getMonth() };
       renderCalendar(); return;
     }
     calMonth = { y: calMonth.y, m: calMonth.m + d }; if (calMonth.m < 0) calMonth = { y: calMonth.y - 1, m: 11 }; if (calMonth.m > 11) calMonth = { y: calMonth.y + 1, m: 0 }; renderCalendar();
   };
   el('calModeMonth').addEventListener('click', () => setCalMode('month'));
   el('calModeWeek').addEventListener('click', () => setCalMode('week'));
+  el('calModeDay').addEventListener('click', () => setCalMode('day'));
+  el('calModeTT').addEventListener('click', () => setCalMode('tt'));
   el('calRemind').addEventListener('click', toggleRemind);
-  if (localGet('pref:calmode') === 'week') calMode = 'week';
+  if (CAL_MODES.includes(localGet('pref:calmode'))) calMode = localGet('pref:calmode');
   el('calPrev').addEventListener('click', () => calShift(-1));
   el('calNext').addEventListener('click', () => calShift(1));
-  el('calToday').addEventListener('click', () => { const t = new Date(); calMonth = { y: t.getFullYear(), m: t.getMonth() }; calSel = todayStr(); renderCalendar(); });
+  el('calToday').addEventListener('click', () => { const t = new Date(); calMonth = { y: t.getFullYear(), m: t.getMonth() }; calSel = todayStr(); cdScrollDay = null; renderCalendar(); });
   el('calAll').addEventListener('change', () => { calAll = el('calAll').checked; renderCalendar(); });
+  el('calGrid').addEventListener('pointerdown', calDragDown);
+  el('calGrid').addEventListener('contextmenu', e => { if (cdrag.node && cdrag.touch) e.preventDefault(); });
   el('calGrid').addEventListener('click', e => {
+    if (calJustDragged || calMode === 'tt') return;     // ders programının kendi olayları var
+    if (calMode === 'day') {
+      if (e.target.closest('input')) return;             // onay kutusu: change olayı işler
+      if (e.target.closest('[data-caladd]')) { calAddTask(); return; }
+      const les = e.target.closest('[data-cdlesson]');
+      if (les) { ttAddHomework(les.dataset.cdlesson); return; }
+      const it = e.target.closest('[data-open]');
+      if (it) { openCard(it.dataset.open); return; }
+      const g = e.target.closest('[data-cdgrid]');
+      if (g) { const r = g.getBoundingClientRect(); calAddTask(minT(Math.max(0, Math.min(1410, Math.floor((e.clientY - r.top) / CD_PX / 30) * 30)))); }
+      return;
+    }
     const it = e.target.closest('[data-open]');
-    if (it && window.matchMedia('(min-width: 721px)').matches) { openCard(it.dataset.open); return; }
+    if (it && !isPhoneWidth()) { openCard(it.dataset.open); return; }
     const c = e.target.closest('[data-day]');
     if (!c) return;
     calSel = c.dataset.day;
     const d = parseDay(calSel);
     if (d.getMonth() !== calMonth.m) calMonth = { y: d.getFullYear(), m: d.getMonth() };
     renderCalendar();
+  });
+  el('calGrid').addEventListener('change', e => {
+    const c = e.target.closest('[data-caldone]');
+    if (c) { toggleDone(c.dataset.caldone); return; }
+    const sb = e.target.closest('[data-calsub]');
+    if (sb) { const [a, b] = sb.dataset.calsub.split(':'); toggleSub(a, b); }
   });
   el('calDay').addEventListener('click', e => {
     if (e.target.closest('[data-caladd]')) { calAddTask(); return; }
@@ -17546,7 +18589,9 @@
   });
   el('modalDesc').addEventListener('blur', () => setTimeout(() => { el('wlSuggest').hidden = true; }, 150));
   el('modalDue').addEventListener('change', updateModalDueHint);
-  el('modalDueClear').addEventListener('click', () => { el('modalDue').value = ''; el('modalRepeat').value = ''; updateModalDueHint(); });
+  el('modalDueClear').addEventListener('click', () => { el('modalDue').value = ''; el('modalTime').value = ''; setModalDur(null); el('modalRepeat').value = ''; updateModalDueHint(); });
+  el('modalTime').addEventListener('change', updateModalDueHint);
+  el('modalTime').addEventListener('input', updateModalDueHint);
   // Tekrar seçilince tarih yoksa bugün olur (tekrar son tarihe göre hesaplanır)
   el('modalRepeat').addEventListener('change', () => {
     if (el('modalRepeat').value && !el('modalDue').value) el('modalDue').value = todayStr();
@@ -17683,6 +18728,33 @@
     if (f) importJSON(f);
     e.target.value = ''; // aynı dosya tekrar seçilebilsin diye sıfırla
   });
+  el('icsFile').addEventListener('change', e => { const f = e.target.files[0]; if (f) importICS(f); e.target.value = ''; });
+  if (matchMedia('(pointer: coarse)').matches) el('icsFile').removeAttribute('accept'); // bazı telefonlar .ics'yi seçtirmiyor
+  /* Takvim dosyası penceresi */
+  const icsClose = () => { el('icsModal').classList.remove('open'); icsPending = null; };
+  el('icsClose').addEventListener('click', icsClose);
+  el('icsCancel').addEventListener('click', icsClose);
+  el('icsModal').addEventListener('click', e => { if (e.target === el('icsModal')) icsClose(); });
+  el('icsPast').addEventListener('change', icsRenderInfo);
+  el('icsGo').addEventListener('click', icsDoImport);
+  /* Ders programı: tablo ve ders penceresi */
+  el('calGrid').addEventListener('click', e => {
+    if (calMode !== 'tt') return;
+    const pr = e.target.closest('[data-ttpreset]'); if (pr) { ttApplyPreset(pr.dataset.ttpreset); return; }
+    const b = e.target.closest('[data-tt]');
+    if (b) { const a = b.dataset.tt; if (a === 'addslot') ttAddSlot(); else if (a === 'print') ttPrint(); else if (a === 'clear') ttClear(); return; }
+    const sl = e.target.closest('[data-ttslot]'); if (sl) { ttEditSlot(+sl.dataset.ttslot); return; }
+    const c = e.target.closest('[data-ttcell]'); if (c) ttOpenCell(c.dataset.ttcell);
+  });
+  el('calGrid').addEventListener('change', e => { if (calMode === 'tt' && e.target.matches('[data-ttdays]')) ttSetDays(+e.target.value); });
+  el('ttmClose').addEventListener('click', ttCloseCell);
+  el('ttModal').addEventListener('click', e => { if (e.target === el('ttModal')) ttCloseCell(); });
+  el('ttmSave').addEventListener('click', () => ttSaveCell(false));
+  el('ttmClear').addEventListener('click', () => ttSaveCell(true));
+  el('ttmHw').addEventListener('click', () => { const n = el('ttmName').value.trim(); ttSaveCell(false).then(() => { if (n) ttAddHomework(n, todayStr()); }); });
+  el('ttmColors').addEventListener('click', e => { const d = e.target.closest('[data-ttcolor]'); if (!d) return; ttEditColor = d.dataset.ttcolor; ttColorPicked = true; ttRenderColors(); });
+  el('ttmName').addEventListener('input', () => { if (!ttColorPicked) ttRenderColors(); });
+  ['ttmName', 'ttmRoom'].forEach(id => el(id).addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); ttSaveCell(false); } }));
 
   /* ---- GÖRÜNÜM (TEMA) ----
      Tema düğmesi bir menü açar. Seçilen tema body'ye data-theme olarak yazılır; koyu temalar ayrıca
@@ -19590,6 +20662,8 @@ service cloud.firestore {
       }).map(x => JSON.parse(JSON.stringify(x)));
     };
     const p = { id: pid, name: String(p0.name || 'Proje').slice(0, 80), created: +p0.created || Date.now() };
+    const tt0 = ttClean(p0.tt);
+    if (tt0 && tt0.slots.length) p.tt = tt0;   // ders programı da gelsin
     const cols = copy('columns').filter(c => c.id).map(c => Object.assign(c, {
       name: String(c.name || 'Sütun'), color: /^#[0-9a-f]{3,8}$/i.test(c.color || '') ? c.color : '#2747C9', order: +c.order || 0 }));
     const colIds = new Set(cols.map(c => c.id));
