@@ -13139,11 +13139,20 @@
 
   /* ---- Yan yana: algoritma yazısı ↔ şema. Yazdıkça (biraz durunca) şema yeniden çizilir; şema başka
      yoldan değişince (şekil düzenleme, ekip arkadaşı) yazı da yenilenir. Yorum notları korunur. ---- */
-  let flSplitOn = false, flSplitSig = null, flSplitTimer = null, flSplitBusy = false, flSplitCid = null;
+  let flSplitOn = false, flSplitSig = null, flSplitTimer = null, flSplitBusy = false, flSplitCid = null, flSplitBase = null;
+  /* "Adım no" açıkken yazı numaralı adımlarla gelir (Adım 1: Başla …): şekillerin yanındaki numaralarla aynıdır.
+     Kapalıyken girintili yazı (Eğer / Değilse …). Yazarken her iki biçim de anlaşılır. */
   function flSplitText() {
     const cid = activeChartId(activeProject);
     if (!cid || !flLogicNodes(activeProject).length) return '';
-    try { return flCodeGen(activeProject, cid, 'pseudo').replace(/\n+$/, '') + '\n'; } catch (e) { return flowToSteps(activeProject); }
+    if (flNumsOn()) { const t = flowToSteps(activeProject, cid, true); if (t) return t + '\n'; }
+    try { return flCodeGen(activeProject, cid, 'pseudo').replace(/\n+$/, '') + '\n'; } catch (e) { return flowToSteps(activeProject, cid, true); }
+  }
+  function flSplitSetText(t) { const ta = el('flSplitText'); ta.value = t; flSplitBase = t; }
+  function flSplitPlaceholder() {
+    el('flSplitText').placeholder = flNumsOn() && flAutoNumOn()
+      ? 'Adım 1: Başla\nAdım 2: Oku a, b\nAdım 3: Eğer a > b ise Adım 5\'e git\nAdım 4: Yaz b ve Adım 6\'ya git\nAdım 5: Yaz a\nAdım 6: Bitir'
+      : 'Başla\nOku a, b\nEğer a > b ise\n    Yaz a\nDeğilse\n    Yaz b\nBitir';
   }
   function flFlowSig() {
     return flKey() + '|' + projectFlowNodes(activeProject).map(n => n.id + n.kind + n.text).join('\u0001') + '|' + projectFlowEdges(activeProject).map(e => e.from + '>' + e.to + (e.label || '')).join('\u0001');
@@ -13154,18 +13163,19 @@
     el('flSplitBtn').setAttribute('aria-pressed', on ? 'true' : 'false');
     el('flSplit').style.display = on ? '' : 'none';
     el('flWrap').classList.toggle('fl-split-on', on);
-    if (on) { el('flSplitText').value = flSplitText(); flSplitSig = flFlowSig(); flSplitCid = flKey(); el('flSplitMsg').textContent = ''; el('flSplitMsg').className = 'fl-split-msg'; }
+    if (on) { flSplitSetText(flSplitText()); flSplitSig = flFlowSig(); flSplitCid = flKey(); el('flSplitMsg').textContent = ''; el('flSplitMsg').className = 'fl-split-msg'; }
     setTimeout(() => { updateFlSurfaceSize(); drawFlEdges(); flRenderMini(); }, 0);
   }
-  function flSplitSync() { // şema başka yoldan değişti: yazıyı yenile (yazarken dokunma; başka şemaya geçildiyse her zaman)
-    if (!flSplitOn || flSplitBusy) return;
+  function flSplitSync(bicim) { // şema başka yoldan değişti: yazıyı yenile (yazarken dokunma; başka şemaya geçildiyse her zaman)
+    if (!flSplitOn) return;
+    if (flSplitBusy) { if (bicim) setTimeout(() => flSplitSync(bicim), 300); return; }   // bicim: "Adım no" değişti, yazı yeni biçimde gelsin
     const other = flSplitCid !== flKey();
     if (!other && document.activeElement === el('flSplitText')) return;
     const sig = flFlowSig();
-    if (other || sig !== flSplitSig) {
+    if (other || sig !== flSplitSig || bicim) {
       clearTimeout(flSplitTimer);
       flSplitSig = sig; flSplitCid = flKey(); flSplitApply.last = null;
-      el('flSplitText').value = flSplitText();
+      flSplitSetText(flSplitText());
       if (other) { el('flSplitMsg').textContent = ''; el('flSplitMsg').className = 'fl-split-msg'; }
     }
   }
@@ -13174,6 +13184,7 @@
     if (!flSplitOn || flSplitBusy) return;
     if (flSplitCid && flSplitCid !== flKey()) { flSplitSync(); return; } // yazı başka şemanın: bu şemaya uygulanmaz
     let src = ta.value;
+    if (src === flSplitBase && flSplitSig === flFlowSig()) return;   // yazı değişmedi (yalnız tıklayıp çıkıldı): şema yeniden dizilmesin
     if (!src.trim()) { msg.className = 'fl-split-msg'; msg.textContent = 'Algoritmayı yaz: şema burada çizilir.'; return; }
     let warn = [];
     if (looksLikePython(src)) { const cv = pythonToAlgo(src); src = cv.text; warn = cv.warn; }
@@ -13183,8 +13194,9 @@
     warn = warn.concat(res.warn || []);
     msg.className = 'fl-split-msg' + (warn.length ? ' warn' : ' ok');
     msg.textContent = warn.length ? '⚠ ' + warn.slice(0, 2).join(' · ') + (warn.length > 2 ? ' (+' + (warn.length - 2) + ')' : '') : '✓ Şema güncel';
-    if (key === flSplitApply.last && flSplitSig === flFlowSig()) return; // yapı değişmedi
+    if (key === flSplitApply.last && flSplitSig === flFlowSig()) { flSplitBase = ta.value; return; } // yapı değişmedi
     flSplitApply.last = key;
+    flSplitBase = ta.value;
     flSplitBusy = true;
     try {
       const pid = activeProject, cid = flSplitCid && findChart(flSplitCid) ? flSplitCid : await ensureChart(pid);
@@ -13712,7 +13724,7 @@
     return { order: order, outs: outs, num: num, needGoto: needGoto };
   }
 
-  function flowToSteps(pid, cid) {
+  function flowToSteps(pid, cid, yalin) {
     const { order, outs, num, needGoto } = flowStepNumbers(pid, cid);
     if (!order.length) return '';
     const next = n => (outs[n.id] || [])[0];
@@ -13731,7 +13743,7 @@
       } else if (n.kind === 'loop') {
         const yes = branch(n, 'Evet') || (outs[n.id] || [])[0], no = branch(n, 'Hayır') || (outs[n.id] || []).find(e => e !== yes);
         t = 'Döngü ' + t + ' : sürerse ' + step(yes && yes.to) + ', bitince ' + step(no && no.to) + ' git.';
-      } else if (n.kind !== 'end' && !next(n)) {
+      } else if (n.kind !== 'end' && !next(n) && !yalin) {
         t += '  (devamı bağlanmamış)';
       }
       lines.push('Adım ' + num[n.id] + ': ' + t);
@@ -19987,7 +19999,9 @@
   el('flNumBtn').addEventListener('click', () => {
     localSet('pref:flnum', flNumsOn() ? '0' : null);
     renderFlow();
-    flToast(flNumsOn() ? 'Adım numaraları gösteriliyor (Şemadan algoritmadaki numaralarla aynı).' : 'Adım numaraları gizlendi.', 2500);
+    flSplitPlaceholder();
+    if (flSplitOn) flSplitSync(true);
+    flToast(flNumsOn() ? 'Adım numaraları gösteriliyor: şemada ve algoritmada (Adım 1, Adım 2…).' : 'Adım numaraları gizlendi.', 2500);
   });
   el('flFit').addEventListener('click', () => flFit());
   el('flZoomIn').addEventListener('click', () => setFlZoom(flZoom + 0.1));
@@ -20409,8 +20423,8 @@
   }
   /* Kutudaki metni değiştirir; tarayıcının geri alma geçmişine tek adım olarak girer (Ctrl+Z) */
   let flNumBusy = false, flNumBefore = null, flPlainEnter = false;
-  function flSetSrc(text, caret) {
-    const ta = el('flSource'), top = ta.scrollTop;
+  function flSetSrc(text, caret, kutu) {
+    const ta = kutu || el('flSource'), top = ta.scrollTop;
     flNumBusy = true;
     try {
       ta.focus();
@@ -20426,9 +20440,9 @@
       else if (y + lh > ta.scrollTop + ta.clientHeight - pad) ta.scrollTop = y + lh - ta.clientHeight + 2 * pad;
     } finally { flNumBusy = false; }
   }
-  function flStepKey(e) {
+  function flStepKey(e, acik) {
     if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { flPlainEnter = true; return false; }
-    if (!flAutoNumOn() || e.isComposing || e.keyCode === 229 || e.ctrlKey || e.metaKey || e.altKey) return false;
+    if (!acik || e.isComposing || e.keyCode === 229 || e.ctrlKey || e.metaKey || e.altKey) return false;
     const ta = e.target, v = ta.value, s = ta.selectionStart, s2 = ta.selectionEnd;
     let r = null;
     if (e.key === 'Enter' && !e.shiftKey && s === s2) r = flStepEnter(v, s);
@@ -20436,47 +20450,52 @@
     else if (e.key === 'Tab') r = flStepIndent(v, s, s2, e.shiftKey);
     if (!r) return false;
     e.preventDefault();
-    if (r.text !== v) flSetSrc(r.text, r.caret); else ta.setSelectionRange(r.caret, r.caret);
+    if (r.text !== v) flSetSrc(r.text, r.caret, ta); else ta.setSelectionRange(r.caret, r.caret);
     return true;
   }
-  el('flSource').addEventListener('beforeinput', e => {
-    if (flNumBusy) return;
-    const ta = e.target;
-    flNumBefore = ta.value;
-    // boş kutuda ilk harf: önüne "Adım 1: " gelir
-    if (!flAutoNumOn() || e.inputType !== 'insertText' || !e.data || e.data.length !== 1 || /[\s#]/.test(e.data) || ta.value.trim()) return;
-    e.preventDefault();
-    flSetSrc('Adım 1: ' + e.data, 9);
-  });
-  el('flSource').addEventListener('input', e => {
-    const before = flNumBefore, plain = flPlainEnter;
-    flNumBefore = null; flPlainEnter = false;
-    if (flNumBusy || !e.isTrusted || !flAutoNumOn() || /^history/.test(e.inputType || '')) return;
-    const ta = e.target, v = ta.value, c = ta.selectionStart;
-    // Telefon klavyesinde Enter tuşu yakalanamayabilir: satır sonu eklendikten sonra aynı işlem yapılır
-    if ((e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph') && !plain && c > 0 && v[c - 1] === '\n') {
-      const r = flStepEnter(v.slice(0, c - 1) + v.slice(c), c - 1);
-      if (r) { flSetSrc(r.text, r.caret); return; }
-    }
-    if (before == null || flStepCount(before) === flStepCount(v)) return;
-    const lines = v.split('\n'), out = flStepRenumber(lines);
-    if (!out) return;
-    const li = v.slice(0, c).split('\n').length - 1, col = c - (v.lastIndexOf('\n', c - 1) + 1);
-    const a = flStepOf(lines[li]), b = flStepOf(out[li]);
-    flSetSrc(out.join('\n'), flLinePos(out, li, Math.max(0, col + (a && b && col > a.at ? b.nl - a.nl : 0))));
-  });
+  /* Bir yazı kutusuna kendiliğinden numarayı bağlar. acik(): o an numaralama açık mı */
+  function flStepWire(kutu, acik) {
+    kutu.addEventListener('beforeinput', e => {
+      if (flNumBusy) return;
+      const ta = e.target;
+      flNumBefore = ta.value;
+      // boş kutuda ilk harf: önüne "Adım 1: " gelir
+      if (!acik() || e.inputType !== 'insertText' || !e.data || e.data.length !== 1 || /[\s#]/.test(e.data) || ta.value.trim()) return;
+      e.preventDefault();
+      flSetSrc('Adım 1: ' + e.data, 9, ta);
+    });
+    kutu.addEventListener('input', e => {
+      const before = flNumBefore, plain = flPlainEnter;
+      flNumBefore = null; flPlainEnter = false;
+      if (flNumBusy || !e.isTrusted || !acik() || /^history/.test(e.inputType || '')) return;
+      const ta = e.target, v = ta.value, c = ta.selectionStart;
+      // Telefon klavyesinde Enter tuşu yakalanamayabilir: satır sonu eklendikten sonra aynı işlem yapılır
+      if ((e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph') && !plain && c > 0 && v[c - 1] === '\n') {
+        const r = flStepEnter(v.slice(0, c - 1) + v.slice(c), c - 1);
+        if (r) { flSetSrc(r.text, r.caret, ta); return; }
+      }
+      if (before == null || flStepCount(before) === flStepCount(v)) return;
+      const lines = v.split('\n'), out = flStepRenumber(lines);
+      if (!out) return;
+      const li = v.slice(0, c).split('\n').length - 1, col = c - (v.lastIndexOf('\n', c - 1) + 1);
+      const a = flStepOf(lines[li]), b = flStepOf(out[li]);
+      flSetSrc(out.join('\n'), flLinePos(out, li, Math.max(0, col + (a && b && col > a.at ? b.nl - a.nl : 0))), ta);
+    });
+  }
+  flStepWire(el('flSource'), flAutoNumOn);
+  flStepWire(el('flSplitText'), () => flNumsOn() && flAutoNumOn());
   function updateFlAutoNumUI() {
     const on = flAutoNumOn();
     el('flAutoNum').checked = on;
     el('flSource').placeholder = on ? 'Adım 1: Başla\nAdım 2: Oku a, b\nAdım 3: toplam = a + b\nAdım 4: Yaz "Toplam:", toplam\nAdım 5: Bitir'
                                     : 'Başla\nOku a, b\ntoplam = a + b\nYaz "Toplam:", toplam\nBitir';
   }
-  el('flAutoNum').addEventListener('change', e => { localSet('pref:flautonum', e.target.checked ? null : '0'); updateFlAutoNumUI(); });
+  el('flAutoNum').addEventListener('change', e => { localSet('pref:flautonum', e.target.checked ? null : '0'); updateFlAutoNumUI(); flSplitPlaceholder(); });
   updateFlAutoNumUI();
 
   el('flSource').addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); el('flParseBtn').click(); return; }
-    if (flStepKey(e)) return; // adım numaraları: Enter / Geri silme / Tab
+    if (flStepKey(e, flAutoNumOn())) return; // adım numaraları: Enter / Geri silme / Tab
     if (e.key !== 'Tab' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
     e.preventDefault();
     e.target.setRangeText('    ', e.target.selectionStart, e.target.selectionEnd, 'end'); // girinti = blok
@@ -20642,7 +20661,11 @@
   });
   el('flSplitText').addEventListener('input', () => { clearTimeout(flSplitTimer); flSplitTimer = setTimeout(flSplitApply, 700); });
   el('flSplitText').addEventListener('blur', () => { clearTimeout(flSplitTimer); flSplitApply(); });
-  el('flSplitText').addEventListener('keydown', e => { if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); document.execCommand('insertText', false, '    '); } });
+  el('flSplitText').addEventListener('keydown', e => {
+    if (flStepKey(e, flNumsOn() && flAutoNumOn())) return;   // numaralı satırda Enter / Geri silme / Tab
+    if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); document.execCommand('insertText', false, '    '); }
+  });
+  flSplitPlaceholder();
   if (localGet('pref:flsplit') === '1') setTimeout(() => { if (!flSplitOn) setFlSplitOn(true); }, 0);
   el('flRunBp').addEventListener('click', () => {
     if (flSel && flSel.type === 'node') flToggleBp(flSel.id);
