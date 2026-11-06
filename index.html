@@ -1962,6 +1962,23 @@
   .tm-on.on::before { background: var(--green); }
   .tm-rm { height: 30px; padding: 0 0.6rem; font-size: 0.8rem; }
   .team-row-acts { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.8rem; }
+  .adm-tabs { display: flex; gap: 1rem; margin: 0.1rem 0 0.9rem; border-bottom: 1px solid var(--line); }
+  .adm-tab { background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 0.45rem 0.1rem; font: inherit; font-size: 0.9rem; color: var(--muted); cursor: pointer; }
+  .adm-tab.on { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+  .adm-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .adm-row .tm-txt small { display: block; white-space: normal; overflow: visible; text-overflow: clip; }
+  .adm-kapali > .av, .adm-kapali > .tm-txt { opacity: 0.55; }
+  .adm-acts { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.1rem 0 0.7rem; }
+  .adm-not { margin-top: 0; }
+  .adm-new { flex-wrap: wrap; }
+  .adm-check { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.875rem; color: var(--ink-2); }
+  .adm-cihaz { font-size: 0.82rem; margin: 0 0 0.7rem; display: flex; flex-direction: column; gap: 0.25rem; color: var(--ink-2); }
+  .adm-olaylar { display: flex; flex-direction: column; gap: 0.3rem; max-height: 55vh; overflow: auto; }
+  .adm-olay { display: grid; grid-template-columns: auto 1fr; column-gap: 0.7rem; font-size: 0.82rem; line-height: 1.45; padding: 0.35rem 0.55rem; border-radius: var(--r); background: var(--paper-2); }
+  .adm-olay.kotu { background: var(--danger-soft); }
+  .adm-olay .adm-z { color: var(--muted); grid-row: span 2; white-space: nowrap; }
+  .adm-olay small { grid-column: 2; color: var(--muted); overflow-wrap: anywhere; }
+  .team-msg code { font-size: 0.85rem; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 0 0.3rem; user-select: all; overflow-wrap: anywhere; }
   /* Kişi atama, yorumlar, etkinlik ve not geçmişi */
   .er-head-icon .ico { width: 12px; height: 12px; vertical-align: -2px; margin-right: 1px; }
   .fl-cmt circle { fill: var(--accent); }
@@ -23068,9 +23085,13 @@ service cloud.firestore {
       const msg = tp.msg ? '<div class="team-msg ' + (tp.msgKind || '') + '" role="status">' + esc(tp.msg) + '</div>' : '';
       if (loading) { body.innerHTML = msg + '<div class="team-loading"><span class="team-spin" aria-hidden="true"></span>Bağlanıyor…</div>'; return; }
       // Yeniden çizerken yazılanlar kaybolmasın (şifre kutuları hariç): ör. bir uyarıdan sonra görünen ad, davet kodu
-      const keep = {};
-      body.querySelectorAll('input[id], select[id]').forEach(n => { if (n.type !== 'password' && n.type !== 'hidden' && !n.readOnly) keep[n.id] = n.value; });
+      const keep = {}, isaret = {};
+      body.querySelectorAll('input[id], select[id]').forEach(n => {
+        if (n.type === 'checkbox') isaret[n.id] = n.checked;
+        else if (n.type !== 'password' && n.type !== 'hidden' && !n.readOnly) keep[n.id] = n.value;
+      });
       body.innerHTML = msg + srvPanelHTML();
+      Object.keys(isaret).forEach(id => { const n = el(id); if (n && body.contains(n) && n.type === 'checkbox') n.checked = isaret[id]; });
       Object.keys(keep).forEach(id => {
         const n = el(id);
         if (!n || !body.contains(n) || n.type === 'password' || n.readOnly) return;
@@ -23633,7 +23654,7 @@ service cloud.firestore {
     } catch (e) {
       throw { net: true, msg: 'Sunucuya ulaşılamıyor; internet bağlantını kontrol et.' };
     } finally { if (timer) clearTimeout(timer); }
-    if (!res.ok) throw { status: res.status, msg: data && typeof data.hata === 'string' ? data.hata.slice(0, 300) : res.status >= 500 ? 'Sunucuya şu an ulaşılamıyor (' + res.status + ').' : 'İstek reddedildi (' + res.status + ').' };
+    if (!res.ok) throw { status: res.status, msg: data && typeof data.hata === 'string' ? data.hata.slice(0, 300) : res.status >= 500 ? 'Sunucuya şu an ulaşılamıyor (' + res.status + ').' : 'İstek reddedildi (' + res.status + ').', data: data };
     if (!data || typeof data !== 'object') throw { status: res.status, msg: 'Sunucudan beklenmeyen cevap geldi.' };
     return data;
   }
@@ -23647,7 +23668,7 @@ service cloud.firestore {
   function srvSetMe(r) {   // /api/ben cevabı
     const k = r && r.kullanici;
     if (!k || !SAFE_UID.test(k.id || '')) return null;
-    const me = { id: k.id, ad: String(k.ad || '').slice(0, 40), gorunen: String(k.gorunen || k.ad || '').slice(0, 60), totp: !!k.totp };
+    const me = { id: k.id, ad: String(k.ad || '').slice(0, 40), gorunen: String(k.gorunen || k.ad || '').slice(0, 60), totp: !!k.totp, yonetici: !!k.yonetici };
     localSet('pref:sben', JSON.stringify(me));
     if (Array.isArray(r.ekipler)) {
       localSet('pref:steams', JSON.stringify(r.ekipler.filter(e => e && SRV_ID_RE.test(e.id || '')).slice(0, 200)
@@ -24200,7 +24221,7 @@ service cloud.firestore {
       if (sp.offline) return '<p class="modal-note">Sunucuya şu an ulaşılamıyor. İnternet bağlantını kontrol edip tekrar dene.</p><div class="modal-actions"><span></span><button class="modal-btn primary" type="button" data-tact="srv-retry">Tekrar dene</button></div>';
       return srvSigninHTML();
     }
-    return sp.view === 'account' ? srvAccountHTML() : srvHomeHTML();
+    return sp.view === 'account' ? srvAccountHTML() : sp.view === 'admin' && sp.me.yonetici ? srvAdminHTML() : srvHomeHTML();
   }
   const srvDis = () => sp.busy ? ' disabled' : '';
   function srvInviteCard() {
@@ -24249,6 +24270,7 @@ service cloud.firestore {
     let h = '<div class="team-acct"><span class="av lg" style="background:' + uidColor(me.id) + '" aria-hidden="true">' + esc(initials(me.gorunen || me.ad)) + '</span>' +
       '<div class="team-acct-txt"><b>' + esc(me.gorunen || me.ad) + '</b><small>@' + esc(me.ad) + (me.totp ? ' · iki adımlı doğrulama açık' : '') + '</small></div>' +
       '<button class="modal-btn" type="button" data-tact="srv-account">Hesap</button>' +
+      (me.yonetici ? '<button class="modal-btn" type="button" data-tact="srv-admin">Yönetim</button>' : '') +
       '<button class="modal-btn" type="button" data-tact="srv-signout"' + srvDis() + '>Çıkış yap</button></div>';
     if (sp.offline) h += '<div class="team-msg">Sunucuya şu an ulaşılamıyor; aşağıdaki liste bu cihazda son görülen hâli.</div>';
     if (inv) h += srvInviteCard();
@@ -24354,6 +24376,138 @@ service cloud.firestore {
         '<div class="team-row-acts"><button class="modal-btn" type="button" data-tact="srv-totp-start"' + srvDis() + '>İki adımlı doğrulamayı aç</button></div>';
     }
     return h;
+  }
+  /* ---------- Yönetim (yalnız yöneticiler): kullanıcılar ve güvenlik olayları ----------
+     Değiştiren her işlemden önce sunucu yöneticinin şifresini yeniden ister (10 dakika geçerli). */
+  const ADM_OLAY = { 'giris': 'Giriş', 'giris-hatali': 'Hatalı giriş', 'totp-hatali': 'Hatalı doğrulama kodu', 'kayit': 'Davetle hesap açtı',
+    'kullanici-eklendi': 'Hesap açıldı', 'sifre-degisti': 'Şifresini değiştirdi', 'sifre-sifirlandi': 'Şifresi sıfırlandı',
+    'totp-acildi': 'İki adımlıyı açtı', 'totp-kapandi': 'İki adımlıyı kapattı', 'totp-kapatildi': 'İki adımlısı kapatıldı',
+    'kullanici-kapatildi': 'Hesabı kapatıldı', 'kullanici-acildi': 'Hesabı yeniden açıldı', 'oturumlar-kapandi': 'Oturumları kapatıldı',
+    'yonetici-yapildi': 'Yönetici yapıldı', 'yoneticilik-alindi': 'Yöneticiliği alındı', 'yonetim-onay': 'Yönetici onayı',
+    'yonetim-onay-hatali': 'Hatalı yönetici onayı', 'ekip-kuruldu': 'Ekip kurdu', 'katildi': 'Ekibe katıldı', 'davet': 'Davet oluşturdu',
+    'davet-iptal': 'Daveti iptal etti', 'uye-degisti': 'Üyelik değişti', 'yedek': 'Gece yedeği', 'yedek-hatasi': 'Yedek alınamadı' };
+  const ADM_KOTU = /hatali|hatasi|kapatildi|oturumlar-kapandi|sifre-sifirlandi|yoneticilik-alindi/;
+  const admZaman = t => (+t ? new Date(+t).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
+  function admAjan(a) {
+    a = String(a || '');
+    const os = /Android/.test(a) ? 'Android' : /iPhone|iPad/.test(a) ? 'iPhone / iPad' : /Windows/.test(a) ? 'Windows' : /Mac OS X/.test(a) ? 'Mac' : /Linux/.test(a) ? 'Linux' : '';
+    const br = /Edg\//.test(a) ? 'Edge' : /OPR\//.test(a) ? 'Opera' : /Firefox\//.test(a) ? 'Firefox' : /Chrome\//.test(a) ? 'Chrome' : /Safari\//.test(a) ? 'Safari' : '';
+    return [br, os].filter(Boolean).join(' · ') || a.slice(0, 50) || 'bilinmeyen cihaz';
+  }
+  function admSifreUret() {   // okunması kolay, tahmini zor (16 karakter, ~90 bit)
+    const ab = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789', b = new Uint32Array(16);
+    crypto.getRandomValues(b);
+    return Array.from(b, (x, i) => (i && i % 4 === 0 ? '-' : '') + ab[x % ab.length]).join('');
+  }
+  function srvAdminHTML() {
+    const a = sp.adm || (sp.adm = { tab: 'kisiler' }), me = sp.me;
+    let h = '<div class="team-back"><button class="link-btn" type="button" data-tact="srv-home">← Ekip penceresine dön</button></div>' +
+      '<div class="adm-tabs" role="tablist" aria-label="Yönetim">' + [['kisiler', 'Kullanıcılar'], ['olaylar', 'Güvenlik olayları']].map(([t, ad]) =>
+        '<button class="adm-tab' + (a.tab === t ? ' on' : '') + '" type="button" role="tab" aria-selected="' + (a.tab === t) + '" data-tact="srv-adm-tab" data-tab="' + t + '">' + ad + '</button>').join('') + '</div>';
+    if (a.onayIste) {
+      return h + '<div class="modal-section-label">Yönetici onayı</div>' +
+        '<p class="team-hint">Hesapları değiştirmeden önce şifreni bir kez daha yaz' + (me.totp ? ', telefonundaki kodu da gir' : '') + '. Onay bu oturumda 10 dakika geçerli.</p>' +
+        '<form class="team-form" data-sform="adm-onay" novalidate>' +
+        '<input type="text" autocomplete="username" value="' + escAttr(me.ad) + '" hidden tabindex="-1" aria-hidden="true">' +
+        '<input class="modal-tags-input" id="admPass" type="password" autocomplete="current-password" maxlength="200" placeholder="Şifren" aria-label="Şifren" data-autofocus>' +
+        (me.totp ? '<input class="modal-tags-input" id="admCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="Doğrulama kodu" aria-label="Doğrulama kodu">' : '') +
+        '<button class="modal-btn primary" type="submit"' + srvDis() + '>Onayla</button></form>' +
+        '<div class="team-links"><button class="link-btn" type="button" data-tact="srv-adm-onay-iptal">Vazgeç</button></div>';
+    }
+    if (a.sonuc) h += '<div class="team-msg ok" role="status">' + a.sonuc + '</div>';
+    return h + (a.tab === 'olaylar' ? admOlaylarHTML(a) : admKisilerHTML(a, me));
+  }
+  function admKisilerHTML(a, me) {
+    if (!a.list) return '<p class="team-hint">' + esc(a.hata || 'Yükleniyor…') + '</p>';
+    const id = u => escAttr(u.id);
+    let h = '<div class="modal-section-label">Kullanıcılar (' + a.list.length + ')</div><div class="team-members adm-list">' + a.list.map(u => {
+      const self = u.id === me.id, acik = a.sec === u.id;
+      const etiket = [u.yonetici ? 'yönetici' : '', u.totp ? 'iki adımlı' : '', u.kapali ? 'kapalı' : ''].filter(Boolean).join(' · ');
+      let r = '<div class="team-member adm-row' + (u.kapali ? ' adm-kapali' : '') + '">' +
+        '<span class="av" style="background:' + uidColor(u.id) + '" aria-hidden="true">' + esc(initials(u.gorunen || u.ad)) + '</span>' +
+        '<div class="tm-txt"><b>' + esc(u.gorunen || u.ad) + (self ? ' <span class="tm-you">(sen)</span>' : '') + '</b>' +
+        '<small>@' + esc(u.ad) + (etiket ? ' · ' + esc(etiket) : '') + '</small>' +
+        '<small>Son giriş: ' + esc(admZaman(u.songiris)) + ' · ' + (+u.oturum || 0) + ' açık oturum · ' + (+u.ekip || 0) + ' ekip</small></div>' +
+        '<button class="modal-btn" type="button" data-tact="srv-adm-sec" data-id="' + id(u) + '" aria-expanded="' + acik + '">' + (acik ? 'Gizle' : 'İşlemler') + '</button></div>';
+      if (!acik) return r;
+      const dugme = (islem, ad, tehlike) => '<button class="modal-btn' + (tehlike ? ' danger' : '') + '" type="button" data-tact="srv-adm-islem" data-islem="' + islem + '" data-id="' + id(u) + '"' + srvDis() + '>' + ad + '</button>';
+      r += '<div class="adm-acts">';
+      if (!self) {
+        r += '<button class="modal-btn" type="button" data-tact="srv-adm-sifre" data-id="' + id(u) + '">Şifresini sıfırla</button>';
+        if (+u.oturum) r += dugme('oturumlari-kapat', 'Oturumlarını kapat');
+        if (u.totp) r += dugme('totp-kapat', 'İki adımlıyı kapat');
+        r += u.yonetici ? dugme('yonetici-al', 'Yöneticiliği al') : dugme('yonetici-yap', 'Yönetici yap');
+        r += u.kapali ? dugme('ac', 'Hesabı aç') : dugme('kapat', 'Hesabı kapat', true);
+      }
+      r += '<button class="modal-btn" type="button" data-tact="srv-adm-cihaz" data-id="' + id(u) + '">Cihazlar</button></div>';
+      if (self) r += '<p class="team-hint adm-not">Kendi şifreni ve iki adımlı doğrulamanı Hesap bölümünden değiştirirsin.</p>';
+      if (a.sifreFor === u.id) {
+        r += '<form class="team-form adm-not" data-sform="adm-sifre" data-id="' + id(u) + '" novalidate>' +
+          '<input class="modal-tags-input" id="admNewPass" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="200" placeholder="Yeni şifre (en az 10 karakter)" aria-label="Yeni şifre" data-autofocus>' +
+          '<button class="modal-btn" type="button" data-tact="srv-adm-uret" data-hedef="admNewPass">Üret</button>' +
+          '<button class="modal-btn primary" type="submit"' + srvDis() + '>Sıfırla</button></form>' +
+          '<p class="team-hint adm-not">Kişinin bütün oturumları kapanır. Yeni şifreyi ona yüz yüze ya da güvendiğin bir yoldan ilet; girince Hesap bölümünden değiştirsin.</p>';
+      }
+      if (a.cihaz && a.cihaz.id === u.id) {
+        r += !a.cihaz.list ? '<p class="team-hint adm-not">Yükleniyor…</p>' : !a.cihaz.list.length ? '<p class="team-hint adm-not">Açık oturum yok.</p>' :
+          '<div class="adm-cihaz">' + a.cihaz.list.map(o => '<div><b>' + esc(admAjan(o.ajan)) + '</b> · ' + esc(admZaman(o.olusturma)) + ' tarihinde girdi' + (o.bu ? ' · <i>bu cihaz</i>' : '') + '</div>').join('') + '</div>';
+      }
+      return r;
+    }).join('') + '</div>';
+    h += '<div class="modal-section-label">Yeni kullanıcı</div>' +
+      '<form class="team-form adm-new" data-sform="adm-new" novalidate>' +
+      '<input class="modal-tags-input" id="admNewUser" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="32" placeholder="Kullanıcı adı" aria-label="Kullanıcı adı">' +
+      '<input class="modal-tags-input" id="admNewName" autocomplete="off" maxlength="60" placeholder="Görünen ad (isteğe bağlı)" aria-label="Görünen ad">' +
+      '<input class="modal-tags-input" id="admNewUserPass" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="200" placeholder="İlk şifresi (en az 10 karakter)" aria-label="İlk şifresi">' +
+      '<button class="modal-btn" type="button" data-tact="srv-adm-uret" data-hedef="admNewUserPass">Üret</button>' +
+      '<label class="adm-check"><input type="checkbox" id="admNewAdmin"> Yönetici</label>' +
+      '<button class="modal-btn primary" type="submit"' + srvDis() + '>Hesap aç</button></form>' +
+      '<p class="team-hint">Bir ekibe katılması için ona ayrıca davet kodu ver. İlk şifresini girdikten sonra Hesap bölümünden değiştirsin.</p>';
+    return h;
+  }
+  function admOlaylarHTML(a) {
+    if (!a.olaylar) return '<p class="team-hint">' + esc(a.hata || 'Yükleniyor…') + '</p>';
+    if (!a.olaylar.length) return '<p class="team-hint">Kayıtlı olay yok.</p>';
+    return '<p class="team-hint">Girişler, hatalı denemeler ve hesap değişiklikleri (en yeni üstte). Tanımadığın bir adresten giriş ya da çok sayıda hatalı deneme görürsen o kişinin oturumlarını kapatıp şifresini sıfırla.</p>' +
+      '<div class="adm-olaylar">' + a.olaylar.map(o => {
+        const kim = String(o.kim || ''), olay = String(o.olay || '');
+        return '<div class="adm-olay' + (ADM_KOTU.test(olay) ? ' kotu' : '') + '"><span class="adm-z">' + esc(admZaman(o.zaman)) + '</span>' +
+          '<span><b>' + esc(ADM_OLAY[olay] || olay) + '</b>' + (kim ? ' · ' + esc(olay === 'giris-hatali' || olay === 'totp-hatali' ? '"' + kim + '" adıyla' : '@' + kim) : '') + '</span>' +
+          '<small>' + esc([o.ip, o.ayrinti].filter(Boolean).map(String).join(' · ')) + '</small></div>';
+      }).join('') + '</div>' +
+      (a.dahaVar ? '<div class="team-links"><button class="link-btn" type="button" data-tact="srv-adm-daha">Daha eski olaylar</button></div>' : '');
+  }
+  async function srvAdminLoad(ne, daha) {
+    const a = sp.adm || (sp.adm = { tab: 'kisiler' });
+    a.hata = '';
+    try {
+      if (ne === 'olaylar') {
+        const son = daha && a.olaylar && a.olaylar.length ? a.olaylar[a.olaylar.length - 1].zaman : 0;
+        const r = await srvApi('GET', 'yonetim/olaylar' + (son ? '?once=' + encodeURIComponent(son) : ''), null, 10000);
+        const L = Array.isArray(r.olaylar) ? r.olaylar.filter(o => o && typeof o === 'object') : [];
+        a.olaylar = daha ? (a.olaylar || []).concat(L) : L;
+        a.dahaVar = !!r.dahaVar;
+      } else {
+        const r = await srvApi('GET', 'yonetim/kullanicilar', null, 10000);
+        a.list = (Array.isArray(r.kullanicilar) ? r.kullanicilar : []).filter(u => u && SAFE_UID.test(u.id || ''));
+      }
+    } catch (e) { a.hata = (e && e.msg) || 'Yüklenemedi.'; }
+    if (sp.view === 'admin') renderTeamPanel();
+  }
+  /* Değiştiren bir işlem: sunucu onay isterse önce şifre sorulur, sonra işlem kendiliğinden yinelenir */
+  async function admYap(fn, ok) {
+    const a = sp.adm;
+    sp.busy = true; tp.msg = ''; renderTeamPanel();
+    try {
+      const r = await fn();
+      sp.busy = false; a.onayIste = false; a.bekleyen = null;
+      a.sonuc = typeof ok === 'function' ? ok(r) : esc(ok || 'Tamam.');
+      await srvAdminLoad('kisiler');
+    } catch (e) {
+      sp.busy = false;
+      if (e && e.data && e.data.onayGerekli) { a.onayIste = true; a.bekleyen = { fn, ok }; renderTeamPanel(); return; }
+      srvFail(e);
+    }
   }
   function srvAfterRender(body) {
     const u = body.querySelector('#sfUser');
@@ -24481,6 +24635,40 @@ service cloud.firestore {
         catch (e) { srvFail(e); }
         return;
       }
+      case 'adm-onay': {
+        const s = val('admPass'), kod = val('admCode').replace(/\s/g, '');
+        if (need(s, 'Şifreni yaz.', 'admPass')) return;
+        if (sp.me.totp && need(/^\d{6}$/.test(kod), 'Uygulamadaki 6 haneli kodu yaz.', 'admCode')) return;
+        sp.busy = true; renderTeamPanel();
+        try { await srvApi('POST', 'yonetim/onay', { sifre: s, kod: kod }, 15000); }
+        catch (e) { srvFail(e); return; }
+        sp.busy = false;
+        const b = sp.adm.bekleyen;
+        sp.adm.onayIste = false; sp.adm.bekleyen = null;
+        if (b) await admYap(b.fn, b.ok); else renderTeamPanel();
+        return;
+      }
+      case 'adm-new': {
+        const ad = val('admNewUser').trim().toLowerCase(), gorunen = val('admNewName').trim(), s1 = val('admNewUserPass'), yon = !!(el('admNewAdmin') || {}).checked;
+        if (need(/^[a-z0-9][a-z0-9._-]{2,31}$/.test(ad), 'Kullanıcı adı 3–32 karakter olmalı: küçük harf, rakam, nokta, alt çizgi, tire (ilk karakter harf ya da rakam).', 'admNewUser')) return;
+        if (need(s1.length >= 10, 'İlk şifre en az 10 karakter olmalı. "Üret" ile güçlü bir şifre oluşturabilirsin.', 'admNewUserPass')) return;
+        await admYap(() => srvApi('POST', 'yonetim/kullanici', { ad: ad, gorunen: gorunen, sifre: s1, yonetici: yon }, 20000), () => {
+          ['admNewUser', 'admNewName', 'admNewUserPass'].forEach(i => { const n = el(i); if (n) n.value = ''; });
+          const c = el('admNewAdmin'); if (c) c.checked = false;
+          return '@' + esc(ad) + ' hesabı açıldı' + (yon ? ' (yönetici)' : '') + '. İlk şifresi: <code>' + esc(s1) + '</code>. Bunu kişiye güvendiğin bir yoldan ilet; bu pencereden çıkınca bir daha gösterilmez.';
+        });
+        return;
+      }
+      case 'adm-sifre': {
+        const id = form.dataset.id || '', s1 = val('admNewPass'), u = (sp.adm.list || []).find(x => x.id === id);
+        if (!u || !SAFE_UID.test(id)) return;
+        if (need(s1.length >= 10, 'Yeni şifre en az 10 karakter olmalı. "Üret" ile güçlü bir şifre oluşturabilirsin.', 'admNewPass')) return;
+        await admYap(() => srvApi('POST', 'yonetim/kullanici/' + id + '/sifre', { sifre: s1 }, 20000), () => {
+          sp.adm.sifreFor = '';
+          return '@' + esc(u.ad) + ' için yeni şifre: <code>' + esc(s1) + '</code>. Kişiye güvendiğin bir yoldan ilet; açık oturumları kapandı.';
+        });
+        return;
+      }
     }
   }
   async function srvAction(act, node) {
@@ -24490,10 +24678,45 @@ service cloud.firestore {
       case 'srv-mode-register': sp.view = 'register'; tp.msg = ''; renderTeamPanel(); return;
       case 'srv-mode-signin': sp.view = 'home'; tp.msg = ''; renderTeamPanel(); return;
       case 'srv-forgot':
-        tp.msg = 'Şifreni unuttuysan sunucuyu kuran kişiye söyle: Pi\'de "sifre-sifirla" komutuyla sana yeni bir şifre verir. (Güvenlik için e-postayla sıfırlama yok.)';
+        tp.msg = 'Şifreni unuttuysan bir yöneticiye söyle: Yönetim bölümünden sana yeni bir şifre verir. (Güvenlik için e-postayla sıfırlama yok.)';
         tp.msgKind = ''; renderTeamPanel(); return;
       case 'srv-cancel-totp': sp.pending = null; tp.msg = ''; renderTeamPanel(); return;
       case 'srv-account': sp.view = 'account'; tp.msg = ''; renderTeamPanel(); return;
+      case 'srv-admin': sp.view = 'admin'; sp.adm = { tab: 'kisiler' }; tp.msg = ''; renderTeamPanel(); srvAdminLoad('kisiler'); return;
+      case 'srv-adm-tab': {
+        const a = sp.adm || (sp.adm = {});
+        a.tab = node.dataset.tab === 'olaylar' ? 'olaylar' : 'kisiler'; a.sonuc = ''; tp.msg = '';
+        renderTeamPanel(); srvAdminLoad(a.tab); return;
+      }
+      case 'srv-adm-sec': { const a = sp.adm; a.sec = a.sec === node.dataset.id ? '' : node.dataset.id; a.sifreFor = ''; a.cihaz = null; a.sonuc = ''; tp.msg = ''; renderTeamPanel(); return; }
+      case 'srv-adm-sifre': { const a = sp.adm; a.sifreFor = a.sifreFor === node.dataset.id ? '' : node.dataset.id; a.cihaz = null; renderTeamPanel(); return; }
+      case 'srv-adm-uret': { const n = el(node.dataset.hedef || ''); if (n) { n.value = admSifreUret(); n.focus(); n.select(); } return; }
+      case 'srv-adm-onay-iptal': sp.adm.onayIste = false; sp.adm.bekleyen = null; tp.msg = ''; renderTeamPanel(); return;
+      case 'srv-adm-daha': srvAdminLoad('olaylar', true); return;
+      case 'srv-adm-cihaz': {
+        const a = sp.adm, id = node.dataset.id || '';
+        if (!SAFE_UID.test(id)) return;
+        if (a.cihaz && a.cihaz.id === id) { a.cihaz = null; renderTeamPanel(); return; }
+        a.cihaz = { id: id, list: null }; a.sifreFor = ''; renderTeamPanel();
+        try { const r = await srvApi('GET', 'yonetim/kullanici/' + id + '/oturumlar', null, 10000); if (a.cihaz && a.cihaz.id === id) a.cihaz.list = Array.isArray(r.oturumlar) ? r.oturumlar.filter(o => o && typeof o === 'object') : []; }
+        catch (e) { a.cihaz = null; srvFail(e); return; }
+        renderTeamPanel(); return;
+      }
+      case 'srv-adm-islem': {
+        const id = node.dataset.id || '', islem = node.dataset.islem || '', u = (sp.adm.list || []).find(x => x.id === id);
+        if (!u || !SAFE_UID.test(id)) return;
+        const kim = '@' + u.ad;
+        const soru = { 'kapat': kim + ' hesabı kapatılsın mı? Giriş yapamaz, açık oturumları hemen kapanır. Sonra yeniden açabilirsin.',
+          'oturumlari-kapat': kim + ' bütün cihazlardan çıkarılsın mı? Yeniden giriş yapması gerekir.',
+          'totp-kapat': kim + ' için iki adımlı doğrulama kapatılsın mı? (Telefonunu kaybettiyse.) Yalnız şifreyle girebilir olur.',
+          'yonetici-yap': kim + ' yönetici yapılsın mı? Bütün hesapları yönetebilir.',
+          'yonetici-al': kim + ' artık yönetici olmasın mı?' }[islem];
+        if (soru && !confirm(soru)) return;
+        const tamam = { 'kapat': ' hesabı kapatıldı.', 'ac': ' hesabı yeniden açıldı.', 'oturumlari-kapat': ' bütün cihazlardan çıkarıldı.',
+          'totp-kapat': ' için iki adımlı doğrulama kapatıldı.', 'yonetici-yap': ' artık yönetici.', 'yonetici-al': ' artık yönetici değil.' }[islem] || ' güncellendi.';
+        await admYap(() => srvApi('POST', 'yonetim/kullanici/' + id + '/islem', { islem: islem }, 10000), esc(kim) + esc(tamam));
+        return;
+      }
       case 'srv-home': sp.view = 'home'; sp.totp = null; tp.msg = ''; renderTeamPanel(); return;
       case 'invite-cancel': tp.invite = null; tp.pendingTeam = null; tp.msg = ''; if (!sp.me) sp.view = 'home'; renderTeamPanel(); return;
       case 'copy-personal': copyPersonalToTeam(); return;
