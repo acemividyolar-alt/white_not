@@ -180,12 +180,41 @@ yönlendirme saldırısına karşı). Bu modda bağlantı şifrelenmez (http): �
 | `WN_KOTA_MB` / `WN_KOTA_ADET` | `300` / `100000` | Bir ekibin kayıtları için depolama sınırı |
 | `WN_GECMIS_MB` | `150` | Bir ekibin eski sürümleri (not geçmişi) için en fazla yer; aşılınca en eskiler silinir |
 
-## Güncelleme
+## Güncelleme (kendiliğinden)
+
+Pi yeni sürümleri kendisi kurar; elle bir şey yapmak gerekmez. `whitenote-guncelle.timer` üç dakikada bir
+GitHub'daki `main` dalına bakar (değişiklik yoksa tek küçük istek; GitHub bunu istek sınırına saymaz). Yeni
+sürüm varsa `whitenote-guncelle.sh`:
+
+1. arşivi indirir ve denetler: her şey tek klasörün altında mı, `..` ya da bağlantı (link) var mı, gerekli
+   dosyalar yerinde mi, sunucu kodunda söz dizimi hatası var mı (`node --check`, `whitenote` kullanıcısıyla);
+2. uygulama klasörünü yenisiyle değiştirir ve hizmeti yeniden başlatır;
+3. sunucu 30 saniyede cevap vermezse eski sürüme geri döner; o sürüm bir daha denenmez, daha yenisi beklenir.
+
+Yalnız uygulama dosyaları değişir: veriler (`/var/lib/whitenote`), hizmet ayarları ve betiğin kurulu kopyası
+(`/usr/local/lib/whitenote/`) olduğu gibi kalır; GitHub'dan inen hiçbir şey yönetici olarak çalıştırılmaz.
+Sunucu sayfaya sürümünü yazar (`<meta name="wn-surum">`); açık sayfalar sunucudaki sürümün değiştiğini görünce
+uygun anda kendiliğinden yenilenir (arka plandan dönülünce ya da bir dakikadır dokunulmuyorken; yazı yazarken
+ya da pencere açıkken beklenir).
 
 ```bash
-sudo -u whitenote git -C /opt/whitenote/white_not pull
-sudo systemctl restart whitenote
+journalctl -u whitenote-guncelle                 # kayıtlar
+cat /var/lib/whitenote-guncelle/durum.json       # son durum (ayrıca /api/durum → "guncelleme")
+sudo systemctl start whitenote-guncelle          # hemen dene
+sudo systemctl disable --now whitenote-guncelle.timer   # kapat
 ```
+
+Kurulum (Pi'deki kurulum betiği bunu yapar):
+
+```bash
+sudo install -d /usr/local/lib/whitenote
+sudo install -m 755 sunucu/whitenote-guncelle.sh /usr/local/lib/whitenote/
+sudo cp sunucu/whitenote-guncelle.service sunucu/whitenote-guncelle.timer /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now whitenote-guncelle.timer
+```
+
+Hizmet dosyası (`whitenote.service`) ya da betiğin kendisi değişirse bunlar kendiliğinden kurulmaz (bilerek:
+yönetici yetkisi isteyen değişiklikler elle yapılır); kurulum betiğini bir kez yeniden çalıştırmak yeter.
 
 ## Yedekler
 

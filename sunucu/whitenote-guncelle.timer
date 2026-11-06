@@ -1,0 +1,11 @@
+# White Note: üç dakikada bir yeni sürüm var mı diye bakar (değişiklik yoksa GitHub'a tek küçük istek gider)
+[Unit]
+Description=White Note yeni sürüm denetimi
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=3min
+RandomizedDelaySec=20s
+
+[Install]
+WantedBy=timers.target

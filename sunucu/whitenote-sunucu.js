@@ -12,6 +12,8 @@
      • Her gece denetlenen yedek (son 14 gün + 8 hafta + 12 ay), giriş denemesi sınırı, ekip başına
        depolama sınırı, güvenlik başlıkları (CSP, HSTS …), https'te __Host- çerezi
      • Sayfa, betik ve büyük cevaplar sıkıştırılır (brotli / gzip)
+     • Sayfaya sürümünü yazar (<meta name="wn-surum">), /api/durum da sunucudaki sürümü söyler: Pi yeni
+       sürümü kendiliğinden kurunca (whitenote-guncelle) açık sayfalar uygun anda kendiliğinden yenilenir
 
    Çalıştırma:
      node whitenote-sunucu.js                       sunucuyu başlatır (ayarlar: ortam değişkenleri, aşağıda)
@@ -39,6 +41,7 @@
      WN_ADRES=https://whitenote.com.tr   sitenin adresi (Origin denetimi ve güvenli çerez için)
      WN_KOTA_MB=300, WN_KOTA_ADET=100000  bir ekibin depolama sınırı
      WN_GECMIS_MB=150      bir ekibin eski sürümleri (not geçmişi) için en fazla yer
+     WN_GUNCELLE_DURUM=/var/lib/whitenote-guncelle/durum.json   kendiliğinden güncellemenin son durumu (varsa /api/durum'da)
    ===================================================================== */
 'use strict';
 const http = require('node:http');
@@ -475,7 +478,25 @@ setInterval(() => {
 const API = [];
 const yol = (yontem, desen, fn, opt) => API.push({ yontem, desen, fn, opt: opt || {} });
 
-yol('GET', /^\/api\/durum$/, (req, res) => json(res, 200, { whitenote: true, surum: SURUM }), { acik: true });
+/* Kendiliğinden güncellemenin (whitenote-guncelle) son durumu: { durum, surum, zaman, denetim, mesaj } — dosya yoksa null */
+let guncelleOnb = { t: 0, v: null };
+function guncellemeDurumu() {
+  if (Date.now() - guncelleOnb.t < 10000) return guncelleOnb.v;
+  let v = null;
+  try {
+    const d = JSON.parse(fs.readFileSync(process.env.WN_GUNCELLE_DURUM || '/var/lib/whitenote-guncelle/durum.json', 'utf8'));
+    if (d && typeof d === 'object') {
+      const sayi = x => (Number.isFinite(+x) ? Math.floor(+x) : 0), yazi = (x, n) => String(x == null ? '' : x).replace(/[\u0000-\u001f]/g, ' ').slice(0, n);
+      v = { durum: yazi(d.durum, 20), surum: yazi(d.surum, 40).replace(/[^0-9a-f]/g, ''), zaman: sayi(d.zaman), denetim: sayi(d.denetim), mesaj: yazi(d.mesaj, 200) };
+    }
+  } catch (e) { v = null; }
+  guncelleOnb = { t: Date.now(), v };
+  return v;
+}
+yol('GET', /^\/api\/durum$/, (req, res) => {
+  const s = sayfa();
+  json(res, 200, { whitenote: true, surum: SURUM, uygulama: s ? s.surum : '', guncelleme: guncellemeDurumu() });
+}, { acik: true });
 
 yol('POST', /^\/api\/giris$/, async (req, res, p, b) => {
   // çok uzun girdiler kırpılır: deneme sayaçları ve günlük şişirilemez (geçerli bir ad en fazla 32, şifre 200 karakter)
@@ -1037,9 +1058,12 @@ function sayfa() {
   let st;
   try { st = fs.statSync(f); } catch (e) { return null; }
   if (st.mtimeMs === sayfaOnb.mtime && st.size === sayfaOnb.size) return sayfaOnb;
-  const html = fs.readFileSync(f, 'utf8').replace('<meta name="wn-sunucu" content="">', '<meta name="wn-sunucu" content="1">');
+  const ham = fs.readFileSync(f, 'utf8');
+  const surum = crypto.createHash('sha256').update(ham).digest('base64url').slice(0, 16);   // sayfanın sürümü: içeriğinden
+  const html = ham.replace('<meta name="wn-sunucu" content="">', '<meta name="wn-sunucu" content="1">')
+    .replace('<meta name="wn-surum" content="">', '<meta name="wn-surum" content="' + surum + '">');
   const buf = Buffer.from(html);
-  sayfaOnb = { mtime: st.mtimeMs, size: st.size, buf, csp: cspHesapla(html),
+  sayfaOnb = { mtime: st.mtimeMs, size: st.size, buf, surum, csp: cspHesapla(html),
     etag: '"s' + crypto.createHash('sha256').update(buf).digest('base64url').slice(0, 22) + '"' };
   return sayfaOnb;
 }

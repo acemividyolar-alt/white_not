@@ -18,6 +18,7 @@
 <meta charset="UTF-8">                                   <!-- Türkçe karakterlerin (ş,ğ,ı...) doğru görünmesi için -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Telefonda doğru ölçeklenmesi için -->
 <meta name="wn-sunucu" content="">                       <!-- White Note sunucusu (Raspberry Pi) sayfayı sunarken buraya "1" yazar: ekip alanı o sunucuda açılır -->
+<meta name="wn-surum" content="">                        <!-- sunucu buraya sayfanın sürümünü yazar: sunucuda yeni sürüm olunca sayfa kendiliğinden yenilenir -->
 <title>White Note</title>                                 <!-- Tarayıcı sekmesinde görünen başlık -->
 <meta name="description" content="Not, görev, Trello tarzı pano, SQLite veritabanı şema tasarımcısı ve algoritma / akış şeması tasarımcısı. Tek dosya, tarayıcıda çalışır, veriler cihazda kalır.">
 <!-- Sekmedeki simge (ayrı dosya gerekmesin diye SVG olarak buraya gömülü) -->
@@ -3609,7 +3610,7 @@
             <tr><td><code>İken i &lt;= n</code></td><td>Koşullu döngü (koşul doğru oldukça tekrarla)</td></tr>
             <tr><td><code>İçin i = 1 .. n</code></td><td>Sayaçlı döngü (<code>i = 1'den 10'a kadar</code>, <code>adım 2</code> da olur)</td></tr>
             <tr><td><code>Tekrarla</code> &hellip; <code>i &gt; 10 olana kadar</code></td><td>Sonda kontrollü döngü · <code>5 kez tekrarla</code></td></tr>
-            <tr><td><code>Adım 4: Eğer x &gt; 0 ise Adım 6'ya git</code></td><td>Numaralı (git'li) algoritma biçimi. “Adım numaralarını kendiliğinden yaz” açıksa Enter'a basınca sıradaki numara gelir; araya satır ekleyip silince numaralar ve “git”ler kayar (Shift+Enter: numarasız satır)</td></tr>
+            <tr><td><code>Adım 4: Eğer x &gt; 0 ise Adım 6'ya git</code></td><td>Numaralı (git'li) algoritma biçimi. “Adım numaralarını kendiliğinden yaz” açıksa Enter'a basınca sıradaki numara gelir (boş adımda da: her Enter bir adım; boş adımı Geri silme siler); araya satır ekleyip silince numaralar ve “git”ler kayar (Shift+Enter: numarasız satır)</td></tr>
             <tr><td><code>A = [3, 1, 2]</code><br><code>A = dizi(5, 0)</code></td><td>Dizi (liste): sıra numaraları 0'dan başlar. <code>A[0]</code> ilk eleman, <code>A[i] = 7</code> ile değişir, <code>Oku A[i]</code> ile okunur; <code>dizi(5, 0)</code> beş tane 0'dan oluşur</td></tr>
             <tr><td><code>ekle(A, 5)</code></td><td>Dizinin sonuna eleman ekler (tek başına bir adım olarak yazılır)</td></tr>
             <tr><td><code>uzunluk(A)</code> <code>toplam(A)</code><br><code>min(A)</code> <code>max(A)</code> <code>ters(A)</code></td><td>Eleman sayısı, toplam, en küçük, en büyük, ters çevrilmiş kopya</td></tr>
@@ -13734,7 +13735,8 @@
     // 2. geçiş: satırları yaz
     const lines = [];
     order.forEach(n => {
-      let t = oneLine(n.text) || FL_KINDS[n.kind].def;
+      // boş işlem kutusu boş adım olarak kalır (örnek metin "x = 0" algoritmaya karışmasın)
+      let t = oneLine(n.text) || (n.kind === 'process' ? '' : FL_KINDS[n.kind].def);
       if (n.kind === 'sub') t = 'Alt program ' + (flSubName(t) || t);
       else if (n.kind === 'conn') t = 'Bağlantı ' + t;
       if (n.kind === 'decision') {
@@ -20301,10 +20303,16 @@
      - Numaralı satırda Enter: alt satıra sıradaki "Adım N: " yazılır ("Eğer … ise", "İken …" gibi blok açan
        satırdan sonra bir içeride). Aşağıdaki adımlar ve onlara giden "Adım N'e git"ler birer kayar.
        Numarasız tek bir ilk satırda Enter'a basılırsa o satır "Adım 1" olur (telefon klavyesinde de işler).
-     - Boş adımda Enter: girintiliyse bir dışarı çıkar, değilse numara kalkar (numaralı yazım biter).
-     - Numaranın hemen arkasında Geri silme numarayı kaldırır; aşağıdakiler bir geri kayar.
+     - Boş adımda Enter: girintiliyse bir dışarı çıkar, değilse altına yeni adım açılır (her Enter bir adım;
+       numara hiç kalkmaz, boş satır oluşmaz).
+     - Numaranın önünde ya da hemen arkasında Enter: o adımın önüne boş bir adım açılır, imleç oraya geçer.
+     - Numaranın hemen arkasında Geri silme numarayı kaldırır (o satıra yeniden yazılınca geri gelir);
+       boş adımda Geri silme adımı satırıyla siler. Aşağıdakiler bir geri kayar.
+     - Numara yarım kalmaz: silme / kesme bir numaraya değerse ya da numaralı satır üsttekine birleşirse
+       numara bütünüyle kalkar. İmleç numaranın içine konamaz (dokununca yazının başına geçer).
      - Numaralı satır silinince ya da araya numaralı satırlar yapıştırılınca numaralar 1'den sıraya dizilir.
      - Numaralı satırda Tab / Shift+Tab bütün satırı girintiler / geri alır. Shift+Enter: numarasız yeni satır.
+     Klavyeden bağımsızdır: Enter / Geri silme tuşu yakalanamayan telefon klavyelerinde de aynı sonuç çıkar.
      Her değişiklik Ctrl+Z ile tek adımda geri alınır. */
   const flAutoNumOn = () => localGet('pref:flautonum') !== '0';
   const FL_STEP_RE = /^([ \t]*)(\p{L}+)([ \t]*)(\d{1,4})([ \t]*[:.)\-–])[ \t]?/u;
@@ -20386,15 +20394,20 @@
       line = ind + 'Adım 1: ' + line.slice(ind.length);
       lines[li] = line; L = flStepOf(line); col = line.length;
     }
-    if (col < L.len) return null;
+    const pre = n => L.ind + L.word + L.gap + n + L.sep + ' ';
     if (!line.slice(L.len).trim()) {
       if (L.ind.length) { // boş ve girintili adım: bir dışarı çık
         lines[li] = L.ind.replace(/^(?: {1,4}|\t)/, '') + line.slice(L.ind.length);
         return flAt(lines, li, lines[li].length);
       }
-      lines[li] = '';     // boş adım: numara kalkar, aşağıdakiler bir geri kayar
-      const out = flStepShift(lines, li, L.n, -1);
-      return flAt(out, li, 0);
+      // boş adım: altına sıradaki adım açılır (numara kalkmaz; boş adım Geri silmeyle silinir)
+      lines.splice(li + 1, 0, pre(L.n + 1));
+      return flAt(flStepShift(lines, li + 1, L.n + 1, 1), li + 1, pre(L.n + 1).length);
+    }
+    if (col <= L.len) {
+      // numaranın önünde / içinde / hemen arkasında: bu adımın önüne boş bir adım açılır, imleç oraya geçer
+      lines.splice(li, 0, pre(L.n));
+      return flAt(flStepShift(lines, li, L.n, 1), li, pre(L.n).length);
     }
     const head = col > L.len ? line.slice(0, col).replace(/[ \t]+$/, '') : line.slice(0, col), tail = line.slice(col).replace(/^[ \t]+/, '');
     const k = L.n + 1, prefix = L.ind + (!tail && flOpensBlock(line.slice(L.len)) ? '    ' : '') + L.word + L.gap + k + L.sep + ' ';
@@ -20403,12 +20416,18 @@
     const out = flStepShift(lines, li + 1, k, 1);
     return flAt(out, li + 1, prefix.length);
   }
-  /* Numaranın hemen arkasında Geri silme: numara kalkar */
+  /* Numaranın hemen arkasında Geri silme: numara kalkar (bos: o satır yeniden yazılınca numarası geri gelir).
+     Boş adımda: adım satırıyla silinir, imleç üstteki satırın sonuna geçer. */
   function flStepBackspace(v, s) {
     const ls = v.lastIndexOf('\n', s - 1) + 1, lines = v.split('\n'), li = v.slice(0, ls).split('\n').length - 1, L = flStepOf(lines[li]);
     if (!L || s - ls !== L.len) return null;
+    if (li > 0 && !lines[li].slice(L.len).trim()) {
+      lines.splice(li, 1);
+      const out = flStepShift(lines, li - 1, L.n, -1);
+      return flAt(out, li - 1, out[li - 1].length);
+    }
     lines[li] = L.ind + lines[li].slice(L.len);
-    return flAt(flStepShift(lines, li, L.n, -1), li, L.ind.length);
+    return Object.assign(flAt(flStepShift(lines, li, L.n, -1), li, L.ind.length), { bos: li });
   }
   /* Numaralı satırda Tab / Shift+Tab: bütün satır girintilenir (numara girintinin içinde kalır) */
   function flStepIndent(v, s, s2, back) {
@@ -20422,7 +20441,7 @@
     return flAt(lines, li, Math.max(0, s - ls - m[0].length));
   }
   /* Kutudaki metni değiştirir; tarayıcının geri alma geçmişine tek adım olarak girer (Ctrl+Z) */
-  let flNumBusy = false, flNumBefore = null, flPlainEnter = false;
+  let flNumBusy = false, flNumBefore = null, flNumSel = null, flPlainEnter = false;
   function flSetSrc(text, caret, kutu) {
     const ta = kutu || el('flSource'), top = ta.scrollTop;
     flNumBusy = true;
@@ -20439,18 +20458,56 @@
       if (y < ta.scrollTop) ta.scrollTop = Math.max(0, y - pad);
       else if (y + lh > ta.scrollTop + ta.clientHeight - pad) ta.scrollTop = y + lh - ta.clientHeight + 2 * pad;
     } finally { flNumBusy = false; }
+    flStepTrack(ta);
   }
-  /* Numarası silinmiş ya da yeni açılmış boş bir satıra yazılınca numara geri gelir ("Adım K: ", K = üstteki
-     adımın bir fazlası; aşağıdakiler ve "Adım N'e git"ler kayar). İlk kelime bitince (boşluk), Enter'da ya da
-     kutudan çıkınca. Dokunulmayanlar: kutuda hiç numaralı satır yoksa, satır Shift+Enter ile bilerek numarasız
-     açıldıysa, yorumsa (#), Python ise, "Adım N:" elle yazılıyorsa, "Değilse" / "Eğer sonu" gibi yapı satırıysa.
-     bos: { li } — yazılmaya boşken başlanan satır. Döner: { text, caret } · null (henüz değil) · false (vazgeç) */
+  /* Satır takibi. bos: numarası sonra gelecek satırlar ({ li, yazildi }: boşken yazılmaya başlanan ya da numarası
+     Geri silmeyle kalkıp yeniden yazılan); serbest: Shift+Enter ile bilerek numarasız açılanlar. Her değişiklikte
+     yeni yerlerine taşınır: üstte satır eklenip silinse de doğru satırda kalırlar. */
+  function flStepSt(ta) {
+    if (!ta._wn) ta._wn = { prev: ta.value, bos: [], serbest: [], comp: false, tus: null, duzen: false };
+    return ta._wn;
+  }
+  const flMaskLine = s => s.replace(/\d+(?:['’]\p{L}+)?/gu, '#');   // numara kayması satırı "değişmiş" saydırmasın
+  function flLineMapper(a, b) {
+    const A = a.split('\n'), B = b.split('\n');
+    if (a === b || A.length === B.length) return i => (i < B.length ? i : -1);
+    const MA = A.map(flMaskLine), MB = B.map(flMaskLine);
+    let p = 0; while (p < MA.length && p < MB.length && MA[p] === MB[p]) p++;
+    let s = 0; while (s < MA.length - p && s < MB.length - p && MA[MA.length - 1 - s] === MB[MB.length - 1 - s]) s++;
+    return i => (i < p ? i : i >= MA.length - s ? i + MB.length - MA.length : i === p ? p : -1);
+  }
+  function flStepTrack(ta, to) {
+    const st = flStepSt(ta);
+    if (to == null) to = ta.value;
+    if (st.prev !== to) {
+      const m = flLineMapper(st.prev, to), tasi = list => {
+        const out = [];
+        list.forEach(x => { const li = m(x.li); if (li >= 0 && !out.some(y => y.li === li)) out.push(Object.assign({}, x, { li: li })); });
+        return out;
+      };
+      st.bos = tasi(st.bos); st.serbest = tasi(st.serbest);
+      st.prev = to;
+    }
+    return st;
+  }
+  function flStepBosEkle(ta, li, yazildi) {
+    const st = flStepSt(ta), x = st.bos.find(b => b.li === li);
+    if (x) { if (yazildi) x.yazildi = true; } else st.bos.push({ li: li, yazildi: !!yazildi });
+  }
+  /* Satır yeniden numaralanınca imleç aynı yazının yanında kalsın (ör. numara 9 → 10 olunca bir kayar) */
+  function flColKeep(a, b, col) {
+    const A = flStepOf(a), B = flStepOf(b);
+    if (A && B && col >= A.len) return Math.min(b.length, col - A.len + B.len);
+    return Math.min(b.length, col);
+  }
+  /* Numarası silinmiş ya da boşken yazılmaya başlanmış satır numarasını alır ("Adım K: ", K = üstteki adımın bir
+     fazlası; aşağıdakiler ve "Adım N'e git"ler kayar). simdi değilse ilk kelimenin bitmesi (boşluk) beklenir.
+     Dokunulmayanlar: kutuda hiç numaralı satır yoksa, yorumsa (#), Python ise, "Adım N:" elle yazılıyorsa,
+     "Değilse" / "Eğer sonu" gibi yapı satırıysa. Döner: { text, caret } · null (henüz değil) · false (vazgeç) */
   const FL_YAPI_BASI = /^(?:eger|dongu|iken|icin|tekrar|tekrarla|son|degilse|aksi|yoksa|else|end|next|sonraki|wend|until|kadar|while|for|if)$/;
-  function flStepAuto(v, c, bos, simdi) {
-    if (!bos) return null;
-    const lines = v.split('\n'), li = v.slice(0, c).split('\n').length - 1, line = lines[li];
-    if (li !== bos.li || line == null) return false;
-    if (flStepOf(line)) return false;
+  function flStepAuto(v, c, li, simdi) {
+    const lines = v.split('\n'), line = lines[li];
+    if (line == null || flStepOf(line)) return false;
     if (!line.trim()) return null;
     const ilk = flFold(line.trim().split(/\s+/)[0]).replace(/[^a-z]/g, '');
     if (!simdi && (!/\S\s/.test(line) || FL_YAPI_BASI.test(ilk))) return null;   // ilk kelime bitmedi ya da yapı satırı olabilir
@@ -20458,97 +20515,209 @@
     const tur = flClassify(line.trim()).type;
     if (tur === 'closer' || tur === 'else') return false;
     const ind = line.match(/^[ \t]*/)[0];
-    let k = 1;
-    for (let i = li - 1; i >= 0; i--) { const L = flStepOf(lines[i]); if (L) { k = L.n + 1; break; } }
-    const pre = 'Adım ' + k + ': ';
+    let k = 1, S = null;
+    for (let i = li - 1; i >= 0 && !S; i--) { S = flStepOf(lines[i]); if (S) k = S.n + 1; }
+    for (let i = li + 1; i < lines.length && !S; i++) S = flStepOf(lines[i]);   // yazılış biçimi (Adım / Step, ":" / ".") komşudan
+    const pre = (S ? S.word + S.gap + k + S.sep : 'Adım ' + k + ':') + ' ', old = lines.slice();
     lines[li] = ind + pre + line.slice(ind.length);
     const out = flStepShift(lines, li, k, 1);
-    const col = c - (v.lastIndexOf('\n', c - 1) + 1);
-    return flAt(out, li, Math.max(col, ind.length) + pre.length);
+    const cl = v.slice(0, c).split('\n').length - 1, col = c - (v.lastIndexOf('\n', c - 1) + 1);
+    if (cl === li) return flAt(out, li, Math.max(col, ind.length) + pre.length);
+    return flAt(out, cl, flColKeep(old[cl], out[cl], col));
   }
-  function flStepBittiMi(ta, v, s) {   // boş adımda Enter numarayı kaldırır: o satır yeniden yazılınca numara geri gelir
-    ta._bos = { li: v.slice(0, s).split('\n').length - 1 };
+  /* Bekleyen satırları numaralar: imleç başka satırdaysa hemen; imlecin olduğu satır yazarken ilk kelime bitince,
+     Enter'da ya da kutudan çıkınca (hepsi). Numarası kalkıp hiç yazılmayan satıra dokunulmaz. */
+  function flStepBekleyen(ta, v, c, opt) {
+    const st = flStepSt(ta);
+    if (!st.bos.some(b => b.yazildi)) return null;
+    const cl = v.slice(0, c).split('\n').length - 1, kalan = [];
+    let text = v, caret = c, olan = false;
+    st.bos.slice().sort((x, y) => y.li - x.li).forEach(b => {
+      const burada = b.li === cl;
+      if (!b.yazildi || (burada && !opt.hepsi && !opt.yazarken)) { kalan.push(b); return; }
+      if (st.serbest.some(x => x.li === b.li)) return;
+      const r = flStepAuto(text, caret, b.li, opt.hepsi || !burada);
+      if (r === null) { kalan.push(b); return; }
+      if (r) { text = r.text; caret = r.caret; olan = true; }
+    });
+    st.bos = kalan;
+    return olan ? { text: text, caret: caret } : null;
+  }
+  /* Numaralar 1'den sıraya dizilir (satır silinince / yapıştırılınca / geri almadan sonra); imleç aynı yazının yanında */
+  function flStepDuzenle(v, c) {
+    const lines = v.split('\n'), out = flStepRenumber(lines);
+    if (!out) return null;
+    const li = v.slice(0, c).split('\n').length - 1, col = c - (v.lastIndexOf('\n', c - 1) + 1);
+    return { text: out.join('\n'), caret: flLinePos(out, li, flColKeep(lines[li], out[li], col)) };
+  }
+  /* Enter: önce bekleyen satırlar numarasını alır, sonra numaralı Enter (flStepEnter) */
+  function flStepEnterAll(ta, v, s) {
+    const b = flStepBekleyen(ta, v, s, { hepsi: true });
+    if (b) { v = b.text; s = b.caret; }
+    return flStepEnter(v, s) || (b ? { text: v.slice(0, s) + '\n' + v.slice(s), caret: s + 1 } : null);
+  }
+  /* Silme, kesme ya da birkaç satırı birden değiştirme "Adım N:" numarasını yarım bırakmasın ("Adım 4" · "dım 4:"):
+     - silme bir numaranın içinden başlıyorsa o numara bütünüyle kalkar;
+     - numaralı satır üsttekinin sonuna birleşiyorsa numarası kalkar, yazısı birleşir;
+     - silinen yer satır başında bitiyorsa (bütün satırlar silindi) alttaki satırın numarası olduğu gibi kalır.
+     Geri silme tuşunu göndermeyen telefon klavyelerinde de Geri silme tuşuyla aynı sonuç çıkar.
+     b / a: önceki / sonraki metin, s1–s2: önceki seçim (bilinmiyorsa null). Döner: { text, caret, bos? } ya da null */
+  function flStepFix(b, a, s1, s2, typ) {
+    if (b === a) return null;
+    const d = b.length - a.length;
+    let p, q;
+    if (s1 == null) {   // seçim bilinmiyor (tarayıcı beforeinput göndermedi): silinen yer farktan bulunur
+      if (!/^delete/.test(typ) || d <= 0) return null;
+      p = 0; while (p < a.length && b[p] === a[p]) p++;
+      q = p + d; s1 = s2 = /Backward$/.test(typ) ? q : p;
+    } else if (s1 !== s2) { p = s1; q = s2; }
+    else if (/^delete/.test(typ) && d > 0) { if (/Backward$/.test(typ)) { p = s1 - d; q = s1; } else { p = s1; q = s1 + d; } }
+    else return null;
+    if (p < 0 || q > b.length) return null;
+    const ins = a.slice(p, a.length - (b.length - q));
+    if (b.slice(0, p) + ins + b.slice(q) !== a) return null;                     // beklenmedik değişiklik: dokunma
+    if (ins && !b.slice(p, q).includes('\n')) return null;                       // tek satırda yazıyla değiştirme (ör. "Adım" → "Step")
+    if (typ === 'deleteContentBackward' && s1 === s2 && d === 1) { const r = flStepBackspace(b, s1); if (r) return r; }
+    const lines = b.split('\n'), pre = [];
+    let ls = 0;
+    lines.forEach(line => { const L = flStepOf(line); if (L) pre.push([ls, ls + L.len]); ls += line.length + 1; });
+    let P = p, Q = q;
+    pre.forEach(([ps, pe]) => {   // silme bir numaranın başından ya da içinden başlıyor: o numara bütünüyle kalkar
+      if (ps <= p && p < pe && q < pe) { P = ps; Q = pe; }
+      else if (ps < p && p < pe) P = ps;
+    });
+    const basta = (P === 0 || b[P - 1] === '\n') && (!ins || ins.endsWith('\n'));
+    pre.forEach(([ps, pe]) => {   // alttaki satırlar: önlerindeki satır sonu silindi
+      if (ps <= p || ps > q || q >= pe) return;                                   // değmiyor ya da numarası bütünüyle silindi
+      if (basta) Q = Math.min(Q, ps);                                             // satır başına geliyor: numarası kalır
+      else Q = Math.max(Q, pe);                                                   // üsttekine birleşiyor: numarası kalkar
+    });
+    if (P === p && Q === q) return null;
+    const text = b.slice(0, P) + ins + b.slice(Q), li = b.slice(0, P).split('\n').length - 1, satir = text.split('\n')[li];
+    const r = { text: text, caret: P + ins.length };
+    if (flStepOf(lines[li]) && !flStepOf(satir) && satir.trim()) r.bos = li;      // numarası kalkan satır: yazılınca geri gelir
+    return r;
+  }
+  /* İmleç numaranın içine düşmesin ("Ad|ım 4:" — dokununca ya da ok tuşuyla): yazının başına geçer;
+     sola gidiliyorsa üst satırın sonuna. Seçim (sürükleme, çift dokunma) olduğu gibi kalır. */
+  function flStepSnap(ta, st) {
+    const tus = st.tus, s = ta.selectionStart;
+    st.tus = null;
+    if (s !== ta.selectionEnd) return;
+    const v = ta.value, ls = v.lastIndexOf('\n', s - 1) + 1, le = v.indexOf('\n', s);
+    const L = flStepOf(v.slice(ls, le < 0 ? v.length : le));
+    if (!L || s - ls >= L.len) return;
+    const to = tus === 'ArrowLeft' && ls > 0 ? ls - 1 : ls + L.len;
+    ta.setSelectionRange(to, to);
   }
   function flStepKey(e, acik) {
-    const ta = e.target;
-    if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      flPlainEnter = true;
-      ta._numBitti = ta.value.slice(0, ta.selectionStart).split('\n').length;   // Shift+Enter: yeni satır bilerek numarasız
-      return false;
-    }
+    const ta = e.target, st = flStepTrack(ta);
+    st.tus = e.key;
+    if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { flPlainEnter = true; return false; }   // numarasız yeni satır
     if (!acik || e.isComposing || e.keyCode === 229 || e.ctrlKey || e.metaKey || e.altKey) return false;
-    const v0 = ta.value, s2 = ta.selectionEnd;
-    let v = v0, s = ta.selectionStart, r = null;
-    if (e.key === 'Enter' && !e.shiftKey && s === s2) {
-      const a = flStepAuto(v, s, ta._bos, true);
-      if (a) { ta._bos = null; v = a.text; s = a.caret; }
-      r = flStepEnter(v, s) || (a ? { text: v.slice(0, s) + '\n' + v.slice(s), caret: s + 1 } : null);
-    } else if (e.key === 'Backspace' && !e.shiftKey && s === s2) {
-      r = flStepBackspace(v, s);
-      if (r) flStepBittiMi(ta, r.text, r.caret);
-    } else if (e.key === 'Tab') r = flStepIndent(v, s, s2, e.shiftKey);
+    const v0 = ta.value, s = ta.selectionStart, s2 = ta.selectionEnd;
+    let r = null;
+    if (e.key === 'Enter' && !e.shiftKey && s === s2) r = flStepEnterAll(ta, v0, s);
+    else if (e.key === 'Backspace' && !e.shiftKey && s === s2) r = flStepBackspace(v0, s);
+    else if (e.key === 'Tab') r = flStepIndent(v0, s, s2, e.shiftKey);
     if (!r) return false;
     e.preventDefault();
+    if (st.duzen) { st.duzen = false; const d = flStepDuzenle(r.text, r.caret); if (d) r = Object.assign(r, d); }
     if (r.text !== v0) flSetSrc(r.text, r.caret, ta); else ta.setSelectionRange(r.caret, r.caret);
+    if (r.bos != null) flStepBosEkle(ta, r.bos, false);
     return true;
   }
   /* Bir yazı kutusuna kendiliğinden numarayı bağlar. acik(): o an numaralama açık mı */
   function flStepWire(kutu, acik) {
     kutu.addEventListener('beforeinput', e => {
       if (flNumBusy) return;
-      const ta = e.target;
-      flNumBefore = ta.value;
+      const ta = e.target, st = flStepTrack(ta), typ = e.inputType || '';
+      flNumBefore = ta.value; flNumSel = [ta.selectionStart, ta.selectionEnd];
       if (!acik()) return;
-      // boş bir satıra yazılmaya başlanıyor: numarası sonra geri gelir (flStepAuto)
-      if (/^insert(?:Text|CompositionText|ReplacementText|FromPaste)$/.test(e.inputType || '')) {
+      // boş bir satıra yazılmaya başlanıyor ya da numarası kalkan satıra yeniden yazılıyor: numara sonra gelir
+      const yapistir = /^insertFrom(?:Paste|Drop)$/.test(typ);
+      if (/^insert(?:Text|CompositionText|ReplacementText)$/.test(typ) || (yapistir && !/\n/.test((e.dataTransfer && e.dataTransfer.getData('text/plain')) || e.data || ''))) {
         const v = ta.value, sx = ta.selectionStart, ls = v.lastIndexOf('\n', sx - 1) + 1, le = v.indexOf('\n', sx);
-        const li = v.slice(0, ls).split('\n').length - 1;
-        if (!v.slice(ls, le < 0 ? v.length : le).trim() && ta._numBitti !== li && !(ta._bos && ta._bos.li === li)) ta._bos = { li: li };
+        const li = v.slice(0, ls).split('\n').length - 1, line = v.slice(ls, le < 0 ? v.length : le);
+        if (!flStepOf(line) && !st.serbest.some(x => x.li === li)) {
+          if (!line.trim()) flStepBosEkle(ta, li, true);
+          else { const x = st.bos.find(b => b.li === li); if (x) x.yazildi = true; }
+        }
       }
       // boş kutuda ilk harf: önüne "Adım 1: " gelir
-      if (e.inputType !== 'insertText' || !e.data || e.data.length !== 1 || /[\s#]/.test(e.data) || ta.value.trim()) return;
+      if (typ !== 'insertText' || !e.data || e.data.length !== 1 || /[\s#]/.test(e.data) || ta.value.trim()) return;
       e.preventDefault();
       flSetSrc('Adım 1: ' + e.data, 9, ta);
     });
     kutu.addEventListener('input', e => {
-      const before = flNumBefore, plain = flPlainEnter;
-      flNumBefore = null; flPlainEnter = false;
-      if (flNumBusy || !e.isTrusted || !acik() || /^history/.test(e.inputType || '')) return;
-      const ta = e.target, v = ta.value, c = ta.selectionStart;
+      const before = flNumBefore, sel = flNumSel, plain = flPlainEnter;
+      flNumBefore = null; flNumSel = null; flPlainEnter = false;
+      if (flNumBusy) return;
+      const ta = e.target, typ = e.inputType || '', prev0 = flStepSt(ta).prev, st = flStepTrack(ta);
+      const onceki = before != null ? before : prev0;   // beforeinput gelmediyse son bilinen metin
+      let v = ta.value, c = ta.selectionStart, yeniBos = null;
+      const satirSonu = /^insert(?:LineBreak|Paragraph)$/.test(typ);
+      if (plain && satirSonu) st.serbest.push({ li: v.slice(0, c).split('\n').length - 1 });   // Shift+Enter: bilerek numarasız
+      if (/^history/.test(typ)) { if (acik()) st.duzen = true; return; }   // Ctrl+Z: olduğu gibi; sıra bozuk kaldıysa sonraki düzenlemede düzelir
+      if (!e.isTrusted || !acik()) return;
       // Telefon klavyesinde Enter tuşu yakalanamayabilir: satır sonu eklendikten sonra aynı işlem yapılır
-      if ((e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph') && !plain && c > 0 && v[c - 1] === '\n') {
-        let vv = v.slice(0, c - 1) + v.slice(c), cc = c - 1;
-        const a = flStepAuto(vv, cc, ta._bos, true);
-        if (a) { ta._bos = null; vv = a.text; cc = a.caret; }
-        const r = flStepEnter(vv, cc) || (a ? { text: vv.slice(0, cc) + '\n' + vv.slice(cc), caret: cc + 1 } : null);
+      if (satirSonu && !plain && c > 0 && v[c - 1] === '\n') {
+        const vv = v.slice(0, c - 1) + v.slice(c);
+        flStepTrack(ta, vv);
+        const r = flStepEnterAll(ta, vv, c - 1);
         if (r) { flSetSrc(r.text, r.caret, ta); return; }
+        flStepTrack(ta, v);
+        return;
       }
-      // ilk kelime bitti (boşluk): numara şimdi gelir. Telefon klavyesi kelimeyi yazarken (birleştirme) dokunulmaz.
-      if (!e.isComposing && ta._bos) {
-        const a = flStepAuto(v, c, ta._bos, false);
-        if (a === false) ta._bos = null;
-        else if (a) { ta._bos = null; flSetSrc(a.text, a.caret, ta); return; }
+      if (e.isComposing) return;   // telefon klavyesi kelimeyi yazarken (birleştirme) dokunulmaz
+      // silme / kesme numarayı yarım bırakmasın
+      if (onceki != null) {
+        const f = flStepFix(onceki, v, sel ? sel[0] : null, sel ? sel[1] : null, typ);
+        if (f) { v = f.text; c = f.caret; flStepTrack(ta, v); if (f.bos != null) yeniBos = f.bos; }
       }
-      if (before == null || flStepCount(before) === flStepCount(v)) return;
-      const lines = v.split('\n'), out = flStepRenumber(lines);
-      if (!out) return;
-      const li = v.slice(0, c).split('\n').length - 1, col = c - (v.lastIndexOf('\n', c - 1) + 1);
-      const a = flStepOf(lines[li]), b = flStepOf(out[li]);
-      flSetSrc(out.join('\n'), flLinePos(out, li, Math.max(0, col + (a && b && col > a.at ? b.nl - a.nl : 0))), ta);
+      // numaralı satır sayısı değişti mi (satır silindi, yapıştırıldı): bekleyenler numaralanmadan önce bakılır
+      const sayiDegisti = onceki != null && flStepCount(onceki) !== flStepCount(v);
+      // bekleyen satırlar: yazılan satır ilk kelime bitince (boşluk), bırakılan satırlar hemen
+      const b = flStepBekleyen(ta, v, c, { yazarken: /^insert/.test(typ) });
+      if (b) { v = b.text; c = b.caret; }
+      // sayı değiştiyse ya da geri almadan sonra: numaralar 1'den sıraya
+      if (st.duzen || sayiDegisti) {
+        st.duzen = false;
+        const d = flStepDuzenle(v, c);
+        if (d) { v = d.text; c = d.caret; }
+      }
+      if (v !== ta.value) flSetSrc(v, c, ta);
+      if (yeniBos != null) flStepBosEkle(ta, yeniBos, false);
     });
+    kutu.addEventListener('compositionstart', e => { flStepSt(e.target).comp = true; });
     kutu.addEventListener('compositionend', e => {   // telefon klavyesi kelimeyi bitirdi
-      const ta = e.target;
+      const ta = e.target, st = flStepSt(ta);
+      st.comp = false;
       setTimeout(() => {
-        if (!acik() || !ta._bos || flNumBusy || document.activeElement !== ta) return;
-        const a = flStepAuto(ta.value, ta.selectionStart, ta._bos, false);
-        if (a === false) ta._bos = null;
-        else if (a) { ta._bos = null; flSetSrc(a.text, a.caret, ta); }
+        if (!acik() || flNumBusy || st.comp || document.activeElement !== ta) return;
+        flStepTrack(ta);
+        const b = flStepBekleyen(ta, ta.value, ta.selectionStart, { yazarken: true });
+        if (b) flSetSrc(b.text, b.caret, ta);
       }, 0);
     });
-    kutu.addEventListener('blur', e => {   // kutudan çıkınca yarım kalan satır da numarasını alır
-      const ta = e.target;
-      if (acik() && ta._bos) { const a = flStepAuto(ta.value, ta.selectionStart, ta._bos, true); if (a) ta.value = a.text; }
-      ta._bos = null; ta._numBitti = null;
+    // İmleç başka yere geçince: numaranın içine düştüyse çıkar; bırakılan bekleyen satır numarasını alır
+    const secim = () => {
+      if (document.activeElement !== kutu || flNumBusy || !acik()) return;
+      const st = flStepTrack(kutu);
+      if (st.comp) return;
+      flStepSnap(kutu, st);
+      if (kutu.selectionStart !== kutu.selectionEnd) return;
+      const b = flStepBekleyen(kutu, kutu.value, kutu.selectionStart, {});
+      if (b) flSetSrc(b.text, b.caret, kutu);
+    };
+    kutu.addEventListener('selectionchange', secim);
+    document.addEventListener('selectionchange', secim);
+    kutu.addEventListener('pointerdown', e => { flStepSt(e.target).tus = null; });
+    kutu.addEventListener('focus', e => { const st = flStepSt(e.target); st.prev = e.target.value; st.bos = []; st.serbest = []; st.comp = false; });
+    kutu.addEventListener('blur', e => {   // kutudan çıkınca yarım kalan satırlar da numarasını alır
+      const ta = e.target, st = flStepTrack(ta);
+      if (acik()) { const b = flStepBekleyen(ta, ta.value, ta.selectionStart, { hepsi: true }); if (b) ta.value = b.text; }
+      st.bos = []; st.serbest = []; st.comp = false; st.prev = ta.value;
     });
   }
   flStepWire(el('flSource'), flAutoNumOn);
@@ -21541,7 +21710,7 @@
     ['Akış', [['Ctrl+Z · Ctrl+Y', 'Geri al / yinele'], ['Delete', 'Seçili şekli ya da oku sil'], ['Enter', 'Seçili şekli düzenle (çift tık da olur)'], ['F9', 'Kesme noktası koy / kaldır'],
       ['Ctrl+C · Ctrl+X · Ctrl+V · Ctrl+D', 'Kopyala / kes / yapıştır / çoğalt'], ['Ctrl+A', 'Bütün şekilleri seç'], ['Shift+tıkla', 'Çoklu seçim (Shift ile sürükle: dikdörtgen)'],
       ['?', 'Şekiller ne işe yarar?'], ['Ctrl+tekerlek', 'Yakınlaştır / uzaklaştır']]],
-    ['Algoritma kutusu', [['Ctrl+Enter', 'Akış şemasını oluştur'], ['Enter · Shift+Enter', 'Sıradaki "Adım N:" ile / numarasız yeni satır'], ['Tab · Shift+Tab', 'Satırı girintile / geri al']]],
+    ['Algoritma kutusu', [['Ctrl+Enter', 'Akış şemasını oluştur'], ['Enter · Shift+Enter', 'Sıradaki "Adım N:" ile / numarasız yeni satır'], ['Geri silme', 'Boş adımı siler · numaranın arkasında numarayı kaldırır'], ['Tab · Shift+Tab', 'Satırı girintile / geri al']]],
     ['Şema ve SQL konsolu', [['Ctrl+Enter', 'Konsolda çalıştır (seçili kısım varsa yalnız o)'], ['Ctrl+Z · Ctrl+Y', 'Geri al / yinele'], ['Delete', 'Seçili ilişkiyi sil'], ['Ctrl+tekerlek', 'Yakınlaştır / uzaklaştır']]]
   ];
   function renderKbd() {
@@ -24195,6 +24364,53 @@ service cloud.firestore {
     srvSend(false);
     while ((SRV.sending || (cloud.queue.size && SRV.connected)) && Date.now() - t0 < ms) await new Promise(r => setTimeout(r, 60));
     await srvSave();
+  }
+
+  /* ---------- Yeni sürüm: sunucudaki uygulama güncellenince açık sayfa da kendiliğinden yenilenir ----------
+     Pi GitHub'daki yeni sürümü kendisi kurar (sunucu/whitenote-guncelle.sh). Sayfa hangi sürümle açıldıysa (sunucunun
+     yazdığı wn-surum) sunucudakiyle (/api/durum) karşılaştırılır: sayfaya dönülünce, internet gelince ve iki dakikada
+     bir. Yeni sürüm varsa sayfa uygun anda yenilenir: arka plandan dönülünce ya da bir dakikadır dokunulmuyorken;
+     yazı kutusundayken ya da bir pencere açıkken hiç (yazılanlar kaybolmasın). O ana kadar "Şimdi yenile" düğmeli
+     kısa bir not çıkar. */
+  const WN_SURUM = (() => { try { const m = document.querySelector('meta[name="wn-surum"]'); return (m && m.getAttribute('content')) || ''; } catch (e) { return ''; } })();
+  const wnGuncel = { yeni: false, son: Date.now(), bakildi: 0, gizli: false, zamanlayici: null };
+  async function wnSurumBak(zorla) {
+    if (!SRV.ok || !WN_SURUM || wnGuncel.yeni || (!zorla && Date.now() - wnGuncel.bakildi < 20000)) return;
+    wnGuncel.bakildi = Date.now();
+    try {
+      const r = await fetch('api/durum', { cache: 'no-store', credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+      const d = r.ok ? await r.json() : null;
+      if (!d || typeof d.uygulama !== 'string' || !/^[A-Za-z0-9_-]{8,64}$/.test(d.uygulama) || d.uygulama === WN_SURUM) return;
+      wnGuncel.yeni = true;
+      showSnack('Uygulamanın yeni sürümü geldi; uygun anda kendiliğinden yenilenecek.', () => wnYenile('simdi'), 'Şimdi yenile');
+      wnYenile();
+    } catch (e) {}
+  }
+  function wnMesgul() {   // yazı yazılıyor ya da bir pencere açık: yenileme beklesin
+    const a = document.activeElement;
+    if (a && (a.tagName === 'TEXTAREA' || a.isContentEditable || (a.tagName === 'INPUT' && !/^(?:button|checkbox|radio|range|color|file|submit|reset)$/i.test(a.type || '')))) return true;
+    return !!document.querySelector('.modal-overlay.open');
+  }
+  async function wnYenile(mod) {   // mod: 'simdi' (düğme) · 'donus' (arka plandan dönüldü, dokunulmadı) · boş (bir dakika dokunulmadıysa)
+    if (!wnGuncel.yeni) return;
+    if (mod !== 'simdi' && (wnMesgul() || (mod !== 'donus' && Date.now() - wnGuncel.son < 60000))) return;
+    try { if (cloud.team && cloud.prov === 'srv') await srvDrain(3000); } catch (e) {}
+    location.reload();
+  }
+  if (SRV.ok && WN_SURUM) {
+    ['pointerdown', 'keydown', 'input', 'wheel'].forEach(k => document.addEventListener(k, () => { wnGuncel.son = Date.now(); }, { capture: true, passive: true }));
+    document.addEventListener('visibilitychange', () => {
+      clearTimeout(wnGuncel.zamanlayici);
+      if (document.hidden) { wnGuncel.gizli = true; return; }
+      // arka plandan dönüldü: bekleyen kayıtlar bitsin diye biraz beklenir, o arada dokunulmazsa yenilenir
+      const donus = Date.now();
+      wnGuncel.zamanlayici = setTimeout(async () => {
+        await wnSurumBak(true);
+        wnYenile(wnGuncel.son <= donus ? 'donus' : '');
+      }, 1500);
+    });
+    window.addEventListener('online', () => wnSurumBak(true));
+    setInterval(() => { if (!document.hidden) { wnSurumBak(false); wnYenile(); } }, 120000);
   }
 
   /* ---------- Oturum kapandı / erişim bitti: kişisel alana dönülür, Ekip penceresi nedenini söyler ---------- */

@@ -1,0 +1,15 @@
+# White Note: GitHub'daki yeni sürümü denetler ve kurar (whitenote-guncelle.timer birkaç dakikada bir çalıştırır)
+# Kurulum (Pi'deki kurulum betiği yapar):
+#   sudo install -m 755 whitenote-guncelle.sh /usr/local/lib/whitenote/whitenote-guncelle.sh
+#   sudo cp whitenote-guncelle.service whitenote-guncelle.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now whitenote-guncelle.timer
+# Kayıtlar: journalctl -u whitenote-guncelle · Hemen dene: sudo systemctl start whitenote-guncelle
+[Unit]
+Description=White Note kendiliğinden güncelleme
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/whitenote/whitenote-guncelle.sh
+TimeoutStartSec=15min
