@@ -20464,7 +20464,7 @@
      Geri silmeyle kalkıp yeniden yazılan); serbest: Shift+Enter ile bilerek numarasız açılanlar. Her değişiklikte
      yeni yerlerine taşınır: üstte satır eklenip silinse de doğru satırda kalırlar. */
   function flStepSt(ta) {
-    if (!ta._wn) ta._wn = { prev: ta.value, bos: [], serbest: [], comp: false, tus: null, duzen: false };
+    if (!ta._wn) ta._wn = { prev: ta.value, bos: [], serbest: [], comp: false, compBas: null, tus: null, duzen: false };
     return ta._wn;
   }
   const flMaskLine = s => s.replace(/\d+(?:['’]\p{L}+)?/gu, '#');   // numara kayması satırı "değişmiş" saydırmasın
@@ -20598,6 +20598,25 @@
     if (flStepOf(lines[li]) && !flStepOf(satir) && satir.trim()) r.bos = li;      // numarası kalkan satır: yazılınca geri gelir
     return r;
   }
+  /* Bazı telefon klavyeleri satır sonunu kelimeyle birlikte gönderir ("J" + Enter → birleştirmede "J\n"): Enter
+     tuşu ve satır sonu olayı hiç gelmez. Birleştirme bitince eklenen yazıdaki her satır sonu Enter gibi işlenir. */
+  function flStepImeEnter(ta, b, a) {
+    if (b == null || a === b) return null;
+    let p = 0; while (p < b.length && p < a.length && b[p] === a[p]) p++;
+    let q = 0; while (q < b.length - p && q < a.length - p && b[b.length - 1 - q] === a[a.length - 1 - q]) q++;
+    const ins = a.slice(p, a.length - q);
+    if (!ins.includes('\n')) return null;
+    const parca = ins.split('\n');
+    let v = b.slice(0, p) + parca[0] + b.slice(b.length - q), c = p + parca[0].length;
+    flStepTrack(ta, v);
+    for (let i = 1; i < parca.length; i++) {
+      const r = flStepEnterAll(ta, v, c) || { text: v.slice(0, c) + '\n' + v.slice(c), caret: c + 1 };
+      flStepTrack(ta, r.text);
+      v = r.text.slice(0, r.caret) + parca[i] + r.text.slice(r.caret); c = r.caret + parca[i].length;
+      flStepTrack(ta, v);
+    }
+    return { text: v, caret: c };
+  }
   /* İmleç numaranın içine düşmesin ("Ad|ım 4:" — dokununca ya da ok tuşuyla): yazının başına geçer;
      sola gidiliyorsa üst satırın sonuna. Seçim (sürükleme, çift dokunma) olduğu gibi kalır. */
   function flStepSnap(ta, st) {
@@ -20689,15 +20708,15 @@
       if (v !== ta.value) flSetSrc(v, c, ta);
       if (yeniBos != null) flStepBosEkle(ta, yeniBos, false);
     });
-    kutu.addEventListener('compositionstart', e => { flStepSt(e.target).comp = true; });
+    kutu.addEventListener('compositionstart', e => { const st = flStepSt(e.target); st.comp = true; st.compBas = e.target.value; });
     kutu.addEventListener('compositionend', e => {   // telefon klavyesi kelimeyi bitirdi
-      const ta = e.target, st = flStepSt(ta);
-      st.comp = false;
+      const ta = e.target, st = flStepSt(ta), bas = st.compBas;
+      st.comp = false; st.compBas = null;
       setTimeout(() => {
         if (!acik() || flNumBusy || st.comp || document.activeElement !== ta) return;
         flStepTrack(ta);
-        const b = flStepBekleyen(ta, ta.value, ta.selectionStart, { yazarken: true });
-        if (b) flSetSrc(b.text, b.caret, ta);
+        const r = flStepImeEnter(ta, bas, ta.value) || flStepBekleyen(ta, ta.value, ta.selectionStart, { yazarken: true });
+        if (r) flSetSrc(r.text, r.caret, ta);
       }, 0);
     });
     // İmleç başka yere geçince: numaranın içine düştüyse çıkar; bırakılan bekleyen satır numarasını alır
