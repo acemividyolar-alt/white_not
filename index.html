@@ -20440,17 +20440,56 @@
       else if (y + lh > ta.scrollTop + ta.clientHeight - pad) ta.scrollTop = y + lh - ta.clientHeight + 2 * pad;
     } finally { flNumBusy = false; }
   }
+  /* Numarası silinmiş ya da yeni açılmış boş bir satıra yazılınca numara geri gelir ("Adım K: ", K = üstteki
+     adımın bir fazlası; aşağıdakiler ve "Adım N'e git"ler kayar). İlk kelime bitince (boşluk), Enter'da ya da
+     kutudan çıkınca. Dokunulmayanlar: kutuda hiç numaralı satır yoksa, satır Shift+Enter ile bilerek numarasız
+     açıldıysa, yorumsa (#), Python ise, "Adım N:" elle yazılıyorsa, "Değilse" / "Eğer sonu" gibi yapı satırıysa.
+     bos: { li } — yazılmaya boşken başlanan satır. Döner: { text, caret } · null (henüz değil) · false (vazgeç) */
+  const FL_YAPI_BASI = /^(?:eger|dongu|iken|icin|tekrar|tekrarla|son|degilse|aksi|yoksa|else|end|next|sonraki|wend|until|kadar|while|for|if)$/;
+  function flStepAuto(v, c, bos, simdi) {
+    if (!bos) return null;
+    const lines = v.split('\n'), li = v.slice(0, c).split('\n').length - 1, line = lines[li];
+    if (li !== bos.li || line == null) return false;
+    if (flStepOf(line)) return false;
+    if (!line.trim()) return null;
+    const ilk = flFold(line.trim().split(/\s+/)[0]).replace(/[^a-z]/g, '');
+    if (!simdi && (!/\S\s/.test(line) || FL_YAPI_BASI.test(ilk))) return null;   // ilk kelime bitmedi ya da yapı satırı olabilir
+    if (/^\s*#/.test(line) || /^(?:adim|step)/.test(ilk) || looksLikePython(v) || !lines.some((x, i) => i !== li && flStepOf(x))) return false;
+    const tur = flClassify(line.trim()).type;
+    if (tur === 'closer' || tur === 'else') return false;
+    const ind = line.match(/^[ \t]*/)[0];
+    let k = 1;
+    for (let i = li - 1; i >= 0; i--) { const L = flStepOf(lines[i]); if (L) { k = L.n + 1; break; } }
+    const pre = 'Adım ' + k + ': ';
+    lines[li] = ind + pre + line.slice(ind.length);
+    const out = flStepShift(lines, li, k, 1);
+    const col = c - (v.lastIndexOf('\n', c - 1) + 1);
+    return flAt(out, li, Math.max(col, ind.length) + pre.length);
+  }
+  function flStepBittiMi(ta, v, s) {   // boş adımda Enter numarayı kaldırır: o satır yeniden yazılınca numara geri gelir
+    ta._bos = { li: v.slice(0, s).split('\n').length - 1 };
+  }
   function flStepKey(e, acik) {
-    if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { flPlainEnter = true; return false; }
+    const ta = e.target;
+    if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      flPlainEnter = true;
+      ta._numBitti = ta.value.slice(0, ta.selectionStart).split('\n').length;   // Shift+Enter: yeni satır bilerek numarasız
+      return false;
+    }
     if (!acik || e.isComposing || e.keyCode === 229 || e.ctrlKey || e.metaKey || e.altKey) return false;
-    const ta = e.target, v = ta.value, s = ta.selectionStart, s2 = ta.selectionEnd;
-    let r = null;
-    if (e.key === 'Enter' && !e.shiftKey && s === s2) r = flStepEnter(v, s);
-    else if (e.key === 'Backspace' && !e.shiftKey && s === s2) r = flStepBackspace(v, s);
-    else if (e.key === 'Tab') r = flStepIndent(v, s, s2, e.shiftKey);
+    const v0 = ta.value, s2 = ta.selectionEnd;
+    let v = v0, s = ta.selectionStart, r = null;
+    if (e.key === 'Enter' && !e.shiftKey && s === s2) {
+      const a = flStepAuto(v, s, ta._bos, true);
+      if (a) { ta._bos = null; v = a.text; s = a.caret; }
+      r = flStepEnter(v, s) || (a ? { text: v.slice(0, s) + '\n' + v.slice(s), caret: s + 1 } : null);
+    } else if (e.key === 'Backspace' && !e.shiftKey && s === s2) {
+      r = flStepBackspace(v, s);
+      if (r) flStepBittiMi(ta, r.text, r.caret);
+    } else if (e.key === 'Tab') r = flStepIndent(v, s, s2, e.shiftKey);
     if (!r) return false;
     e.preventDefault();
-    if (r.text !== v) flSetSrc(r.text, r.caret, ta); else ta.setSelectionRange(r.caret, r.caret);
+    if (r.text !== v0) flSetSrc(r.text, r.caret, ta); else ta.setSelectionRange(r.caret, r.caret);
     return true;
   }
   /* Bir yazı kutusuna kendiliğinden numarayı bağlar. acik(): o an numaralama açık mı */
@@ -20459,8 +20498,15 @@
       if (flNumBusy) return;
       const ta = e.target;
       flNumBefore = ta.value;
+      if (!acik()) return;
+      // boş bir satıra yazılmaya başlanıyor: numarası sonra geri gelir (flStepAuto)
+      if (/^insert(?:Text|CompositionText|ReplacementText|FromPaste)$/.test(e.inputType || '')) {
+        const v = ta.value, sx = ta.selectionStart, ls = v.lastIndexOf('\n', sx - 1) + 1, le = v.indexOf('\n', sx);
+        const li = v.slice(0, ls).split('\n').length - 1;
+        if (!v.slice(ls, le < 0 ? v.length : le).trim() && ta._numBitti !== li && !(ta._bos && ta._bos.li === li)) ta._bos = { li: li };
+      }
       // boş kutuda ilk harf: önüne "Adım 1: " gelir
-      if (!acik() || e.inputType !== 'insertText' || !e.data || e.data.length !== 1 || /[\s#]/.test(e.data) || ta.value.trim()) return;
+      if (e.inputType !== 'insertText' || !e.data || e.data.length !== 1 || /[\s#]/.test(e.data) || ta.value.trim()) return;
       e.preventDefault();
       flSetSrc('Adım 1: ' + e.data, 9, ta);
     });
@@ -20471,8 +20517,17 @@
       const ta = e.target, v = ta.value, c = ta.selectionStart;
       // Telefon klavyesinde Enter tuşu yakalanamayabilir: satır sonu eklendikten sonra aynı işlem yapılır
       if ((e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph') && !plain && c > 0 && v[c - 1] === '\n') {
-        const r = flStepEnter(v.slice(0, c - 1) + v.slice(c), c - 1);
+        let vv = v.slice(0, c - 1) + v.slice(c), cc = c - 1;
+        const a = flStepAuto(vv, cc, ta._bos, true);
+        if (a) { ta._bos = null; vv = a.text; cc = a.caret; }
+        const r = flStepEnter(vv, cc) || (a ? { text: vv.slice(0, cc) + '\n' + vv.slice(cc), caret: cc + 1 } : null);
         if (r) { flSetSrc(r.text, r.caret, ta); return; }
+      }
+      // ilk kelime bitti (boşluk): numara şimdi gelir. Telefon klavyesi kelimeyi yazarken (birleştirme) dokunulmaz.
+      if (!e.isComposing && ta._bos) {
+        const a = flStepAuto(v, c, ta._bos, false);
+        if (a === false) ta._bos = null;
+        else if (a) { ta._bos = null; flSetSrc(a.text, a.caret, ta); return; }
       }
       if (before == null || flStepCount(before) === flStepCount(v)) return;
       const lines = v.split('\n'), out = flStepRenumber(lines);
@@ -20480,6 +20535,20 @@
       const li = v.slice(0, c).split('\n').length - 1, col = c - (v.lastIndexOf('\n', c - 1) + 1);
       const a = flStepOf(lines[li]), b = flStepOf(out[li]);
       flSetSrc(out.join('\n'), flLinePos(out, li, Math.max(0, col + (a && b && col > a.at ? b.nl - a.nl : 0))), ta);
+    });
+    kutu.addEventListener('compositionend', e => {   // telefon klavyesi kelimeyi bitirdi
+      const ta = e.target;
+      setTimeout(() => {
+        if (!acik() || !ta._bos || flNumBusy || document.activeElement !== ta) return;
+        const a = flStepAuto(ta.value, ta.selectionStart, ta._bos, false);
+        if (a === false) ta._bos = null;
+        else if (a) { ta._bos = null; flSetSrc(a.text, a.caret, ta); }
+      }, 0);
+    });
+    kutu.addEventListener('blur', e => {   // kutudan çıkınca yarım kalan satır da numarasını alır
+      const ta = e.target;
+      if (acik() && ta._bos) { const a = flStepAuto(ta.value, ta.selectionStart, ta._bos, true); if (a) ta.value = a.text; }
+      ta._bos = null; ta._numBitti = null;
     });
   }
   flStepWire(el('flSource'), flAutoNumOn);
