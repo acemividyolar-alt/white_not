@@ -7,7 +7,7 @@ Uygulamayı kendi alan adınla (ör. `https://whitenote.com.tr`) evdeki bir Rasp
 - ekipler, davet kodları, roller (sahip / yönetici / üye / okur)
 - anında eşitleme
 
-Tek dosyadır, dış paket gerekmez (Node.js 22 ya da üstü yeter). Veriler Pi'deki bir SQLite dosyasında
+Tek dosyadır, dış paket gerekmez (Node.js 22.13 ya da üstü yeter). Veriler Pi'deki bir SQLite dosyasında
 durur ve her gece yedeklenir. Uygulamanın ekipte nasıl kullanıldığı ana
 [README](../README.md#kendi-sunucunda-ekip-raspberry-pi)'de anlatılıyor.
 
@@ -35,7 +35,7 @@ Tarayıcı ──HTTPS──> Cloudflare ──tünel──> cloudflared (Pi) �
    ```bash
    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
    sudo apt install -y nodejs
-   node --version     # v22 ya da üstü olmalı
+   node --version     # v22.13 ya da üstü olmalı (Raspberry Pi OS'un kendi paketi eskidir, bu yüzden NodeSource)
    ```
 4. Sunucu için ayrı, oturum açamayan bir kullanıcı ve uygulamanın kopyası:
    ```bash

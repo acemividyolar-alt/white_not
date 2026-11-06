@@ -23904,13 +23904,24 @@ service cloud.firestore {
 
   /* ---------- Canlı yayın ---------- */
   function srvListen() {
-    if (SRV.es || !cloud.on || cloud.prov !== 'srv' || SRV.ended) return;
+    if (!cloud.on || cloud.prov !== 'srv' || SRV.ended) return;
+    if (SRV.es) {
+      // Açık yayın: bu arada başka bir istek ağ hatası verdiyse "bağlı değil" kalmasın (çağıran okumayı başarıyla yaptı)
+      if (SRV.es.readyState === 1) { SRV.retryN = 0; srvSetConn(true); return; }
+      // Bağlanmayı deneyen eski bağlantı: tarayıcı art arda başarısız denemelerden sonra uzun süre bekleyebilir
+      // (ya da hiç denemez); ağ geri gelince hemen yenisi açılır.
+      try { SRV.es.close(); } catch (e) {}
+      SRV.es = null;
+    }
     let es;
     try { es = new EventSource('api/ekip/' + encodeURIComponent(cloud.team.id) + '/akis'); }
     catch (e) { srvRetryLater(); return; }
     SRV.es = es;
+    SRV.beat = Date.now();
+    es.addEventListener('nabiz', () => { SRV.beat = Date.now(); });
     es.addEventListener('merhaba', ev => {
       const x = srvJSON(ev.data);
+      SRV.beat = Date.now();
       SRV.retryN = 0;
       srvSetConn(true);
       if (x && (+x.sira !== SRV.sira || (typeof x.donem === 'string' && x.donem !== SRV.donem))) srvFetch();   // kaçırılan değişiklikler
@@ -23920,7 +23931,7 @@ service cloud.firestore {
       srvPresenceSend(true);
       if (cloud.queue.size) srvSendSoon(0);
     });
-    es.addEventListener('kayit', ev => { const x = srvJSON(ev.data); if (x && +x.sira > SRV.sira) srvFetch(); });
+    es.addEventListener('kayit', ev => { const x = srvJSON(ev.data); SRV.beat = Date.now(); if (x && +x.sira > SRV.sira) srvFetch(); });
     es.addEventListener('kimler', ev => { const x = srvJSON(ev.data); if (x) srvPresence(x); });
     es.addEventListener('uyeler', () => srvMembers());
     es.addEventListener('ekip', ev => {
@@ -23934,7 +23945,7 @@ service cloud.firestore {
         if (SRV.es === es) SRV.es = null;
         srvCheckAccess();
       }
-      // (bağlanıyor durumunda tarayıcı kendisi yeniden dener)
+      else srvRetryLater();   // bağlanıyor: tarayıcı kendisi de dener; olmazsa biraz sonra baştan bağlanılır
     };
   }
   async function srvCheckAccess() {
@@ -23945,7 +23956,9 @@ service cloud.firestore {
     const s = srvBenState(ben);
     if (s === 'gone') { srvLostAccess(); return; }
     if (s !== 'ok') { srvSessionEnded(); return; }
-    srvRetryLater(true);   // erişim var: biraz sonra yeniden bağlan
+    // Erişim var: yeniden bağlan. Bekleme giderek uzar; yayın hep reddediliyorsa (ör. çok fazla açık sekme)
+    // birkaç saniyede bir boşuna istek atılmasın. İlk deneme yine 2 sn sonra.
+    srvRetryLater();
   }
   async function srvMembers() {
     if (!cloud.on || cloud.prov !== 'srv' || !cloud.team) return;
@@ -24012,6 +24025,7 @@ service cloud.firestore {
         entries.forEach(([k, v], i) => { if (SRV.inflight.get(k) === v) SRV.inflight.delete(k); if (ilk) SRV.wrote.set(k, ilk + i); });
         if (SRV.wrote.size > 5000) SRV.wrote.clear();
         SRV.sendFails = 0;
+        if (SRV.es && SRV.es.readyState === 1) srvSetConn(true);
         if (cloud.error && cloud.errorKind === 'write') cloud.error = '';
         SRV.sending = false;
         if (cloud.queue.size) srvSendSoon(50);
@@ -24103,11 +24117,24 @@ service cloud.firestore {
       msg: 'Oturumun kapandı (şifren başka bir cihazda değişmiş, oradan çıkış yapılmış ya da süresi dolmuş olabilir). "' + name + '" ekibini açmak için yeniden giriş yap.' +
         (n ? ' Gönderilmemiş ' + n + ' değişikliğin bu cihazda saklı; aynı hesapla giriş yapınca gönderilir.' : '') };
   }
+  /* Yarı açık bağlantı: ağ değişince (Wi-Fi ↔ mobil) tarayıcı yayının koptuğunu uzun süre fark etmeyebilir.
+     Sunucu 25 sn'de bir "nabiz" gönderir; uzun süre hiçbir şey gelmezse yayın baştan açılır. */
+  function srvWatch(limit) {
+    if (!cloud.on || cloud.prov !== 'srv' || SRV.ended || !SRV.es || SRV.es.readyState !== 1) return;
+    if (Date.now() - (SRV.beat || 0) < limit) return;
+    try { SRV.es.close(); } catch (e) {}
+    SRV.es = null;
+    srvSetConn(false);
+    srvConnect();
+  }
+  setInterval(() => srvWatch(80000), 30000);
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && cloud.on && cloud.prov === 'srv' && !SRV.connected && !SRV.ended) srvConnect();
+    if (document.visibilityState !== 'visible' || !cloud.on || cloud.prov !== 'srv' || SRV.ended) return;
+    if (!SRV.connected) srvConnect(); else srvWatch(60000);
   });
   window.addEventListener('online', () => {
-    if (cloud.on && cloud.prov === 'srv' && !SRV.connected && !SRV.ended) srvConnect();
+    if (!cloud.on || cloud.prov !== 'srv' || SRV.ended) return;
+    if (!SRV.connected) srvConnect(); else srvWatch(30000);
   });
 
   /* ===================================================================
