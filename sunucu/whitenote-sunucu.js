@@ -9,8 +9,9 @@
      • Ekip alanı: kullanıcı adı + şifre (+ isteğe bağlı iki adımlı doğrulama / TOTP) ile giriş,
        ekipler, davet kodları, roller (sahip / yönetici / üye / okur)
      • Ekibin kayıtları SQLite'ta durur; değişiklikler herkesin ekranına anında gider (Server-Sent Events)
-     • Her gece yedek (son 14 gün), giriş denemesi sınırı, ekip başına depolama sınırı,
-       güvenlik başlıkları (CSP, HSTS …)
+     • Her gece denetlenen yedek (son 14 gün + 8 hafta + 12 ay), giriş denemesi sınırı, ekip başına
+       depolama sınırı, güvenlik başlıkları (CSP, HSTS …), https'te __Host- çerezi
+     • Sayfa, betik ve büyük cevaplar sıkıştırılır (brotli / gzip)
 
    Çalıştırma:
      node whitenote-sunucu.js                       sunucuyu başlatır (ayarlar: ortam değişkenleri, aşağıda)
@@ -20,6 +21,9 @@
      node whitenote-sunucu.js kullanici-kapat AD    hesabı kapatır (giriş yapamaz, oturumları kapanır)
      node whitenote-sunucu.js kullanici-ac AD       kapatılan hesabı yeniden açar
      node whitenote-sunucu.js kullanicilar          kullanıcıları listeler
+     node whitenote-sunucu.js olaylar [N]           son N güvenlik olayı (girişler, hatalı denemeler, şifre değişiklikleri …)
+     node whitenote-sunucu.js oturumlar AD          kişinin açık oturumları (hangi cihaz, ne zaman)
+     node whitenote-sunucu.js oturumlari-kapat AD   kişinin bütün oturumlarını kapatır (şüpheli bir giriş görürsen)
      node whitenote-sunucu.js yedek-al              hemen yedek alır
      node whitenote-sunucu.js geri-yukle DOSYA      yedeği geri yükler (önce sunucuyu durdur)
 
@@ -37,6 +41,7 @@
 const http = require('node:http');
 const net = require('node:net');
 const crypto = require('node:crypto');
+const zlib = require('node:zlib');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
@@ -58,6 +63,7 @@ const AYAR = {
 const SURUM = '2';
 const GUN = 86400000;
 const OTURUM_SURE = 30 * GUN;                 // giriş 30 gün hatırlanır (kullanıldıkça uzar)
+const OTURUM_EN_UZUN = 180 * GUN;             // ama en fazla 180 gün; sonra yeniden giriş istenir
 const KAYIT_MAX = 1000000;                    // bir kayıt en fazla ~1 MB (uygulamadaki sınırla aynı)
 const ISTEK_MAX = 8 * 1024 * 1024;            // bir istek gövdesi en fazla 8 MB
 const KOTA_BOYUT = (+process.env.WN_KOTA_MB || 300) * 1024 * 1024;   // bir ekibin kayıtları toplam en fazla 300 MB
@@ -131,8 +137,11 @@ function veritabaniAc() {
 veritabaniAc();
 const Q = sql => db.prepare(sql);
 const tx = fn => (...a) => { db.exec('BEGIN IMMEDIATE'); try { const r = fn(...a); db.exec('COMMIT'); return r; } catch (e) { db.exec('ROLLBACK'); throw e; } };
+// Günlüğe yazılanlar kırpılır, kontrol karakterleri atılır: dışarıdan gelen uzun ad / kaçış dizileri diski şişiremez,
+// "olaylar" komutunda yöneticinin uçbirimini bozamaz
+const kirp = (x, n) => (x == null || x === '' ? null : String(x).replace(/[\u0000-\u001f\u007f-\u009f]/g, '?').slice(0, n));
 function gunluk(olay, kim, ip, ayrinti) {
-  try { Q('INSERT INTO gunluk VALUES (?, ?, ?, ?, ?)').run(Date.now(), olay, kim || null, ip || null, ayrinti ? String(ayrinti).slice(0, 300) : null); } catch (e) {}
+  try { Q('INSERT INTO gunluk VALUES (?, ?, ?, ?, ?)').run(Date.now(), olay, kirp(kim, 64), kirp(ip, 64), kirp(ayrinti, 300)); } catch (e) {}
 }
 
 /* ---------- şifre, belirteç, TOTP ---------- */
@@ -192,11 +201,25 @@ async function sifreIsi(res, anahtar, is) {   // yoğunsa cevabı verip null dö
   catch (e) { if (e && e.yogun) { hata(res, 429, 'Sunucu şu an çok yoğun; biraz sonra yeniden dene.'); return null; } throw e; }
 }
 const SAHTE_OZET = sifreOzet(rastgele());   // olmayan kullanıcıda da aynı sürede cevap verilsin
-function sifreUygun(s) {
+/* Çok kullanılan şifreler. Deneme sınırı çevrim içi tahmini zaten yavaşlatır; bu liste, veritabanı bir gün
+   çalınırsa ilk denenecek şifreleri baştan engeller. */
+const KOLAY_SIFRELER = new Set(('1234567890 0123456789 12345678910 0987654321 1122334455 1234512345 1234554321 ' +
+  'qwertyuiop qwerty1234 qwerty12345 1qaz2wsx3edc asdfghjkl1 zxcvbnm123 1q2w3e4r5t 1q2w3e4r5t6y q1w2e3r4t5 ' +
+  'password1 password12 password123 passw0rd123 iloveyou12 sifre12345 sifre123456 şifre12345 parola1234 parola12345 ' +
+  'sifresifre galatasaray galatasaray1905 fenerbahce fenerbahçe fenerbahce1907 besiktas1903 beşiktaş1903 trabzonspor ' +
+  'trabzonspor1967 mustafakemal ataturk1881 atatürk1881 turkiye1923 türkiye1923 ankara1923 istanbul34 istanbul1453 ' +
+  'whitenote whitenote1 whitenote123 administrator admin12345 welcome123 letmein123 abcdefghij abc1234567 a123456789 ' +
+  '123456789a 123456789q qwe1234567 football12 superman12').split(' '));
+function sifreUygun(s, ad) {
   s = String(s || '');
   if (s.length < 10) return 'Şifre en az 10 karakter olmalı.';
   if (s.length > 200) return 'Şifre çok uzun.';
-  if (/^(.)\1+$/.test(s) || /^(?:0123456789|1234567890|password|sifre12345)/i.test(s)) return 'Bu şifre çok kolay tahmin edilir.';
+  const k = s.toLocaleLowerCase('tr');
+  if (/^(.{1,3})\1+.?$/.test(s) || /^(?:0123456789|1234567890|password|sifre12345)/i.test(s) || KOLAY_SIFRELER.has(k) || KOLAY_SIFRELER.has(s.toLowerCase()))
+    return 'Bu şifre çok kolay tahmin edilir; daha az bilinen bir şey seç (birkaç kelime yan yana iyi olur).';
+  if (/^\d+$/.test(s) && s.length < 14) return 'Yalnız rakamdan oluşan şifre en az 14 haneli olmalı (ya da harf de ekle).';
+  ad = String(ad || '').toLowerCase();
+  if (ad.length >= 5 && k.includes(ad)) return 'Şifre kullanıcı adını içermesin.';
   return '';
 }
 /* Görünen ad / ekip adı: kontrol ve yön değiştirme karakterleri (adı başka biri gibi göstermeye yarar) atılır */
@@ -267,9 +290,70 @@ function guvenlikBasliklari(res) {
 }
 function json(res, kod, veri, ek) {
   const b = Buffer.from(JSON.stringify(veri));
+  res.wnYanit = true;   // cevap yola çıktı (sıkıştırılıyor olabilir): ikinci bir cevap yazılmasın
   guvenlikBasliklari(res);
-  res.writeHead(kod, Object.assign({ 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': b.length, 'Cache-Control': 'no-store' }, ek || {}));
-  res.end(b);
+  const h = Object.assign({ 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }, ek || {});
+  // 16 KB'tan büyük cevaplar (ör. bir ekibin bütün kayıtları) iş parçacığında, hızlı ayarla sıkıştırılır.
+  // Küçük cevaplar (giriş, davet kodu, doğrulama anahtarı) hiç sıkıştırılmaz.
+  const kodl = b.length >= 16384 && res.req ? kodlamaSec(res.req) : '';
+  const gonder = (govdeB, enc) => {
+    if (res.destroyed || res.headersSent) return;
+    if (enc) { h['Content-Encoding'] = enc; h['Vary'] = 'Accept-Encoding'; }
+    h['Content-Length'] = govdeB.length;
+    res.writeHead(kod, h);
+    res.end(govdeB);
+  };
+  if (!kodl) return gonder(b, '');
+  const bitti = (e, z) => gonder(e || !z ? b : z, e || !z ? '' : kodl);
+  if (kodl === 'br') zlib.brotliCompress(b, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 4, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: b.length } }, bitti);
+  else zlib.gzip(b, { level: 6 }, bitti);
+}
+/* ---------- sıkıştırma ----------
+   Metin dosyaları (sayfa, betik, stil, simge) bir kez sıkıştırılıp bellekte tutulur: brotli en iyi oranla, gzip yedek.
+   Sıkıştırma iş parçacığında yapılır, sunucu beklemez; hazır olana kadar dosya olduğu gibi gider. */
+const SIKISIR = /^(text\/|application\/(json|manifest\+json|javascript)|image\/svg\+xml)/;
+function kodlamaSec(req) {
+  const kabul = new Set();
+  for (const p of String(req.headers['accept-encoding'] || '').toLowerCase().split(',')) {
+    const [ad, ...ek] = p.split(';').map(x => x.trim());
+    const q = ek.find(x => x.startsWith('q='));
+    if (ad && !(q && !(parseFloat(q.slice(2)) > 0))) kabul.add(ad);
+  }
+  return kabul.has('br') ? 'br' : kabul.has('gzip') ? 'gzip' : '';
+}
+const etagEk = (etag, kod) => etag.slice(0, -1) + '-' + kod + '"';
+/* İstemcideki kopya bu sürümden mi? Cloudflare gibi aradakiler ETag'i zayıflatabilir (W/"..."); sıkıştırılmış ve
+   sıkıştırılmamış hâller aynı sürümdür */
+function etagTutar(req, etag) {
+  const h = req.headers['if-none-match'];
+  if (!h) return false;
+  const kabul = [etag, etagEk(etag, 'br'), etagEk(etag, 'gzip')];
+  return String(h).split(',').some(x => { x = x.trim(); if (x.startsWith('W/')) x = x.slice(2); return x === '*' || kabul.includes(x); });
+}
+const sikiOnb = new Map();   // dosya -> { etag, buf, br, gzip }
+function sikiHazirla(anahtar, etag, buf) {
+  let z = sikiOnb.get(anahtar);
+  if (z && z.etag === etag) return z;
+  z = { etag, buf };
+  sikiOnb.set(anahtar, z);
+  if (sikiOnb.size > 64) sikiOnb.delete(sikiOnb.keys().next().value);
+  if (buf.length >= 1024) {
+    const tut = (kod, e, c) => { if (!e && c.length < buf.length && sikiOnb.get(anahtar) === z) z[kod] = c; };
+    zlib.brotliCompress(buf, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: buf.length } }, (e, c) => tut('br', e, c));
+    zlib.gzip(buf, { level: 9 }, (e, c) => tut('gzip', e, c));
+  }
+  return z;
+}
+function sikistirVeGonder(req, res, h, anahtar, etag, buf) {
+  const z = sikiHazirla(anahtar, etag, buf), kod = kodlamaSec(req);
+  let govdeB = buf;
+  h['ETag'] = etag;
+  h['Vary'] = 'Accept-Encoding';
+  if (kod && z[kod]) { govdeB = z[kod]; h['ETag'] = etagEk(etag, kod); h['Content-Encoding'] = kod; }
+  if (etagTutar(req, etag)) { delete h['Content-Encoding']; res.writeHead(304, h); res.end(); return; }
+  h['Content-Length'] = govdeB.length;
+  res.writeHead(200, h);
+  res.end(req.method === 'HEAD' ? undefined : govdeB);
 }
 const hata = (res, kod, mesaj) => json(res, kod, { hata: mesaj });
 function govde(req) {   // sınırı aşan gövde okunup atılır (bağlantı kopmadan 413 dönülsün), çok büyükse bağlantı kesilir
@@ -293,7 +377,8 @@ function cerezler(req) {
   String(req.headers.cookie || '').split(';').forEach(p => { const i = p.indexOf('='); if (i > 0) out[p.slice(0, i).trim()] = p.slice(i + 1).trim(); });
   return out;
 }
-const CEREZ = 'wn_oturum';
+// https'te __Host- öneki: çerez yalnız bu siteye, güvenli bağlantıyla ve bütün yollar için yazılabilir (alt alan adları dokunamaz)
+const CEREZ = AYAR.adres.startsWith('https://') ? '__Host-wn_oturum' : 'wn_oturum';
 function cerezYaz(res, deger, sure) {
   const guvenli = AYAR.adres.startsWith('https://') ? '; Secure' : '';
   res.setHeader('Set-Cookie', CEREZ + '=' + deger + '; Path=/; HttpOnly; SameSite=Strict' + guvenli + '; Max-Age=' + Math.floor(sure / 1000));
@@ -316,14 +401,17 @@ function oturumAc(res, k, ajan) {
 function kimdir(req) {
   const b = cerezler(req)[CEREZ];
   if (!b || !/^[A-Za-z0-9_-]{30,60}$/.test(b)) return null;
-  const o = Q('SELECT o.ozet, o.bitis, o.surum, k.* FROM oturum o JOIN kullanici k ON k.id = o.kullanici WHERE o.ozet = ?').get(ozet(b));
-  if (!o || o.bitis < Date.now() || o.kapali || o.surum !== o.oturum_surum) return null;
-  if (o.bitis - Date.now() < OTURUM_SURE - GUN) Q('UPDATE oturum SET bitis = ? WHERE ozet = ?').run(Date.now() + OTURUM_SURE, o.ozet);   // kullanıldıkça uzar
+  const o = Q('SELECT o.ozet, o.bitis, o.surum, o.olusturma AS acilis, k.* FROM oturum o JOIN kullanici k ON k.id = o.kullanici WHERE o.ozet = ?').get(ozet(b));
+  const s = Date.now();
+  if (!o || o.bitis < s || o.kapali || o.surum !== o.oturum_surum || s - o.acilis > OTURUM_EN_UZUN) return null;
+  // kullanıldıkça uzar (günde en fazla bir kez, açılıştan en fazla 180 gün); çerez de yenilenir, tarayıcı da unutmasın
+  const yeni = Math.min(s + OTURUM_SURE, o.acilis + OTURUM_EN_UZUN);
+  if (yeni - o.bitis > GUN) { Q('UPDATE oturum SET bitis = ? WHERE ozet = ?').run(yeni, o.ozet); req.wnUzat = yeni; req.wnCerez = b; }
   return o;
 }
 function oturumGecerli(oz) {
-  const o = Q('SELECT o.bitis, o.surum, k.oturum_surum, k.kapali FROM oturum o JOIN kullanici k ON k.id = o.kullanici WHERE o.ozet = ?').get(oz);
-  return !!o && o.bitis > Date.now() && !o.kapali && o.surum === o.oturum_surum;
+  const o = Q('SELECT o.bitis, o.surum, o.olusturma, k.oturum_surum, k.kapali FROM oturum o JOIN kullanici k ON k.id = o.kullanici WHERE o.ozet = ?').get(oz);
+  return !!o && o.bitis > Date.now() && !o.kapali && o.surum === o.oturum_surum && Date.now() - o.olusturma <= OTURUM_EN_UZUN;
 }
 const rolOf = (ekip, kid) => { const r = Q('SELECT rol FROM uye WHERE ekip = ? AND kullanici = ?').get(ekip, kid); return r ? r.rol : null; };
 const yazabilir = rol => rol === 'sahip' || rol === 'yonetici' || rol === 'uye';
@@ -386,7 +474,8 @@ const yol = (yontem, desen, fn, opt) => API.push({ yontem, desen, fn, opt: opt |
 yol('GET', /^\/api\/durum$/, (req, res) => json(res, 200, { whitenote: true, surum: SURUM }), { acik: true });
 
 yol('POST', /^\/api\/giris$/, async (req, res, p, b) => {
-  const ip = ipOf(req), ad = String(b.ad || '').trim().toLowerCase(), sifre = String(b.sifre || '');
+  // çok uzun girdiler kırpılır: deneme sayaçları ve günlük şişirilemez (geçerli bir ad en fazla 32, şifre 200 karakter)
+  const ip = ipOf(req), ad = String(b.ad || '').trim().toLowerCase().slice(0, 64), sifre = String(b.sifre || '').slice(0, 1024);
   const kilit = () => sinirli('ip:' + ip, 20, DK15) || sinirli('ad:' + ad, 10, DK15);
   const dk = kilit();
   if (dk) return hata(res, 429, 'Çok fazla deneme. ' + dk + ' dakika sonra yeniden dene.');
@@ -446,8 +535,8 @@ yol('POST', /^\/api\/sifre$/, async (req, res, p, b, k) => {
     if (!k2 || k2.id !== k.id) return { kod: 401, msg: 'Oturum kapalı; yeniden giriş yap.' };
     const dk2 = sinirli('ad:' + k2.ad, 10, DK15);
     if (dk2) return { kod: 429, msg: 'Çok fazla deneme. ' + dk2 + ' dakika sonra yeniden dene.' };
-    if (!(await sifreDogruA(String(b.eski || ''), k2.sifre))) { basarisiz('ad:' + k2.ad, 10, DK15); return { kod: 401, msg: 'Şu anki şifre yanlış.' }; }
-    const u = sifreUygun(b.yeni);
+    if (!(await sifreDogruA(String(b.eski || '').slice(0, 1024), k2.sifre))) { basarisiz('ad:' + k2.ad, 10, DK15); return { kod: 401, msg: 'Şu anki şifre yanlış.' }; }
+    const u = sifreUygun(b.yeni, k2.ad);
     if (u) return { kod: 400, msg: u };
     const yeni = await sifreOzetA(b.yeni);
     const k3 = kimdir(req);
@@ -492,7 +581,7 @@ yol('POST', /^\/api\/totp\/kapat$/, async (req, res, p, b, k) => {
     if (!k2.totp) return {};
     const dk2 = sinirli('ad:' + k2.ad, 10, DK15);
     if (dk2) return { kod: 429, msg: 'Çok fazla deneme. ' + dk2 + ' dakika sonra yeniden dene.' };
-    const dogru = await sifreDogruA(String(b.sifre || ''), k2.sifre);
+    const dogru = await sifreDogruA(String(b.sifre || '').slice(0, 1024), k2.sifre);
     const k3 = kimdir(req);
     if (!k3 || k3.id !== k.id) return { kod: 401, msg: 'Oturum kapalı; yeniden giriş yap.' };
     if (!k3.totp) return {};
@@ -527,7 +616,7 @@ yol('POST', /^\/api\/kayit$/, async (req, res, p, b) => {
   if (!dv) { basarisiz('kayit:' + ip, 10, SAAT); return hata(res, 400, 'Davet kodu geçersiz ya da süresi dolmuş.'); }
   const ad = String(b.ad || '').trim().toLowerCase(), gorunen = metin(b.gorunen, 60) || ad;
   if (!AD_RE.test(ad)) return hata(res, 400, 'Kullanıcı adı 3–32 karakter olmalı: küçük harf, rakam, nokta, alt çizgi, tire.');
-  const u = sifreUygun(b.sifre);
+  const u = sifreUygun(b.sifre, ad);
   if (u) return hata(res, 400, u);
   if (Q('SELECT 1 FROM kullanici WHERE ad = ?').get(ad)) return hata(res, 409, 'Bu kullanıcı adı alınmış.');
   const ozetli = await sifreIsi(res, 'kayit-ad:' + ad, () => sifreOzetA(b.sifre));
@@ -813,11 +902,7 @@ function dosya(req, res, url) {
     const s = sayfa();
     if (!s) return hata(res, 404, 'Bulunamadı.');
     guvenlikBasliklari(res);
-    const h = { 'Content-Type': TURLER['.html'], 'ETag': s.etag, 'Cache-Control': 'no-cache', 'Content-Security-Policy': s.csp };
-    if (req.headers['if-none-match'] === s.etag) { res.writeHead(304, h); res.end(); return; }
-    h['Content-Length'] = s.buf.length;
-    res.writeHead(200, h);
-    res.end(req.method === 'HEAD' ? undefined : s.buf);
+    sikistirVeGonder(req, res, { 'Content-Type': TURLER['.html'], 'Cache-Control': 'no-cache', 'Content-Security-Policy': s.csp }, 'index', s.etag, s.buf);
     return;
   }
   fs.stat(tam, (err, st) => {
@@ -828,7 +913,16 @@ function dosya(req, res, url) {
     const h = { 'Content-Type': tur, 'ETag': etag, 'Cache-Control': /\.(html|js|webmanifest)$/.test(tam) ? 'no-cache' : 'public, max-age=604800' };
     if (tur.startsWith('text/html')) h['Content-Security-Policy'] = "default-src 'none'; frame-ancestors 'none'";
     if (path.basename(tam) === 'sw.js') h['Service-Worker-Allowed'] = '/';
-    if (req.headers['if-none-match'] === etag) { res.writeHead(304, h); res.end(); return; }
+    if (SIKISIR.test(tur) && st.size <= 4 * 1024 * 1024) {
+      delete h['ETag'];
+      const z = sikiOnb.get(tam);
+      if (z && z.etag === etag) return sikistirVeGonder(req, res, h, tam, etag, z.buf);
+      if (etagTutar(req, etag)) { h['ETag'] = etag; h['Vary'] = 'Accept-Encoding'; res.writeHead(304, h); res.end(); return; }
+      // ilk istek: dosya okunur, sıkıştırması arka planda hazırlanır; bu sefer olduğu gibi gider
+      fs.readFile(tam, (e, buf) => { if (e) return hata(res, 404, 'Bulunamadı.'); sikistirVeGonder(req, res, h, tam, etag, buf); });
+      return;
+    }
+    if (etagTutar(req, etag)) { res.writeHead(304, h); res.end(); return; }
     h['Content-Length'] = st.size;
     res.writeHead(200, h);
     if (req.method === 'HEAD') { res.end(); return; }
@@ -855,22 +949,50 @@ async function istek(req, res) {
   if (!r.opt.acik) {
     k = kimdir(req);
     if (!k) return hata(res, 401, 'Oturum kapalı; yeniden giriş yap.');
+    if (req.wnUzat) cerezYaz(res, req.wnCerez, req.wnUzat - Date.now());
     if (r.opt.ekip) {
       rol = rolOf(p[1], k.id);
       if (!rol) return hata(res, 403, 'Bu ekibin üyesi değilsin.');
     }
   }
   try { await r.fn(req, res, p, b, k, rol, url); }
-  catch (e) { console.error(e); if (!res.headersSent) hata(res, 500, 'Sunucuda bir hata oldu.'); }
+  catch (e) { console.error(e); if (!res.headersSent && !res.wnYanit) hata(res, 500, 'Sunucuda bir hata oldu.'); }
 }
 
-/* ---------- yedek: her gece, son 14 gün ---------- */
+/* ---------- yedek: her gece; son 14 gün, son 8 haftanın ve son 12 ayın birer yedeği saklanır ---------- */
+const YEDEK_AD = /^whitenote-\d{4}-\d{2}-\d{2}\.db$/;
+function saklanacakYedekler(adlar) {
+  const L = adlar.filter(f => YEDEK_AD.test(f)).sort().reverse();   // en yeni başta
+  const tut = new Set(L.slice(0, 14)), haftalar = new Set(), aylar = new Set();
+  for (const f of L) {
+    const g = f.slice(10, 20), hafta = Math.floor((Math.floor(Date.parse(g + 'T00:00:00Z') / GUN) + 3) / 7);   // haftalar pazartesi başlar
+    if (haftalar.size < 8 && !haftalar.has(hafta)) { haftalar.add(hafta); tut.add(f); }
+    if (aylar.size < 12 && !aylar.has(g.slice(0, 7))) { aylar.add(g.slice(0, 7)); tut.add(f); }
+  }
+  return tut;
+}
 function yedekAl() {
-  const gun = new Date().toISOString().slice(0, 10), hedef = path.join(AYAR.veri, 'yedek', 'whitenote-' + gun + '.db');
-  try { fs.rmSync(hedef, { force: true }); db.exec("VACUUM INTO '" + hedef.replace(/'/g, "''") + "'"); fs.chmodSync(hedef, 0o600); }
-  catch (e) { console.error('Yedek alınamadı:', e.message); return null; }
-  const eski = fs.readdirSync(path.join(AYAR.veri, 'yedek')).filter(f => /^whitenote-\d{4}-\d{2}-\d{2}\.db$/.test(f)).sort();
-  eski.slice(0, Math.max(0, eski.length - 14)).forEach(f => fs.rmSync(path.join(AYAR.veri, 'yedek', f), { force: true }));
+  const klasor = path.join(AYAR.veri, 'yedek');
+  const gun = new Date().toISOString().slice(0, 10), hedef = path.join(klasor, 'whitenote-' + gun + '.db'), gecici = hedef + '.yeni';
+  try {
+    fs.rmSync(gecici, { force: true });
+    db.exec("VACUUM INTO '" + gecici.replace(/'/g, "''") + "'");
+    fs.chmodSync(gecici, 0o600);
+    // yedek açılıp denetlenir; bozuksa yerine konmaz, eski yedekler de silinmez
+    const t = new DatabaseSync(gecici, { readOnly: true });
+    let sonuc;
+    try { sonuc = t.prepare('PRAGMA quick_check').get(); } finally { t.close(); }
+    if (!sonuc || Object.values(sonuc)[0] !== 'ok') throw new Error('yedek denetimden geçmedi: ' + JSON.stringify(sonuc));
+    fs.renameSync(gecici, hedef);
+  } catch (e) {
+    fs.rmSync(gecici, { force: true });
+    console.error('Yedek alınamadı:', e.message);
+    gunluk('yedek-hatasi', null, null, e.message);
+    return null;
+  }
+  gunluk('yedek', null, null, path.basename(hedef) + ' ' + Math.round(fs.statSync(hedef).size / 1024) + ' KB');
+  const tut = saklanacakYedekler(fs.readdirSync(klasor));
+  for (const f of fs.readdirSync(klasor)) if (YEDEK_AD.test(f) && !tut.has(f)) fs.rmSync(path.join(klasor, f), { force: true });
   // 90 günden eski silme izleri ve süresi dolan oturum / davetler temizlenir. Silme izi temizlenen ekiplerde
   // o kadar eskiden kalan cihazlar listenin tamamını alır (temiz = temizlenen en büyük sıra).
   const s = Date.now(), sinir = s - 90 * GUN;
@@ -878,7 +1000,7 @@ function yedekAl() {
     Q('UPDATE ekip SET temiz = MAX(temiz, COALESCE((SELECT MAX(sira) FROM kayit WHERE kayit.ekip = ekip.id AND d IS NULL AND t < ?), 0))').run(sinir);
     Q('DELETE FROM kayit WHERE d IS NULL AND t < ?').run(sinir);
   })();
-  Q('DELETE FROM oturum WHERE bitis < ?').run(s);
+  Q('DELETE FROM oturum WHERE bitis < ? OR olusturma < ?').run(s, s - OTURUM_EN_UZUN);
   Q('DELETE FROM davet WHERE bitis < ? OR kalan < 1').run(s);
   Q('DELETE FROM gunluk WHERE zaman < ?').run(s - 180 * GUN);
   // 180 günden eski etkinlik ve eski sürümler; ekiplerin eski sürüm boyutu yeniden hesaplanır
@@ -930,21 +1052,24 @@ async function komut(argv) {
     if (Q('SELECT 1 FROM kullanici WHERE ad = ?').get(a)) { console.error('Bu kullanıcı zaten var.'); process.exit(1); }
     const s1 = await sor('Şifre: ', true), s2 = await sor('Şifre (tekrar): ', true);
     if (s1 !== s2) { console.error('Şifreler aynı değil.'); process.exit(1); }
-    const u = sifreUygun(s1); if (u) { console.error(u); process.exit(1); }
+    const u = sifreUygun(s1, a); if (u) { console.error(u); process.exit(1); }
     const gorunen = metin(await sor('Görünen ad (boş bırakılırsa kullanıcı adı): '), 60) || a;
     Q('INSERT INTO kullanici (id, ad, gorunen, sifre, olusturma, yonetici) VALUES (?, ?, ?, ?, ?, ?)').run(yeniId(), a, gorunen, sifreOzet(s1), Date.now(), argv.includes('--yonetici') ? 1 : 0);
+    gunluk('kullanici-eklendi', a, null, 'komut satırından');
     console.log('✓ ' + a + ' eklendi.');
   } else if (k === 'sifre-sifirla') {
     const u0 = kul();
     if (!u0) { console.error('Böyle bir kullanıcı yok.'); process.exit(1); }
     const s1 = await sor('Yeni şifre: ', true), s2 = await sor('Yeni şifre (tekrar): ', true);
     if (s1 !== s2) { console.error('Şifreler aynı değil.'); process.exit(1); }
-    const u = sifreUygun(s1); if (u) { console.error(u); process.exit(1); }
+    const u = sifreUygun(s1, u0.ad); if (u) { console.error(u); process.exit(1); }
     Q('UPDATE kullanici SET sifre = ?, oturum_surum = oturum_surum + 1 WHERE id = ?').run(sifreOzet(s1), u0.id);
     Q('DELETE FROM oturum WHERE kullanici = ?').run(u0.id);
+    gunluk('sifre-sifirlandi', u0.id, null, 'komut satırından');
     console.log('✓ Şifre değişti; açık oturumlar kapandı.');
   } else if (k === 'totp-kapat') {
     const r = Q('UPDATE kullanici SET totp = NULL, totp_son = 0 WHERE ad = ?').run(String(ad || '').toLowerCase());
+    if (r.changes) gunluk('totp-kapatildi', String(ad || '').toLowerCase(), null, 'komut satırından');
     console.log(r.changes ? '✓ İki adımlı doğrulama kapatıldı.' : 'Böyle bir kullanıcı yok.');
   } else if (k === 'kullanici-kapat' || k === 'kullanici-ac') {
     const u0 = kul();
@@ -952,9 +1077,11 @@ async function komut(argv) {
     if (k === 'kullanici-kapat') {
       Q('UPDATE kullanici SET kapali = 1, oturum_surum = oturum_surum + 1 WHERE id = ?').run(u0.id);
       Q('DELETE FROM oturum WHERE kullanici = ?').run(u0.id);
+      gunluk('kullanici-kapatildi', u0.id, null, 'komut satırından');
       console.log('✓ ' + u0.ad + ' kapatıldı; giriş yapamaz, açık oturumları kapandı.');
     } else {
       Q('UPDATE kullanici SET kapali = 0 WHERE id = ?').run(u0.id);
+      gunluk('kullanici-acildi', u0.id, null, 'komut satırından');
       console.log('✓ ' + u0.ad + ' yeniden açıldı.');
     }
   } else if (k === 'yedek-al') {
@@ -975,20 +1102,46 @@ async function komut(argv) {
     Q("INSERT OR REPLACE INTO ayar VALUES ('donem', ?)").run(rastgele(9));   // cihazlar her şeyi baştan alsın
     db.close();
     console.log('✓ Yedek geri yüklendi. Sunucuyu başlat: sudo systemctl start whitenote');
+  } else if (k === 'olaylar') {
+    const n = Math.min(1000, Math.max(1, parseInt(ad, 10) || 40));
+    const adlar = new Map(Q('SELECT id, ad FROM kullanici').all().map(x => [x.id, x.ad]));
+    const L = Q('SELECT zaman, olay, kim, ip, ayrinti FROM gunluk ORDER BY zaman DESC LIMIT ?').all(n).reverse();
+    const sz = x => String(x == null ? '' : x).replace(/[\u0000-\u001f\u007f-\u009f]/g, '?');
+    for (const x of L) {
+      const z = new Date(x.zaman).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'medium' });
+      console.log(z.padEnd(21) + sz(x.olay).padEnd(19) + sz(adlar.get(x.kim) || x.kim || '-').slice(0, 30).padEnd(31) + sz(x.ip || '-').padEnd(17) + sz(x.ayrinti));
+    }
+    console.log(L.length ? '(' + L.length + ' olay; daha fazlası için: olaylar 200)' : 'Kayıtlı olay yok.');
+  } else if (k === 'oturumlar') {
+    const u0 = kul();
+    if (!u0) { console.error('Böyle bir kullanıcı yok.'); process.exit(1); }
+    const sz = x => String(x == null ? '' : x).replace(/[\u0000-\u001f\u007f-\u009f]/g, '?');
+    const L = Q('SELECT olusturma, bitis, ajan, surum FROM oturum WHERE kullanici = ? AND bitis > ? ORDER BY olusturma DESC').all(u0.id, Date.now())
+      .filter(x => x.surum === u0.oturum_surum && Date.now() - x.olusturma <= OTURUM_EN_UZUN);
+    for (const x of L) console.log(new Date(x.olusturma).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }).padEnd(18) + 'son gün ' + new Date(x.bitis).toLocaleDateString('tr-TR').padEnd(12) + sz(x.ajan).slice(0, 100));
+    console.log(L.length + ' açık oturum.');
+  } else if (k === 'oturumlari-kapat') {
+    const u0 = kul();
+    if (!u0) { console.error('Böyle bir kullanıcı yok.'); process.exit(1); }
+    Q('UPDATE kullanici SET oturum_surum = oturum_surum + 1 WHERE id = ?').run(u0.id);
+    const r = Q('DELETE FROM oturum WHERE kullanici = ?').run(u0.id);
+    gunluk('oturumlar-kapandi', u0.id, null, 'komut satırından');
+    console.log('✓ ' + u0.ad + ' için ' + r.changes + ' oturum kapandı; açık sekmeler en geç yarım dakikada çıkış yapar.');
   } else if (k === 'kullanicilar') {
     Q('SELECT ad, gorunen, yonetici, kapali, totp IS NOT NULL t FROM kullanici ORDER BY ad').all()
       .forEach(x => console.log(x.ad.padEnd(20) + x.gorunen.padEnd(24) + (x.yonetici ? 'yönetici ' : '') + (x.t ? '2adım ' : '') + (x.kapali ? 'KAPALI' : '')));
-  } else { console.error('Bilinmeyen komut. Komutlar: kullanici-ekle, sifre-sifirla, totp-kapat, kullanici-kapat, kullanici-ac, kullanicilar, yedek-al, geri-yukle'); process.exit(1); }
+  } else { console.error('Bilinmeyen komut. Komutlar: kullanici-ekle, sifre-sifirla, totp-kapat, kullanici-kapat, kullanici-ac, kullanicilar, olaylar, oturumlar, oturumlari-kapat, yedek-al, geri-yukle'); process.exit(1); }
   process.exit(0);
 }
 
 if (process.argv[2]) komut(process.argv.slice(2));
 else {
-  const sunucu = http.createServer((req, res) => { istek(req, res).catch(e => { console.error(e); try { hata(res, 500, 'Sunucuda bir hata oldu.'); } catch (x) {} }); });
+  const sunucu = http.createServer((req, res) => { istek(req, res).catch(e => { console.error(e); try { if (!res.headersSent && !res.wnYanit) hata(res, 500, 'Sunucuda bir hata oldu.'); } catch (x) {} }); });
   sunucu.headersTimeout = 20000;
   sunucu.requestTimeout = 60000;
   sunucu.keepAliveTimeout = 30000;
   sunucu.maxConnections = 1000;
+  { const s0 = sayfa(); if (s0) sikiHazirla('index', s0.etag, s0.buf); }   // ilk ziyaretçiye sıkıştırılmış gitsin
   sunucu.listen(AYAR.port, AYAR.host, () => console.log('White Note sunucusu: http://' + AYAR.host + ':' + AYAR.port + ' · veri: ' + AYAR.veri + ' · uygulama: ' + AYAR.uygulama));
   geceYedegi();
   const kapat = () => { sunucu.close(); for (const set of dinleyiciler.values()) for (const d of set) { try { d.res.end(); } catch (e) {} } try { db.close(); } catch (e) {} process.exit(0); };
