@@ -134,6 +134,38 @@ sudo -u whitenote env WN_VERI=/var/lib/whitenote node /opt/whitenote/white_not/s
 | `yedek-al` | Hemen yedek alır |
 | `geri-yukle DOSYA` | Yedeği geri yükler; önce sunucuyu durdur (aşağıda) |
 
+## Yönetim paneli
+
+Yönetici hesabıyla girince ekip penceresinde **Yönetim** düğmesi çıkar:
+
+- **Kullanıcılar:** herkesin son girişi, açık oturumu ve ekip sayısı. Bir kişinin satırındaki **İşlemler** ile:
+  şifresini sıfırla (güçlü bir şifre üretilebilir), oturumlarını kapat, iki adımlı doğrulamasını kapat,
+  yönetici yap / yöneticiliğini al, hesabını kapat / yeniden aç, hangi cihazlardan girdiğini gör.
+- **Yeni kullanıcı:** davet kodu olmadan hesap açar; ilk şifresini kişiye güvendiğin bir yoldan ilet.
+- **Güvenlik olayları:** girişler, hatalı denemeler, şifre ve hesap değişiklikleri, gece yedekleri.
+
+Değiştiren her işlemden önce yöneticinin şifresi (iki adımlı açıksa kodu da) yeniden sorulur; onay o oturumda
+10 dakika geçerlidir. Kendi hesabını kapatamaz, kendi yöneticiliğini alamazsın; son yöneticinin hesabı kapatılamaz.
+Her işlem güvenlik günlüğüne, yapan yöneticinin adıyla yazılır.
+
+## Yalnız ev ağı
+
+İnternete açmadan, evdeki telefon ve bilgisayarlardan kullanmak için `whitenote.service`'e (ya da bir ek
+ayar dosyasına) şunlar yazılır:
+
+```ini
+Environment=WN_HOST=0.0.0.0
+Environment=WN_YEREL_AG=1
+Environment=WN_ADRES=
+Environment=WN_VEKIL=
+```
+
+Sonra telefondan `http://PI-ADRESI:8080` açılır (Pi'nin ev ağındaki adresi, ör. `192.168.1.22`; iPhone'da
+`http://raspberrypi.local:8080` de olur). `WN_YEREL_AG=1` yerel olmayan adreslerden gelen istekleri reddeder;
+adres çubuğundaki ad da bir IP, `localhost` ya da `.local` adı olmalıdır (başka bir sitenin adını Pi'ye
+yönlendirme saldırısına karşı). Bu modda bağlantı şifrelenmez (http): şifreler ev ağında açık gider, çevrimdışı
+çalışma ve "uygulamayı yükle" yoktur. Pi'nin adresi değişmesin diye modemde ona sabit adres vermek iyi olur.
+
 ## Ayarlar
 
 `whitenote.service` dosyasındaki `Environment=` satırları:
@@ -144,6 +176,7 @@ sudo -u whitenote env WN_VERI=/var/lib/whitenote node /opt/whitenote/white_not/s
 | `WN_PORT` / `WN_HOST` | `8080` / `127.0.0.1` | Dinlenen adres. Tünel aynı cihazdan bağlandığı için dışarı açmaya gerek yok |
 | `WN_VERI` | `/var/lib/whitenote` | Veritabanı ve yedekler (uygulama klasörünün dışında olmalı) |
 | `WN_VEKIL` | `cloudflare` | Gerçek ziyaretçi adresi Cloudflare'in başlığından alınır (deneme sınırları için) |
+| `WN_YEREL_AG` | (boş) | `1` ise yalnız ev ağından gelen isteklere cevap verilir (yukarıda) |
 | `WN_KOTA_MB` / `WN_KOTA_ADET` | `300` / `100000` | Bir ekibin kayıtları için depolama sınırı |
 | `WN_GECMIS_MB` | `150` | Bir ekibin eski sürümleri (not geçmişi) için en fazla yer; aşılınca en eskiler silinir |
 

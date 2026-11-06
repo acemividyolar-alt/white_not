@@ -24,6 +24,7 @@
      node whitenote-sunucu.js olaylar [N]           son N güvenlik olayı (girişler, hatalı denemeler, şifre değişiklikleri …)
      node whitenote-sunucu.js oturumlar AD          kişinin açık oturumları (hangi cihaz, ne zaman)
      node whitenote-sunucu.js oturumlari-kapat AD   kişinin bütün oturumlarını kapatır (şüpheli bir giriş görürsen)
+   Yöneticiler bunların çoğunu uygulamadaki Yönetim bölümünden de yapar (ekip penceresi → Yönetim).
      node whitenote-sunucu.js yedek-al              hemen yedek alır
      node whitenote-sunucu.js geri-yukle DOSYA      yedeği geri yükler (önce sunucuyu durdur)
 
@@ -33,6 +34,8 @@
      WN_VERI=~/whitenote-veri   veritabanı ve yedeklerin klasörü (uygulama klasörünün DIŞINDA olmalı)
      WN_UYGULAMA=..        index.html'in olduğu klasör (bu dosya depodaki sunucu/ klasöründe durur)
      WN_VEKIL=cloudflare   gerçek ziyaretçi adresini CF-Connecting-IP başlığından al (yalnız tünel arkasında)
+     WN_YEREL_AG=1         yalnız ev ağı: yerel adreslerden (192.168.x.x, 10.x …) gelmeyen istekler reddedilir;
+                           WN_HOST=0.0.0.0 ile birlikte telefondan http://PI-ADRESI:8080 açılır
      WN_ADRES=https://whitenote.com.tr   sitenin adresi (Origin denetimi ve güvenli çerez için)
      WN_KOTA_MB=300, WN_KOTA_ADET=100000  bir ekibin depolama sınırı
      WN_GECMIS_MB=150      bir ekibin eski sürümleri (not geçmişi) için en fazla yer
@@ -58,6 +61,7 @@ const AYAR = {
   veri: (process.env.WN_VERI || path.join(os.homedir(), 'whitenote-veri')).replace(/^~(?=$|\/)/, os.homedir()),
   uygulama: path.resolve(process.env.WN_UYGULAMA || path.join(__dirname, '..')),
   vekil: process.env.WN_VEKIL || '',
+  yerelAg: process.env.WN_YEREL_AG === '1',
   adres: (process.env.WN_ADRES || '').replace(/\/+$/, '')
 };
 const SURUM = '2';
@@ -858,6 +862,157 @@ yol('POST', new RegExp('^/api/ekip/' + EKIP + '/kim$'), (req, res, p, b, k) => {
 }, { ekip: true });
 
 /* ---------- uygulamanın dosyaları ---------- */
+/* ---------- yönetim (yalnız yöneticiler) ----------
+   Kullanıcıları listeler; hesap açar, şifre sıfırlar, hesap kapatır / açar, oturumları ve iki adımlı doğrulamayı
+   kapatır, yöneticilik verir / alır; güvenlik olaylarını gösterir. Değiştiren işlemlerden önce yönetici şifresini
+   (iki adımlı açıksa kodu da) yeniden yazar; bu onay o oturumda 10 dakika geçerlidir. Böylece açık unutulmuş bir
+   oturumla ya da ele geçen bir çerezle hesaplar yönetilemez. Her işlem güvenlik günlüğüne yazılır. */
+const KUL = '([A-Za-z0-9]{6,20})';
+const YONETIM_ONAY = 10 * 60000;
+const onaylar = new Map();   // oturum özeti -> onayın bitişi
+setInterval(() => { const s = Date.now(); for (const [o, t] of onaylar) if (t < s) onaylar.delete(o); }, 600000).unref();
+const onayKalan = k => Math.max(0, (onaylar.get(k.ozet) || 0) - Date.now());
+function yoneticiDegil(res, k, onayIste) {   // yönetici değilse ya da onay gerekiyorsa cevabı yazar
+  if (!k.yonetici) { hata(res, 403, 'Bu bölüm yalnız yöneticiler için.'); return true; }
+  if (onayIste && !onayKalan(k)) { json(res, 403, { hata: 'Bu işlem için şifreni yeniden yaz.', onayGerekli: true }); return true; }
+  return false;
+}
+const yonetimKaydi = (olay, hedef, k, req, ek) => gunluk(olay, hedef, ipOf(req), 'yönetici ' + k.ad + (ek ? ' · ' + ek : ''));
+yol('GET', /^\/api\/yonetim\/kullanicilar$/, (req, res, p, b, k) => {
+  if (yoneticiDegil(res, k)) return;
+  const s = Date.now();
+  const L = Q(`SELECT k.id, k.ad, k.gorunen, k.yonetici, k.totp IS NOT NULL AS iki, k.kapali, k.olusturma,
+      (SELECT COUNT(*) FROM oturum o WHERE o.kullanici = k.id AND o.bitis > ? AND o.surum = k.oturum_surum AND o.olusturma > ?) AS oturum,
+      (SELECT COUNT(*) FROM uye u WHERE u.kullanici = k.id) AS ekip,
+      (SELECT MAX(g.zaman) FROM gunluk g WHERE g.kim = k.id AND g.olay = 'giris') AS son
+    FROM kullanici k ORDER BY k.ad`).all(s, s - OTURUM_EN_UZUN);
+  json(res, 200, { ben: k.id, onay: onayKalan(k), kullanicilar: L.map(x => ({
+    id: x.id, ad: x.ad, gorunen: x.gorunen, yonetici: !!x.yonetici, totp: !!x.iki, kapali: !!x.kapali,
+    olusturma: x.olusturma, oturum: x.oturum, ekip: x.ekip, songiris: x.son || 0 })) });
+});
+yol('POST', /^\/api\/yonetim\/onay$/, async (req, res, p, b, k) => {
+  if (yoneticiDegil(res, k)) return;
+  const dk = sinirli('ad:' + k.ad, 10, DK15);
+  if (dk) return hata(res, 429, 'Çok fazla deneme. ' + dk + ' dakika sonra yeniden dene.');
+  const r = await sifreIsi(res, 'ad:' + k.ad, async () => {
+    const k2 = kimdir(req);
+    if (!k2 || k2.id !== k.id || !k2.yonetici) return { kod: 401, msg: 'Oturum kapalı; yeniden giriş yap.' };
+    const dogru = await sifreDogruA(String(b.sifre || '').slice(0, 1024), k2.sifre);
+    const k3 = kimdir(req);
+    if (!k3 || k3.id !== k.id) return { kod: 401, msg: 'Oturum kapalı; yeniden giriş yap.' };
+    if (!dogru || k3.sifre !== k2.sifre) { basarisiz('ad:' + k3.ad, 10, DK15); gunluk('yonetim-onay-hatali', k3.id, ipOf(req)); return { kod: 401, msg: 'Şifre yanlış.' }; }
+    if (k3.totp) {
+      const a = totpDogrula(k3.totp, b.kod, k3.totp_son);
+      if (!a) { basarisiz('ad:' + k3.ad, 10, DK15); gunluk('yonetim-onay-hatali', k3.id, ipOf(req), 'kod'); return { kod: 401, msg: 'Doğrulama kodu yanlış.' }; }
+      Q('UPDATE kullanici SET totp_son = ? WHERE id = ?').run(a, k3.id);
+    }
+    onaylar.set(k3.ozet, Date.now() + YONETIM_ONAY);
+    gunluk('yonetim-onay', k3.id, ipOf(req));
+    return {};
+  });
+  if (!r) return;
+  if (r.kod) return hata(res, r.kod, r.msg);
+  json(res, 200, { tamam: true, sure: YONETIM_ONAY });
+});
+yol('POST', /^\/api\/yonetim\/kullanici$/, async (req, res, p, b, k) => {
+  if (yoneticiDegil(res, k, true)) return;
+  const ad = String(b.ad || '').trim().toLowerCase().slice(0, 64), gorunen = metin(b.gorunen, 60) || ad, yon = b.yonetici === true;
+  if (!AD_RE.test(ad)) return hata(res, 400, 'Kullanıcı adı 3–32 karakter olmalı: küçük harf, rakam, nokta, alt çizgi, tire.');
+  const u = sifreUygun(b.sifre, ad);
+  if (u) return hata(res, 400, u);
+  if (Q('SELECT 1 FROM kullanici WHERE ad = ?').get(ad)) return hata(res, 409, 'Bu kullanıcı adı alınmış.');
+  const ozetli = await sifreIsi(res, 'kayit-ad:' + ad, () => sifreOzetA(b.sifre));
+  if (!ozetli) return;
+  const id = yeniId(), s = Date.now();
+  const ok = tx(() => {
+    if (Q('SELECT 1 FROM kullanici WHERE ad = ?').get(ad)) return false;
+    Q('INSERT INTO kullanici (id, ad, gorunen, sifre, olusturma, yonetici) VALUES (?, ?, ?, ?, ?, ?)').run(id, ad, gorunen, ozetli, s, yon ? 1 : 0);
+    return true;
+  })();
+  if (!ok) return hata(res, 409, 'Bu kullanıcı adı alınmış.');
+  yonetimKaydi('kullanici-eklendi', id, k, req, yon ? 'yönetici olarak' : '');
+  json(res, 200, { tamam: true, id });
+});
+yol('POST', new RegExp('^/api/yonetim/kullanici/' + KUL + '/sifre$'), async (req, res, p, b, k) => {
+  if (yoneticiDegil(res, k, true)) return;
+  const h = Q('SELECT * FROM kullanici WHERE id = ?').get(p[1]);
+  if (!h) return hata(res, 404, 'Böyle bir kullanıcı yok.');
+  if (h.id === k.id) return hata(res, 400, 'Kendi şifreni Hesap bölümünden değiştir.');
+  const u = sifreUygun(b.sifre, h.ad);
+  if (u) return hata(res, 400, u);
+  const ozetli = await sifreIsi(res, 'ad:' + h.ad, () => sifreOzetA(b.sifre));
+  if (!ozetli) return;
+  Q('UPDATE kullanici SET sifre = ?, oturum_surum = oturum_surum + 1 WHERE id = ?').run(ozetli, h.id);
+  Q('DELETE FROM oturum WHERE kullanici = ?').run(h.id);
+  akisKapat(d => d.kid === h.id);
+  deneme.delete('ad:' + h.ad);   // çok yanlış denemeden kilitlendiyse açılır
+  yonetimKaydi('sifre-sifirlandi', h.id, k, req);
+  json(res, 200, { tamam: true });
+});
+yol('POST', new RegExp('^/api/yonetim/kullanici/' + KUL + '/islem$'), (req, res, p, b, k) => {
+  if (yoneticiDegil(res, k, true)) return;
+  const h = Q('SELECT * FROM kullanici WHERE id = ?').get(p[1]);
+  if (!h) return hata(res, 404, 'Böyle bir kullanıcı yok.');
+  const ben = h.id === k.id;
+  const oturumlariBitir = () => {
+    Q('UPDATE kullanici SET oturum_surum = oturum_surum + 1 WHERE id = ?').run(h.id);
+    Q('DELETE FROM oturum WHERE kullanici = ?').run(h.id);
+    akisKapat(d => d.kid === h.id);
+  };
+  switch (String(b.islem || '')) {
+    case 'kapat':
+      if (ben) return hata(res, 400, 'Kendi hesabını kapatamazsın.');
+      if (h.yonetici && !h.kapali && Q('SELECT COUNT(*) AS n FROM kullanici WHERE yonetici = 1 AND kapali = 0').get().n <= 1) return hata(res, 400, 'Son yöneticinin hesabı kapatılamaz.');
+      Q('UPDATE kullanici SET kapali = 1 WHERE id = ?').run(h.id);
+      oturumlariBitir();
+      yonetimKaydi('kullanici-kapatildi', h.id, k, req);
+      break;
+    case 'ac':
+      Q('UPDATE kullanici SET kapali = 0 WHERE id = ?').run(h.id);
+      yonetimKaydi('kullanici-acildi', h.id, k, req);
+      break;
+    case 'oturumlari-kapat':
+      if (ben) return hata(res, 400, 'Kendi oturumların için Çıkış yap düğmesini kullan.');
+      oturumlariBitir();
+      yonetimKaydi('oturumlar-kapandi', h.id, k, req);
+      break;
+    case 'totp-kapat':
+      if (!h.totp) return hata(res, 400, 'Bu kişide iki adımlı doğrulama zaten kapalı.');
+      Q('UPDATE kullanici SET totp = NULL, totp_son = 0 WHERE id = ?').run(h.id);
+      yonetimKaydi('totp-kapatildi', h.id, k, req);
+      break;
+    case 'yonetici-yap':
+      Q('UPDATE kullanici SET yonetici = 1 WHERE id = ?').run(h.id);
+      yonetimKaydi('yonetici-yapildi', h.id, k, req);
+      break;
+    case 'yonetici-al':
+      if (ben) return hata(res, 400, 'Kendi yöneticiliğini kaldıramazsın; başka bir yönetici kaldırabilir.');
+      Q('UPDATE kullanici SET yonetici = 0 WHERE id = ?').run(h.id);
+      yonetimKaydi('yoneticilik-alindi', h.id, k, req);
+      break;
+    default:
+      return hata(res, 400, 'Bilinmeyen işlem.');
+  }
+  json(res, 200, { tamam: true });
+});
+yol('GET', new RegExp('^/api/yonetim/kullanici/' + KUL + '/oturumlar$'), (req, res, p, b, k) => {
+  if (yoneticiDegil(res, k)) return;
+  const h = Q('SELECT id, oturum_surum FROM kullanici WHERE id = ?').get(p[1]);
+  if (!h) return hata(res, 404, 'Böyle bir kullanıcı yok.');
+  const s = Date.now();
+  const L = Q('SELECT ozet, olusturma, bitis, ajan, surum FROM oturum WHERE kullanici = ? AND bitis > ? ORDER BY olusturma DESC LIMIT 50').all(h.id, s)
+    .filter(x => x.surum === h.oturum_surum && s - x.olusturma <= OTURUM_EN_UZUN);
+  json(res, 200, { oturumlar: L.map(x => ({ olusturma: x.olusturma, bitis: x.bitis, ajan: x.ajan, bu: x.ozet === k.ozet })) });
+});
+yol('GET', /^\/api\/yonetim\/olaylar$/, (req, res, p, b, k, rol, url) => {
+  if (yoneticiDegil(res, k)) return;
+  const once = Math.min(+url.searchParams.get('once') || Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
+  const L = Q('SELECT zaman, olay, kim, ip, ayrinti FROM gunluk WHERE zaman < ? ORDER BY zaman DESC LIMIT 101').all(once);
+  const adlar = new Map(Q('SELECT id, ad FROM kullanici').all().map(x => [x.id, x.ad]));
+  json(res, 200, { dahaVar: L.length > 100, olaylar: L.slice(0, 100).map(x => ({
+    zaman: x.zaman, olay: x.olay, kim: adlar.get(x.kim) || x.kim || '', ip: x.ip || '', ayrinti: x.ayrinti || '' })) });
+});
+
 const TURLER = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
   '.woff2': 'font/woff2', '.woff': 'font/woff', '.txt': 'text/plain; charset=utf-8' };
@@ -931,7 +1086,23 @@ function dosya(req, res, url) {
 }
 
 /* ---------- istek yönlendirme ---------- */
+/* Yalnız ev ağı (WN_YEREL_AG=1): istek yerel bir adresten gelmeli. Adres çubuğundaki ad da bir IP, localhost ya da
+   .local adı olmalı: başka bir sitenin adını Pi'ye yönlendirerek (DNS rebinding) ev ağındaki tarayıcı üzerinden
+   sunucuya ulaşılamaz. */
+function yerelAdres(a) {
+  a = String(a || '').toLowerCase();
+  if (a.startsWith('::ffff:')) a = a.slice(7);
+  if (a === '::1' || /^127\./.test(a) || /^10\./.test(a) || /^192\.168\./.test(a) || /^169\.254\./.test(a)) return true;
+  const m = /^172\.(\d{1,3})\./.exec(a);
+  if (m && +m[1] >= 16 && +m[1] <= 31) return true;
+  return /^f[cd][0-9a-f]{0,2}:/.test(a) || /^fe[89ab][0-9a-f]?:/.test(a);   // IPv6: ULA ve bağlantı-yerel
+}
+function yerelAd(h) {
+  h = String(h || '').toLowerCase().replace(/:\d{1,5}$/, '');
+  return h === 'localhost' || /^\d{1,3}(\.\d{1,3}){3}$/.test(h) || /^\[[0-9a-f:.]+\]$/.test(h) || /^[a-z0-9-]{1,63}\.local$/.test(h);
+}
 async function istek(req, res) {
+  if (AYAR.yerelAg && (!yerelAdres(req.socket.remoteAddress) || !yerelAd(req.headers.host))) return hata(res, 403, 'Bu sunucuya yalnız ev ağından girilebilir.');
   let url;
   try { url = new URL(req.url, 'http://x'); } catch (e) { return hata(res, 400, 'Geçersiz adres.'); }
   if (!url.pathname.startsWith('/api/')) {
