@@ -128,6 +128,9 @@ sudo -u whitenote env WN_VERI=/var/lib/whitenote node /opt/whitenote/white_not/s
 | `kullanici-kapat AD` | Hesabı kapatır: giriş yapamaz, açık oturumları hemen kapanır |
 | `kullanici-ac AD` | Kapatılan hesabı yeniden açar |
 | `kullanicilar` | Kullanıcıları listeler (yönetici, iki adımlı, kapalı) |
+| `olaylar [N]` | Son N güvenlik olayı: girişler, hatalı denemeler, şifre / iki adımlı değişiklikleri, davetler, yedekler |
+| `oturumlar AD` | Kişinin açık oturumları: ne zaman açıldı, hangi cihaz ve tarayıcı |
+| `oturumlari-kapat AD` | Kişinin bütün oturumlarını kapatır; şüpheli bir giriş görürsen önce bunu, sonra `sifre-sifirla` |
 | `yedek-al` | Hemen yedek alır |
 | `geri-yukle DOSYA` | Yedeği geri yükler; önce sunucuyu durdur (aşağıda) |
 
@@ -153,8 +156,11 @@ sudo systemctl restart whitenote
 
 ## Yedekler
 
-Her gece 03:30'da `/var/lib/whitenote/yedek/whitenote-YYYY-MM-DD.db` dosyasına yedek alınır ve son 14 gün
-tutulur. Pi'nin kartı bozulursa diye haftada bir başka bir diske ya da bilgisayara kopyala:
+Her gece 03:30'da `/var/lib/whitenote/yedek/whitenote-YYYY-MM-DD.db` dosyasına yedek alınır. Yedek açılıp
+denetlenir (`PRAGMA quick_check`); bozuksa yerine konmaz ve eski yedekler silinmez, `olaylar` komutunda
+`yedek-hatasi` görünür. Son 14 günün her biri, son 8 haftanın ve son 12 ayın birer yedeği saklanır: bir şeyin
+haftalar sonra fark edilen silinmesi de geri getirilebilir. Pi'nin kartı bozulursa diye haftada bir başka bir
+diske ya da bilgisayara kopyala:
 
 ```bash
 rsync -a /var/lib/whitenote/yedek/ /media/usb/whitenote-yedek/
@@ -180,8 +186,13 @@ değişiklikler kaybolur; cihazlarda gönderilmeyi bekleyen değişiklikler ise 
 - Değiştiren her istekte uygulamanın özel başlığı ve aynı site kökeni aranır (CSRF).
 
 **Giriş ve oturum**
-- Şifreler scrypt ile saklanır.
-- Oturum çerezi `HttpOnly`, `Secure` ve `SameSite=Strict`'tir; JavaScript göremez.
+- Şifreler scrypt ile saklanır. Çok kullanılan şifreler (ör. `galatasaray`, `qwertyuiop`), tekrar eden
+  kalıplar, kısa rakam dizileri ve kullanıcı adını içeren şifreler kabul edilmez.
+- Oturum çerezi `HttpOnly`, `Secure` ve `SameSite=Strict`'tir; JavaScript göremez. `https` adreste adı
+  `__Host-wn_oturum` olur: yalnız bu site, güvenli bağlantıyla yazabilir (alt alan adları dokunamaz).
+- Oturum kullanıldıkça 30 gün uzar (çerez de yenilenir), ama açıldığı günden en fazla 180 gün geçerlidir.
+- Giriş formuna gelen çok uzun ad / şifreler kırpılır; güvenlik günlüğü dışarıdan şişirilemez, kontrol
+  karakterleri atılır (`olaylar` çıktısı uçbirimi bozamaz).
 - Şifre değişince, çıkış yapınca ya da biri ekipten çıkarılınca o kişinin açık canlı bağlantısı hemen kesilir.
 - Art arda yanlış şifre ya da kod girilirse 15 dakika beklenir. İki adımlı doğrulamada aynı kod iki kez
   kullanılamaz.
@@ -199,6 +210,11 @@ değişiklikler kaybolur; cihazlarda gönderilmeyi bekleyen değişiklikler ise 
 - Veri klasörü yalnız `whitenote` kullanıcısına açıktır; servis sistemin geri kalanını salt okunur görür.
 - Uygulama, ekip sunucuya ulaşılamazken de açılabilsin diye cihazda bir kopya tutar (IndexedDB). Bu kopya
   çıkış yapınca, ekipten ayrılınca ya da çıkarılınca silinir.
+
+**Verimlilik**
+- Sayfa, betik ve stil dosyaları bir kez brotli ve gzip ile sıkıştırılıp bellekte tutulur (sayfa 1,6 MB → 0,36 MB);
+  16 KB'tan büyük API cevapları da sıkıştırılır. Sıkıştırma iş parçacığında yapılır, sunucu beklemez.
+- ETag'ler Cloudflare'in zayıflattığı biçimde (`W/"..."`) de tanınır: değişmeyen dosya için yalnız `304` gider.
 
 **Pi**
 - Pi'ye SSH ile yalnız anahtarla gir (`PasswordAuthentication no`).
