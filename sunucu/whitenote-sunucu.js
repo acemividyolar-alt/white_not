@@ -40,7 +40,12 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const { DatabaseSync } = require('node:sqlite');
+let DatabaseSync;
+try { ({ DatabaseSync } = require('node:sqlite')); }
+catch (e) {   // Node 22.13'ten eskisinde SQLite modülü yok (ya da bayrak ister)
+  console.error('White Note sunucusu Node.js 22.13 ya da üstünü ister; bu makinede ' + process.version + ' var. Kurulum: sunucu/README.md');
+  process.exit(1);
+}
 
 const AYAR = {
   port: +process.env.WN_PORT || 8080,
@@ -143,12 +148,48 @@ function sifreOzet(sifre) {
   const h = crypto.scryptSync(String(sifre).normalize('NFC'), tuz, 64, SCRYPT);
   return ['scrypt', SCRYPT.N, SCRYPT.r, SCRYPT.p, tuz.toString('base64'), h.toString('base64')].join('$');
 }
-function sifreDogru(sifre, kayitli) {
+/* Şifre özeti iş parçacığında hesaplanır: bu sırada sunucu (canlı bağlantılar, diğer istekler) donmaz.
+   Aynı anda en fazla 3 hesaplama (gerisi sırada bekler). Aynı kullanıcı adı için denemeler sırayla işlenir
+   ve deneme sayaçlarına hesaplamadan hemen önce yeniden bakılır: aynı anda çok istek atarak sınır aşılamaz. */
+function scryptA(sifre, tuz, o) {
+  return new Promise((ok, no) => crypto.scrypt(String(sifre).normalize('NFC'), tuz, 64, o, (e, h) => (e ? no(e) : ok(h))));
+}
+async function sifreOzetA(sifre) {
+  const tuz = crypto.randomBytes(16);
+  const h = await scryptA(sifre, tuz, SCRYPT);
+  return ['scrypt', SCRYPT.N, SCRYPT.r, SCRYPT.p, tuz.toString('base64'), h.toString('base64')].join('$');
+}
+async function sifreDogruA(sifre, kayitli) {
   const p = String(kayitli || '').split('$');
   if (p.length !== 6 || p[0] !== 'scrypt') return false;
-  const h = crypto.scryptSync(String(sifre).normalize('NFC'), Buffer.from(p[4], 'base64'), 64, { N: +p[1], r: +p[2], p: +p[3], maxmem: 128 * 1024 * 1024 });
+  const h = await scryptA(sifre, Buffer.from(p[4], 'base64'), { N: +p[1], r: +p[2], p: +p[3], maxmem: 128 * 1024 * 1024 });
   const k = Buffer.from(p[5], 'base64');
   return k.length === h.length && crypto.timingSafeEqual(k, h);
+}
+const YOGUN = () => Object.assign(new Error('yoğun'), { yogun: true });
+let hesapta = 0;
+const hesapSirasi = [];
+async function hesapla(is) {
+  if (hesapta < 3) hesapta++;
+  else { if (hesapSirasi.length >= 100) throw YOGUN(); await new Promise(r => hesapSirasi.push(r)); }
+  try { return await is(); }
+  finally { const n = hesapSirasi.shift(); if (n) n(); else hesapta--; }   // sıradakine yer devredilir
+}
+const siradaki = new Map();   // anahtar -> { son: son işin sözü, n: bekleyen + çalışan }
+async function sirayla(anahtar, is) {
+  let x = siradaki.get(anahtar);
+  if (!x) { x = { son: null, n: 0 }; siradaki.set(anahtar, x); }
+  if (x.n >= 10) throw YOGUN();
+  const once = x.son;
+  let bitir;
+  const bu = new Promise(r => { bitir = r; });
+  x.son = bu; x.n++;
+  try { if (once) await once; return await hesapla(is); }
+  finally { bitir(); if (--x.n === 0 && siradaki.get(anahtar) === x) siradaki.delete(anahtar); }
+}
+async function sifreIsi(res, anahtar, is) {   // yoğunsa cevabı verip null döner
+  try { return await sirayla(anahtar, is); }
+  catch (e) { if (e && e.yogun) { hata(res, 429, 'Sunucu şu an çok yoğun; biraz sonra yeniden dene.'); return null; } throw e; }
 }
 const SAHTE_OZET = sifreOzet(rastgele());   // olmayan kullanıcıda da aynı sürede cevap verilsin
 function sifreUygun(s) {
@@ -332,7 +373,7 @@ setInterval(() => {
       let gecerli = true;
       try { gecerli = oturumGecerli(d.oz) && !!rolOf(e, d.kid); } catch (x) {}
       if (!gecerli) { set.delete(d); try { d.res.end(); } catch (x) {} kimDusur(e, d.kid); continue; }
-      try { d.res.write(': nabız\n\n'); } catch (x) {}
+      try { d.res.write('event: nabiz\ndata: 1\n\n'); } catch (x) {}   // istemci bunu görür: uzun süre gelmezse yeniden bağlanır
     }
     if (!set.size) dinleyiciler.delete(e);
   }
@@ -346,25 +387,35 @@ yol('GET', /^\/api\/durum$/, (req, res) => json(res, 200, { whitenote: true, sur
 
 yol('POST', /^\/api\/giris$/, async (req, res, p, b) => {
   const ip = ipOf(req), ad = String(b.ad || '').trim().toLowerCase(), sifre = String(b.sifre || '');
-  const dk = sinirli('ip:' + ip, 20, DK15) || sinirli('ad:' + ad, 10, DK15);
+  const kilit = () => sinirli('ip:' + ip, 20, DK15) || sinirli('ad:' + ad, 10, DK15);
+  const dk = kilit();
   if (dk) return hata(res, 429, 'Çok fazla deneme. ' + dk + ' dakika sonra yeniden dene.');
-  const k = AD_RE.test(ad) ? Q('SELECT * FROM kullanici WHERE ad = ?').get(ad) : null;
-  const dogru = sifreDogru(sifre, k ? k.sifre : SAHTE_OZET) && !!k;
-  if (!dogru || k.kapali) {
-    basarisiz('ip:' + ip, 20, DK15); basarisiz('ad:' + ad, 10, DK15);
-    gunluk('giris-hatali', ad, ip);
-    return hata(res, 401, 'Kullanıcı adı ya da şifre yanlış.');
-  }
-  if (k.totp) {
-    if (!b.kod) return json(res, 200, { totpGerekli: true });
-    const a = totpDogrula(k.totp, b.kod, k.totp_son);
-    if (!a) { basarisiz('ad:' + ad, 10, DK15); gunluk('totp-hatali', ad, ip); return hata(res, 401, 'Doğrulama kodu yanlış.'); }
-    Q('UPDATE kullanici SET totp_son = ? WHERE id = ?').run(a, k.id);
-  }
-  deneme.delete('ad:' + ad);
-  oturumAc(res, k, req.headers['user-agent']);
-  gunluk('giris', k.id, ip);
-  json(res, 200, { kullanici: kullaniciDisa(k) });
+  const r = await sifreIsi(res, 'ad:' + ad, async () => {
+    const dk2 = kilit();
+    if (dk2) return { kod: 429, msg: 'Çok fazla deneme. ' + dk2 + ' dakika sonra yeniden dene.' };
+    const k0 = AD_RE.test(ad) ? Q('SELECT * FROM kullanici WHERE ad = ?').get(ad) : null;
+    const dogru = (await sifreDogruA(sifre, k0 ? k0.sifre : SAHTE_OZET)) && !!k0;
+    const k = dogru ? Q('SELECT * FROM kullanici WHERE id = ?').get(k0.id) : null;   // beklerken değişmiş olabilir
+    if (!k || k.kapali || k.sifre !== k0.sifre) {
+      basarisiz('ip:' + ip, 20, DK15); basarisiz('ad:' + ad, 10, DK15);
+      gunluk('giris-hatali', ad, ip);
+      return { kod: 401, msg: 'Kullanıcı adı ya da şifre yanlış.' };
+    }
+    if (k.totp) {
+      if (!b.kod) return { totp: true };
+      const a = totpDogrula(k.totp, b.kod, k.totp_son);
+      if (!a) { basarisiz('ad:' + ad, 10, DK15); gunluk('totp-hatali', ad, ip); return { kod: 401, msg: 'Doğrulama kodu yanlış.' }; }
+      Q('UPDATE kullanici SET totp_son = ? WHERE id = ?').run(a, k.id);
+    }
+    deneme.delete('ad:' + ad);
+    oturumAc(res, k, req.headers['user-agent']);
+    gunluk('giris', k.id, ip);
+    return { k };
+  });
+  if (!r) return;
+  if (r.kod) return hata(res, r.kod, r.msg);
+  if (r.totp) return json(res, 200, { totpGerekli: true });
+  json(res, 200, { kullanici: kullaniciDisa(r.k) });
 }, { acik: true });
 
 yol('POST', /^\/api\/cikis$/, (req, res) => {
@@ -387,18 +438,29 @@ yol('POST', /^\/api\/ad$/, (req, res, p, b, k) => {
   json(res, 200, { tamam: true });
 });
 
-yol('POST', /^\/api\/sifre$/, (req, res, p, b, k) => {
+yol('POST', /^\/api\/sifre$/, async (req, res, p, b, k) => {
   const dk = sinirli('ad:' + k.ad, 10, DK15);
   if (dk) return hata(res, 429, 'Çok fazla deneme. ' + dk + ' dakika sonra yeniden dene.');
-  if (!sifreDogru(String(b.eski || ''), k.sifre)) { basarisiz('ad:' + k.ad, 10, DK15); return hata(res, 401, 'Şu anki şifre yanlış.'); }
-  const u = sifreUygun(b.yeni);
-  if (u) return hata(res, 400, u);
-  Q('UPDATE kullanici SET sifre = ?, oturum_surum = oturum_surum + 1 WHERE id = ?').run(sifreOzet(b.yeni), k.id);
-  Q('DELETE FROM oturum WHERE kullanici = ?').run(k.id);
-  const k2 = Q('SELECT * FROM kullanici WHERE id = ?').get(k.id);
-  oturumAc(res, k2, req.headers['user-agent']);   // diğer cihazlardaki oturumlar kapanır, bu açık kalır
-  akisKapat(d => d.kid === k.id);                  // bu cihazın canlı bağlantısı da yeni çerezle yeniden bağlanır
-  gunluk('sifre-degisti', k.id, ipOf(req));
+  const r = await sifreIsi(res, 'ad:' + k.ad, async () => {
+    const k2 = kimdir(req);   // beklerken oturum kapanmış ya da şifre değişmiş olabilir
+    if (!k2 || k2.id !== k.id) return { kod: 401, msg: 'Oturum kapalı; yeniden giriş yap.' };
+    const dk2 = sinirli('ad:' + k2.ad, 10, DK15);
+    if (dk2) return { kod: 429, msg: 'Çok fazla deneme. ' + dk2 + ' dakika sonra yeniden dene.' };
+    if (!(await sifreDogruA(String(b.eski || ''), k2.sifre))) { basarisiz('ad:' + k2.ad, 10, DK15); return { kod: 401, msg: 'Şu anki şifre yanlış.' }; }
+    const u = sifreUygun(b.yeni);
+    if (u) return { kod: 400, msg: u };
+    const yeni = await sifreOzetA(b.yeni);
+    const k3 = kimdir(req);
+    if (!k3 || k3.id !== k.id || k3.sifre !== k2.sifre) return { kod: 409, msg: 'Şifre bu arada başka bir yerde değişti; sayfayı yenileyip yeniden dene.' };
+    Q('UPDATE kullanici SET sifre = ?, oturum_surum = oturum_surum + 1 WHERE id = ?').run(yeni, k.id);
+    Q('DELETE FROM oturum WHERE kullanici = ?').run(k.id);
+    oturumAc(res, Q('SELECT * FROM kullanici WHERE id = ?').get(k.id), req.headers['user-agent']);   // diğer cihazlardaki oturumlar kapanır, bu açık kalır
+    akisKapat(d => d.kid === k.id);                  // bu cihazın canlı bağlantısı da yeni çerezle yeniden bağlanır
+    gunluk('sifre-degisti', k.id, ipOf(req));
+    return {};
+  });
+  if (!r) return;
+  if (r.kod) return hata(res, r.kod, r.msg);
   json(res, 200, { tamam: true });
 });
 
@@ -420,14 +482,28 @@ yol('POST', /^\/api\/totp\/ac$/, (req, res, p, b, k) => {
   gunluk('totp-acildi', k.id, ipOf(req));
   json(res, 200, { tamam: true });
 });
-yol('POST', /^\/api\/totp\/kapat$/, (req, res, p, b, k) => {
+yol('POST', /^\/api\/totp\/kapat$/, async (req, res, p, b, k) => {
   if (!k.totp) return json(res, 200, { tamam: true });
   const dk = sinirli('ad:' + k.ad, 10, DK15);
   if (dk) return hata(res, 429, 'Çok fazla deneme. ' + dk + ' dakika sonra yeniden dene.');
-  const a = sifreDogru(String(b.sifre || ''), k.sifre) ? totpDogrula(k.totp, b.kod, k.totp_son) : 0;
-  if (!a) { basarisiz('ad:' + k.ad, 10, DK15); return hata(res, 401, 'Şifre ya da kod yanlış.'); }
-  Q('UPDATE kullanici SET totp = NULL, totp_son = 0 WHERE id = ?').run(k.id);
-  gunluk('totp-kapandi', k.id, ipOf(req));
+  const r = await sifreIsi(res, 'ad:' + k.ad, async () => {
+    const k2 = kimdir(req);
+    if (!k2 || k2.id !== k.id) return { kod: 401, msg: 'Oturum kapalı; yeniden giriş yap.' };
+    if (!k2.totp) return {};
+    const dk2 = sinirli('ad:' + k2.ad, 10, DK15);
+    if (dk2) return { kod: 429, msg: 'Çok fazla deneme. ' + dk2 + ' dakika sonra yeniden dene.' };
+    const dogru = await sifreDogruA(String(b.sifre || ''), k2.sifre);
+    const k3 = kimdir(req);
+    if (!k3 || k3.id !== k.id) return { kod: 401, msg: 'Oturum kapalı; yeniden giriş yap.' };
+    if (!k3.totp) return {};
+    const a = dogru && k3.sifre === k2.sifre ? totpDogrula(k3.totp, b.kod, k3.totp_son) : 0;
+    if (!a) { basarisiz('ad:' + k3.ad, 10, DK15); return { kod: 401, msg: 'Şifre ya da kod yanlış.' }; }
+    Q('UPDATE kullanici SET totp = NULL, totp_son = 0 WHERE id = ?').run(k.id);
+    gunluk('totp-kapandi', k.id, ipOf(req));
+    return {};
+  });
+  if (!r) return;
+  if (r.kod) return hata(res, r.kod, r.msg);
   json(res, 200, { tamam: true });
 });
 
@@ -443,7 +519,7 @@ yol('POST', /^\/api\/davet-bak$/, (req, res, p, b) => {
 }, { acik: true });
 
 /* Davetle kayıt: açık kayıt yok; ekip sahibinin / yöneticisinin verdiği kodla */
-yol('POST', /^\/api\/kayit$/, (req, res, p, b) => {
+yol('POST', /^\/api\/kayit$/, async (req, res, p, b) => {
   const ip = ipOf(req);
   const dk = sinirli('kayit:' + ip, 10, SAAT);
   if (dk) return hata(res, 429, 'Çok fazla deneme. ' + dk + ' dakika sonra yeniden dene.');
@@ -454,17 +530,26 @@ yol('POST', /^\/api\/kayit$/, (req, res, p, b) => {
   const u = sifreUygun(b.sifre);
   if (u) return hata(res, 400, u);
   if (Q('SELECT 1 FROM kullanici WHERE ad = ?').get(ad)) return hata(res, 409, 'Bu kullanıcı adı alınmış.');
+  const ozetli = await sifreIsi(res, 'kayit-ad:' + ad, () => sifreOzetA(b.sifre));
+  if (!ozetli) return;
+  // Beklerken davet kullanılmış ya da ad alınmış olabilir: tek işlemde yeniden bakılır
   const id = yeniId(), s = Date.now();
-  tx(() => {
-    Q('INSERT INTO kullanici (id, ad, gorunen, sifre, olusturma) VALUES (?, ?, ?, ?, ?)').run(id, ad, gorunen, sifreOzet(b.sifre), s);
-    Q('INSERT INTO uye VALUES (?, ?, ?, ?)').run(dv.ekip, id, dv.rol === 'sahip' ? 'uye' : dv.rol, s);
-    Q('UPDATE davet SET kalan = kalan - 1 WHERE ozet = ?').run(dv.ozet);
+  const sonuc = tx(() => {
+    const dv2 = davetBul(b.davet);
+    if (!dv2) return 'davet';
+    if (Q('SELECT 1 FROM kullanici WHERE ad = ?').get(ad)) return 'ad';
+    Q('INSERT INTO kullanici (id, ad, gorunen, sifre, olusturma) VALUES (?, ?, ?, ?, ?)').run(id, ad, gorunen, ozetli, s);
+    Q('INSERT INTO uye VALUES (?, ?, ?, ?)').run(dv2.ekip, id, dv2.rol === 'sahip' ? 'uye' : dv2.rol, s);
+    Q('UPDATE davet SET kalan = kalan - 1 WHERE ozet = ?').run(dv2.ozet);
+    return dv2;
   })();
+  if (sonuc === 'davet') return hata(res, 400, 'Davet kodu geçersiz ya da süresi dolmuş.');
+  if (sonuc === 'ad') return hata(res, 409, 'Bu kullanıcı adı alınmış.');
   const k = Q('SELECT * FROM kullanici WHERE id = ?').get(id);
   oturumAc(res, k, req.headers['user-agent']);
-  gunluk('kayit', id, ip, dv.ekip);
-  yayinla(dv.ekip, 'uyeler', {});
-  json(res, 200, { kullanici: kullaniciDisa(k), ekip: dv.ekip });
+  gunluk('kayit', id, ip, sonuc.ekip);
+  yayinla(sonuc.ekip, 'uyeler', {});
+  json(res, 200, { kullanici: kullaniciDisa(k), ekip: sonuc.ekip });
 }, { acik: true });
 
 /* Var olan kullanıcı davet koduyla ekibe katılır */
