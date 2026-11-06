@@ -24790,7 +24790,22 @@ service cloud.firestore {
       '<label class="adm-check"><input type="checkbox" id="admNewAdmin"> Yönetici</label>' +
       '<button class="modal-btn primary" type="submit"' + srvDis() + '>Hesap aç</button></form>' +
       '<p class="team-hint">Bir ekibe katılması için ona ayrıca davet kodu ver. İlk şifresini girdikten sonra Hesap bölümünden değiştirsin.</p>';
-    return h;
+    return h + admGuncelHTML(a);
+  }
+  /* Sunucunun kendiliğinden güncellemesi (Pi: whitenote-guncelle): son denetim, kurulu sürüm, sorun varsa nedeni */
+  function admGuncelHTML(a) {
+    if (!a.guncelVar) return '';
+    const g = a.guncel;
+    let t;
+    if (!g) t = 'Kendiliğinden güncelleme bu sunucuda kurulu değil; kurulum betiği bir kez çalıştırılınca kurulur.';
+    else {
+      const once = sn => { const d = Math.max(0, Math.round((Date.now() / 1000 - sn) / 60)); return !sn ? '—' : d < 1 ? 'az önce' : d < 60 ? d + ' dk önce' : d < 2880 ? Math.round(d / 60) + ' saat önce' : Math.round(d / 1440) + ' gün önce'; };
+      t = g.durum === 'tamam' ? 'Kendiliğinden güncelleme açık, sürüm güncel'
+        : g.durum === 'ulasilamadi' ? 'Kendiliğinden güncelleme açık ama GitHub\'a ulaşılamıyor (Pi internete bağlı mı?)'
+        : 'Son sürüm kurulamadı' + (g.mesaj ? ': ' + g.mesaj : '') + ' (sunucu önceki sürümle çalışıyor)';
+      t += ' · son denetim ' + once(g.denetim) + (g.surum ? ' · kurulu sürüm ' + g.surum.slice(0, 7) + (g.zaman ? ' (' + admZaman(g.zaman * 1000) + ')' : '') : '');
+    }
+    return '<div class="modal-section-label">Sunucu</div><p class="team-hint">' + esc(t) + '</p>';
   }
   function admOlaylarHTML(a) {
     if (!a.olaylar) return '<p class="team-hint">' + esc(a.hata || 'Yükleniyor…') + '</p>';
@@ -24817,6 +24832,12 @@ service cloud.firestore {
       } else {
         const r = await srvApi('GET', 'yonetim/kullanicilar', null, 10000);
         a.list = (Array.isArray(r.kullanicilar) ? r.kullanicilar : []).filter(u => u && SAFE_UID.test(u.id || ''));
+        try {
+          const d = await srvApi('GET', 'durum', null, 5000);
+          const g = d.guncelleme;
+          a.guncel = g && typeof g === 'object' ? { durum: String(g.durum || ''), surum: String(g.surum || '').replace(/[^0-9a-f]/g, ''), zaman: +g.zaman || 0, denetim: +g.denetim || 0, mesaj: String(g.mesaj || '').slice(0, 200) } : null;
+          a.guncelVar = true;
+        } catch (e) {}
       }
     } catch (e) { a.hata = (e && e.msg) || 'Yüklenemedi.'; }
     if (sp.view === 'admin') renderTeamPanel();
