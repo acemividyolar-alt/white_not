@@ -255,8 +255,16 @@ Aynı menünün altında:
     `Adım N: ` yazılır. `Eğer … ise`, `İken`, `İçin`, `Değilse` gibi blok açan satırdan sonra bir içeride başlar.
   - Araya adım eklenince ya da numaralı satır silinince aşağıdaki adımlar ve onlara giden `Adım N'e git`ler
     kendiliğinden kayar (ekler de uyar: `Adım 5'e` → `Adım 6'ya`).
-  - Boş adımda Enter numaralı yazımı bitirir (girintiliyse bir dışarı çıkar); numaranın hemen arkasında
-    Geri silme numarayı kaldırır. Tab / Shift+Tab bütün satırı girintiler. Shift+Enter numarasız satır açar.
+  - Her Enter yeni bir adım açar: boş adımda da (numara hiç kalkmaz, numarasız boş satır oluşmaz);
+    girintili boş adımda Enter bir dışarı çıkarır. Numaranın önünde ya da hemen arkasında Enter o adımın
+    önüne boş bir adım açar. Boş adımda Geri silme adımı siler; dolu adımda numaranın hemen arkasında
+    Geri silme numarayı kaldırır (o satıra yeniden yazılınca numara geri gelir).
+  - Numara yarım kalmaz: silme / kesme bir numaraya değerse ya da numaralı satır üsttekine birleşirse
+    numara bütünüyle kalkar; imleç numaranın içine konamaz (dokununca yazının başına geçer).
+  - Boş bir satıra yazılan adım, ilk kelime bitince ya da başka satıra geçince numarasını alır.
+    Telefon klavyelerinde de aynı çalışır (Enter / Geri silme tuşunu göndermeyen klavyeler dahil).
+  - Tab / Shift+Tab bütün satırı girintiler. Shift+Enter numarasız satır açar. Boş adım şemada boş kutu
+    olur ve yazıya yine boş adım olarak döner.
   - Yapıştırılan metne (Python kodu dahil) numara eklenmez. Her değişiklik Ctrl+Z ile geri alınır.
 - **C# / Java / C / C++'tan şema:** kod yapıştırınca Türkçe algoritmaya çevrilir (**Koddan çevir** ile önce
   görülebilir); `Main` / `main` ana şema, diğer her metot / fonksiyon parametreli **alt program şeması** olur.
