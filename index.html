@@ -1121,6 +1121,7 @@
   }
   .modal-tags-input { width: 100%; }
   .modal-row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+  .modal-row .opt { white-space: normal; }   /* uzun seçenek yazısı dar ekranda pencerenin dışına taşmasın */
   .due-row .due-hint { flex-basis: 100%; }
   .due-row #modalTime { min-width: 6.6rem; }
   .modal-actions { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; margin-top: 1.4rem; flex-wrap: wrap; }
@@ -1760,12 +1761,17 @@
   @keyframes mic-pulse { 50% { opacity: 0.55; } }
   @media (prefers-reduced-motion: reduce) { .md-tools .md-mic.on { animation: none; } }
   /* Klavye kısayolları penceresi */
-  .kbd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1rem 1.6rem; }
+  .kbd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr)); gap: 1rem 1.6rem; }
   .kbd-grid h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 0.3rem; }
   .kbd-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.8rem; padding: 0.3rem 0; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
   .kbd-row .k { white-space: nowrap; }
   .kbd-row .d { text-align: right; color: var(--ink-2); }
   .kbd-row kbd { margin: 0 0.1rem; }
+  @media (max-width: 760px) {   /* telefonda: tuşlar üstte, açıklama altında (eskiden açıklamalar ekranın sağına taşıp okunmuyordu) */
+    .kbd-row { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
+    .kbd-row .k { white-space: normal; line-height: 1.9; }
+    .kbd-row .d { text-align: left; }
+  }
   .md-tools button {
     font-size: 0.8125rem; min-width: 30px; height: 28px; padding: 0 0.4rem; cursor: pointer;
     background: transparent; border: 1px solid transparent; border-radius: var(--r-sm); color: var(--muted);
@@ -14138,6 +14144,9 @@
 
   function parseAlgorithm(src) {
     const L = flPrepLines(src);
+    // Sonda kalan yazısız "Adım 8:" satırları sayılmaz: yazarken son satırdan sonra Enter'a basınca açılan boş adım,
+    // şemada boş bir "İşlem" kutusu ve fazladan bir "Bitir" oluyordu. (Aradaki boş adım, doldurulmak üzere boş kutu olarak kalır.)
+    while (L.length && !L[L.length - 1].text) L.pop();
     L.forEach(l => { l.c = flClassify(l.text); });
     const nodes = [], edges = [], gotos = [], labels = {}, warn = [];
     let pos = 0;
@@ -20675,6 +20684,8 @@
        Numarasız tek bir ilk satırda Enter'a basılırsa o satır "Adım 1" olur (telefon klavyesinde de işler).
      - Boş adımda Enter: girintiliyse bir dışarı çıkar, değilse altına yeni adım açılır (her Enter bir adım;
        numara hiç kalkmaz, boş satır oluşmaz).
+     - "Değilse" / "Eğer sonu" / "Döngü sonu" / "… olana kadar" gövdenin hizasında yazılıp Enter'a basılınca
+       ait olduğu "Eğer" / döngü satırının hizasına çekilir (flKapanisHizasi).
      - Numaranın önünde ya da hemen arkasında Enter: o adımın önüne boş bir adım açılır, imleç oraya geçer.
      - Numaranın hemen arkasında Geri silme numarayı kaldırır (o satıra yeniden yazılınca geri gelir);
        boş adımda Geri silme adımı satırıyla siler. Aşağıdakiler bir geri kayar.
@@ -20753,6 +20764,35 @@
     if (c.type === 'else') return c.elseIf != null ? flOpensBlock('Eğer ' + c.elseIf) : !c.inline;
     return c.type === 'while' || c.type === 'for' || c.type === 'count' || c.type === 'repeat';
   }
+  /* Gövde hizasında yazılmış "Değilse" / kapanış satırının olması gereken girintisi (değişmeyecekse null).
+     Yukarı doğru bakılır: aynı hizada onu açan satır varsa ("Eğer" ile hizalı "Değilse") yerindedir; aynı hizada
+     sıradan bir adım varsa gövdenin içindeyiz: bir dıştaki açan satırın ("Eğer", "İken" …) hizasına çekilir. */
+  function flKapanisHizasi(lines, li, L) {
+    const tur = flClassify(lines[li].slice(L.len).trim()).type;
+    if (tur !== 'else' && tur !== 'closer' && tur !== 'until') return null;
+    const gen = x => x.replace(/\t/g, '    ').length, I = gen(L.ind);
+    let kapali = 0;   // aynı hizada görülen, işi bitmiş yapı sayısı ("Değilse"si / kapanışı zaten yazılmış "Eğer")
+    for (let k = li - 1; k >= 0; k--) {
+      const x = lines[k];
+      if (!x.trim()) continue;
+      const xind = x.match(/^[ \t]*/)[0], xi = gen(xind);
+      if (xi > I) continue;
+      const S = flStepOf(x), govde = (S ? x.slice(S.len) : x).trim();
+      if (!govde) continue;
+      const c = flClassify(govde);
+      const acar = tur === 'until' ? c.type === 'repeat'
+        : tur === 'else' ? (c.type === 'if' || (c.type === 'else' && c.elseIf != null)) && flOpensBlock(govde)
+        : flOpensBlock(govde);
+      if (xi < I) return acar ? xind : null;                // bir dıştaki satır: açan satırsa onun hizasına
+      // aynı hizada:
+      if (c.type === 'closer' || c.type === 'until' || (tur === 'else' && c.type === 'else' && c.elseIf == null)) { kapali++; continue; }
+      if (c.type === 'else' && tur !== 'else') continue;    // kapanış arıyoruz: "Değilse" yapının ortasıdır, açan satıra kadar devam
+      if (flOpensBlock(govde) && kapali > 0) { kapali--; continue; }   // bu yapı zaten tamamlanmış
+      if (acar) return null;                                 // açan satırla hizalı: yerinde
+      // sıradan bir adım: gövdenin içindeyiz, dışarı bakmaya devam
+    }
+    return null;
+  }
   /* Enter. v: metin, s: imleç. Döner: { text, caret } ya da null (olağan Enter) */
   function flStepEnter(v, s) {
     const ls = v.lastIndexOf('\n', s - 1) + 1, lines = v.split('\n'), li = v.slice(0, ls).split('\n').length - 1;
@@ -20763,6 +20803,12 @@
       const ind = line.match(/^[ \t]*/)[0];
       line = ind + 'Adım 1: ' + line.slice(ind.length);
       lines[li] = line; L = flStepOf(line); col = line.length;
+    }
+    // "Değilse" / "Eğer sonu" / "Döngü sonu" gövdenin hizasında yazıldıysa (önce bir dışarı çıkılmadan), ait olduğu
+    // "Eğer" / döngü satırının hizasına çekilir; yoksa "Değilse" ve sonrası gövdenin içinde, iki kat girintili kalıyordu.
+    if (L.ind.length && col >= line.length) {
+      const hiza = flKapanisHizasi(lines, li, L);
+      if (hiza != null) { line = hiza + line.slice(L.ind.length); lines[li] = line; L = flStepOf(line); col = line.length; }
     }
     const pre = n => L.ind + L.word + L.gap + n + L.sep + ' ';
     if (!line.slice(L.len).trim()) {
@@ -21739,10 +21785,20 @@
     const rows = await oyIstek(d.transaction('ozet', 'readonly').objectStore('ozet').getAll());
     return (rows || []).filter(r => r && typeof r.t === 'number' && isFinite(r.t)).sort((a, b) => (b.t - a.t) || (b.id - a.id));
   }
-  function oyOzet(metin) {   // içerik değişti mi diye bakmak için (güvenlik amaçlı değil)
-    let a = 0x811c9dc5, b = 5381;
-    for (let i = 0; i < metin.length; i++) { const c = metin.charCodeAt(i); a = Math.imul(a ^ c, 0x01000193); b = (Math.imul(b, 33) + c) | 0; }
-    return metin.length + ':' + (a >>> 0).toString(36) + ':' + (b >>> 0).toString(36);
+  /* İçerik değişti mi diye bakmak için özet (güvenlik amaçlı değil). Kayıtların SIRASINDAN bağımsızdır: aynı notlar
+     bellekte eklenme sırasıyla, sayfa yenilenince depodaki sırayla durur; sıraya bağlı bir özet her yenilemede
+     (ve iki sekmede) "değişmiş" sayıp gereksiz kopya aldırıyordu. Her kaydın özeti toplanır ve XOR'lanır. */
+  function oyOzet(veri) {
+    let top = 0, xor = 0, n = 0;
+    Object.keys(veri).sort().forEach(k => {
+      (Array.isArray(veri[k]) ? veri[k] : [veri[k]]).forEach(r => {
+        const m = k + '\u0001' + JSON.stringify(r);
+        let a = 0x811c9dc5, b = 5381;
+        for (let i = 0; i < m.length; i++) { const c = m.charCodeAt(i); a = Math.imul(a ^ c, 0x01000193); b = (Math.imul(b, 33) + c) | 0; }
+        top = (top + (a >>> 0)) >>> 0; xor ^= b; n++;
+      });
+    });
+    return 's2:' + n + ':' + top.toString(36) + ':' + (xor >>> 0).toString(36);
   }
   async function oySikistir(metin) {
     if (typeof CompressionStream === 'function') {
@@ -21781,7 +21837,7 @@
       const tema = { theme: veri.theme, fontSize: veri.fontSize, contrast: veri.contrast };
       delete veri.theme; delete veri.fontSize; delete veri.contrast;   // görünüm tercihleri özet kaydında durur: tema değişti diye yeni kopya alınmaz
       veri.exported = 0;
-      const metin = JSON.stringify(veri), h = oyOzet(metin), liste = await oyListe();
+      const metin = JSON.stringify(veri), h = oyOzet(veri), liste = await oyListe();
       if (liste.length && liste[0].h === h) { oy.kirli = false; oy.son = Math.max(oy.son, liste[0].t); return { ayni: true }; }
       const sik = await oySikistir(metin), t = Date.now();
       const ozet = { t: t, h: h, neden: neden || '', b: metin.length, s: sik.z ? sik.d.byteLength : metin.length * 2, tema: tema,

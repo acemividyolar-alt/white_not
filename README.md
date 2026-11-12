@@ -263,6 +263,9 @@ Aynı menünün altında:
     `Adım N: ` yazılır. `Eğer … ise`, `İken`, `İçin`, `Değilse` gibi blok açan satırdan sonra bir içeride başlar.
   - Araya adım eklenince ya da numaralı satır silinince aşağıdaki adımlar ve onlara giden `Adım N'e git`ler
     kendiliğinden kayar (ekler de uyar: `Adım 5'e` → `Adım 6'ya`).
+  - `Değilse`, `Eğer sonu`, `Döngü sonu`, `… olana kadar` satırı gövdenin hizasında yazılıp Enter'a basılınca
+    kendiliğinden ait olduğu `Eğer` / döngü satırının hizasına çekilir (önce dışarı çıkmak gerekmez); sonraki
+    adım doğru yerde açılır. Sonda boş kalan `Adım N:` şemada kutu üretmez.
   - Her Enter yeni bir adım açar: boş adımda da (numara hiç kalkmaz, numarasız boş satır oluşmaz);
     girintili boş adımda Enter bir dışarı çıkarır. Numaranın önünde ya da hemen arkasında Enter o adımın
     önüne boş bir adım açar. Boş adımda Geri silme adımı siler; dolu adımda numaranın hemen arkasında
