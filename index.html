@@ -343,6 +343,19 @@
     background: var(--green); border-color: var(--green);
   }
   .task-check:checked::after, .card-check:checked::after, .modal-check:checked::after, .md li.md-check input:checked::after, .cal-row input[type="checkbox"]:checked::after { opacity: 1; }
+  /* Dokunmatik ekranda onay kutularının dokunma alanı büyür (görünüş aynı kalır): 17–20 piksellik kutuya parmakla isabet
+     etmek zordu. Alt alta sık duran kutularda (kontrol listesi) alan yalnız yana doğru genişler ki komşu satırın
+     kutusuna taşmasın. Proje silme çarpısı ve sütun menüsü düğmesi de büyür. */
+  @media (pointer: coarse) {
+    .task-check, .card-check, .modal-check, .md li.md-check input, .cal-row input[type="checkbox"] { position: relative; }
+    .task-check::before, .card-check::before, .modal-check::before, .md li.md-check input::before, .cal-row input[type="checkbox"]::before { content: ""; position: absolute; inset: -11px; }
+    .md li.md-check input::before { inset: -3px -11px; }
+    .cal-row input[type="checkbox"]::before { inset: -10px -11px; }
+    .subs-mini li input { width: 20px; height: 20px; }
+    .subs .sub-row input[type="checkbox"] { width: 22px; height: 22px; }
+    .proj .proj-x { width: 32px; height: 32px; font-size: 1rem; }
+    .column-head .column-menu-btn { width: 36px; height: 36px; }
+  }
 
   /* Bağlantı gibi görünen düğme */
   .link-btn { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
@@ -719,6 +732,13 @@
   .actions button[data-del]:hover { background: var(--danger-soft); color: var(--danger); }
 
   .empty { text-align: center; color: var(--muted); padding: 2.5rem 1rem; border: 1px dashed var(--line-2); border-radius: var(--r-lg); }
+  /* Uzun listenin sonundaki "… öğe daha" düğmesi (ekrana yaklaşınca kendiliğinden açılır) */
+  .list-more {
+    display: block; width: 100%; margin-top: 0.6rem; padding: 0.7rem 1rem; border-radius: var(--r-lg);
+    border: 1px dashed var(--line-2); background: transparent; color: var(--muted); font: inherit; font-size: 0.875rem; cursor: pointer;
+  }
+  .list-more:hover { color: var(--ink); border-color: var(--accent); }
+  .modal-overlay > [tabindex="-1"]:focus { outline: none; }   /* pencere açılınca odak kutunun kendisine alınır; çerçeve çizilmez */
   .status { font-size: 0.75rem; color: var(--muted); text-align: center; margin: 1.2rem 0 0.5rem; }
 
   /* ---- Son tarih ---- */
@@ -812,6 +832,8 @@
   .card {
     background: var(--paper); border: 1px solid var(--line); border-radius: var(--r);
     padding: 0; overflow: hidden; cursor: grab; box-shadow: var(--shadow-1);
+    /* Sütun dolunca kartlar büzülmesin (yazı ve etiketler kesiliyordu); sütunun kendisi kaysın */
+    flex-shrink: 0;
     /* Dokunmatikte parmakla kaydırma serbest kalır; sürüklemek için karta basılı tutulur
        (bkz. onCardPointerDown). touch-callout: uzun basınca iOS menüsü çıkmasın. */
     touch-action: manipulation;
@@ -1104,6 +1126,16 @@
   .modal-actions { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; margin-top: 1.4rem; flex-wrap: wrap; }
   .modal-actions-right { display: flex; gap: 0.5rem; flex-wrap: wrap; }
   .modal-note { font-size: 0.875rem; color: var(--muted); line-height: 1.6; margin-bottom: 0.85rem; }
+  /* Hızlı ekle penceresi */
+  .modal.hizli { max-width: 460px; }
+  .hizli-satir { display: flex; gap: 0.5rem; align-items: center; }
+  .hizli-satir #hizliMetin { flex: 1; min-width: 0; height: 44px; font-size: 1rem; }
+  .hizli-satir #hizliSaat { height: 44px; min-width: 6.6rem; }
+  .hizli-eklenen { list-style: none; margin: 0.6rem 0 0; padding: 0; max-height: 8.5rem; overflow-y: auto; font-size: 0.875rem; color: var(--ink-2); }
+  .hizli-eklenen li { padding: 0.15rem 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hizli-eklenen li::before { content: "\2713"; color: var(--green); font-weight: 700; margin-right: 0.45rem; }
+  .hizli-ipucu { font-size: 0.8125rem; color: var(--muted); }
+  .modal.hizli .modal-actions { margin-top: 1rem; }
   .modal .color-dots { padding: 0; }
   .cover-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 
@@ -1820,6 +1852,21 @@
   .bk-mode small { display: block; color: var(--muted); font-size: 0.8125rem; line-height: 1.5; margin-top: 0.15rem; }
   .bk-pick-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.85rem; font-weight: 600; color: var(--ink-2); margin-bottom: 0.35rem; }
   .bk-list { max-height: 34vh; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--r-lg); }
+  /* Otomatik yedekler penceresi */
+  .oy-list { max-height: 44vh; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--r-lg); }
+  .oy-row { display: flex; gap: 0.5rem; align-items: center; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--line); }
+  .oy-row:last-child { border-bottom: 0; }
+  .oy-ne { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; }
+  .oy-ne b { font-weight: 640; }
+  .oy-ne small { font-size: 0.78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .oy-ne .oy-rozet { font-size: 0.72rem; font-weight: 600; color: var(--ink-2); background: var(--paper-2); border: 1px solid var(--line); border-radius: 999px; padding: 0 0.45rem; margin-left: 0.4rem; white-space: nowrap; }
+  .oy-bos { padding: 1.3rem; color: var(--muted); text-align: center; font-size: 0.9rem; line-height: 1.55; }
+  .oy-uyari { margin: 0.8rem 0 0; }
+  @media (max-width: 760px) {   /* telefonda: özet üstte tam satır, düğmeler altında */
+    .oy-row { flex-wrap: wrap; }
+    .oy-ne { flex-basis: 100%; }
+    .oy-row [data-oyind] { margin-left: auto; }
+  }
   .bk-row { display: flex; gap: 0.6rem; align-items: center; min-height: 42px; padding: 0.35rem 0.75rem; border-bottom: 1px solid var(--line); cursor: pointer; }
   .bk-row:last-child { border-bottom: 0; }
   .bk-row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2183,13 +2230,15 @@
      - Şema / Akış araç çubukları tek satırda yana kayar.
      =================================================================== */
   @media (max-width: 760px) {
+    /* Kapalıyken gölgesi yok ve görünmez (visibility): eskiden gölge ekranın sol kenarına gri bir şerit olarak
+       taşıyordu, klavyeyle gezerken de görünmeyen çekmecedeki düğmelere odaklanılabiliyordu. */
     .sidebar {
       position: fixed; top: 0; left: 0; bottom: 0; z-index: 50;
-      width: 84%; max-width: 310px; transform: translateX(-100%);
-      transition: transform 0.25s ease; box-shadow: var(--shadow-3);
+      width: 84%; max-width: 310px; transform: translateX(-100%); visibility: hidden;
+      transition: transform 0.25s ease, visibility 0s linear 0.25s;
       padding-top: calc(1rem + env(safe-area-inset-top, 0px));
     }
-    .app.drawer-open .sidebar { transform: translateX(0); }
+    .app.drawer-open .sidebar { transform: translateX(0); visibility: visible; box-shadow: var(--shadow-3); transition: transform 0.25s ease, visibility 0s; }
     .app.drawer-open .overlay { display: block; }
     .menu-btn { display: grid; margin-left: -0.45rem; }
     .gs-top { display: grid; }
@@ -2246,6 +2295,15 @@
     .modal-body { padding: 0.3rem 1.1rem 1.2rem; }
     .modal-title-input { font-size: 1.2rem; }
     .modal-actions { position: sticky; bottom: calc(-1.2rem - env(safe-area-inset-bottom, 0px)); background: var(--paper); margin: 1.1rem -1.1rem -1.2rem; padding: 0.7rem 1.1rem calc(0.8rem + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
+
+    /* Hızlı ekle penceresi telefonda üstten açılır: klavye açılınca altında kalmasın */
+    #hizliModal.modal-overlay { padding: 0.5rem; }
+    #hizliModal.modal-overlay.open { align-items: flex-start; }
+    #hizliModal .modal { border-radius: var(--r-xl); border-bottom: 1px solid var(--line); margin-top: env(safe-area-inset-top, 0px); padding-bottom: 0; }
+    #hizliModal.open .modal { animation: modalIn 0.18s ease-out; }
+    #hizliModal .modal-actions { position: static; margin: 1rem 0 0; padding: 0; border-top: 0; background: none; }
+    #hizliModal .hizli-ipucu { display: none; }
+    #hizliModal .modal-actions-right { margin-left: auto; }
 
     /* Arama penceresi telefonda ekranın üstünden açılır */
     .gs-overlay.open { padding: 0.5rem; }
@@ -2427,6 +2485,7 @@
               <div class="menu-group-label">Yedek</div>
               <button data-act="json-export">JSON yedeği indir</button>
               <button data-act="json-import">JSON yedeği yükle&hellip;</button>
+              <button data-act="oto-yedek">Otomatik yedekler&hellip;</button>
               <div class="sep"></div>
               <div class="menu-group-label">Takvim</div>
               <button data-act="ics-import">Takvim dosyası yükle (.ics)&hellip;</button>
@@ -3101,6 +3160,33 @@
 </div>
 
 <!-- ===================================================================
+     HIZLI EKLE: panoda "+ Kart ekle", takvimde "+ Görev". Yalnız başlık (takvimde isteğe bağlı saat) sorar;
+     Enter ekler ve pencere açık kalır, böylece art arda birkaç tane yazılabilir. Boş Enter / Esc / Bitti kapatır.
+     =================================================================== -->
+<div class="modal-overlay" id="hizliModal">
+  <div class="modal hizli">
+    <div class="modal-head">
+      <div class="modal-heading" id="hizliBaslik">Yeni kart</div>
+      <button class="modal-close" id="hizliKapat" type="button" aria-label="Kapat">&times;</button>
+    </div>
+    <form class="modal-body" id="hizliForm" autocomplete="off">
+      <div class="hizli-satir">
+        <input class="modal-tags-input" type="text" id="hizliMetin" maxlength="300" placeholder="Başlık" aria-labelledby="hizliBaslik" enterkeyhint="done">
+        <input class="modal-select" type="time" id="hizliSaat" aria-label="Saat (isteğe bağlı)" title="Saat (isteğe bağlı)" hidden>
+      </div>
+      <ul class="hizli-eklenen" id="hizliEklenen" aria-live="polite"></ul>
+      <div class="modal-actions">
+        <span class="hizli-ipucu" id="hizliIpucu">Enter: ekle ve sıradakini yaz</span>
+        <div class="modal-actions-right">
+          <button class="modal-btn" type="button" id="hizliBitti">Bitti</button>
+          <button class="modal-btn primary" type="submit" id="hizliEkle">Ekle</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================================================================
      ÇÖP KUTUSU: silinen not / görev, akış şeması ve projeler 30 gün burada durur.
      =================================================================== -->
 <div class="modal-overlay" id="trashModal">
@@ -3115,6 +3201,30 @@
       <div class="modal-actions">
         <button class="modal-btn danger" id="trashEmpty">Çöp kutusunu boşalt</button>
         <button class="modal-btn primary" id="trashDone">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     OTOMATİK YEDEKLER: kişisel alanın bu cihazda kendiliğinden saklanan kopyaları; bir tarihe geri dönülür ya da indirilir
+     =================================================================== -->
+<div class="modal-overlay" id="oyModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-heading">Otomatik yedekler</div>
+      <button class="modal-close" id="oyKapat" type="button" aria-label="Kapat">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-note">Kişisel alanının (projeler, notlar, pano, şema, akış) kopyası <b>bu cihazda</b> kendiliğinden saklanır. Yanlışlıkla sildiğin ya da bozduğun bir şeyi buradan geri getirebilirsin.</p>
+      <div class="oy-list" id="oyListe" aria-live="polite"></div>
+      <p class="modal-note oy-uyari">Değişiklik oldukça en sık yarım saatte bir kopya alınır; son iki haftanın her günü ve son iki ayın her haftası için bir kopya kalır. Tarayıcının site verilerini silersen kopyalar da silinir: önemli şeyler için ara sıra <b>İndir</b> ile dosyasını da al.</p>
+      <div class="modal-actions">
+        <button class="modal-btn danger" id="oySil" type="button">Kopyaları sil</button>
+        <div class="modal-actions-right">
+          <button class="modal-btn" id="oySimdi" type="button">Şimdi yedekle</button>
+          <button class="modal-btn primary" id="oyBitti" type="button">Kapat</button>
+        </div>
       </div>
     </div>
   </div>
@@ -3738,6 +3848,8 @@
   /* GITHUB İLE PAYLAŞ: kayıt değişince ve proje listesi çizilince haber verilir
      (aşağıda "GITHUB İLE PAYLAŞ" bölümü kurulunca { write, render } olur). */
   let ghHook = null;
+  /* OTOMATİK YEDEK: kişisel alanda bir kayıt değişince haber verilir (aşağıda "OTOMATİK YEDEK" bölümü kurulunca işlev olur). */
+  let oyHook = null;
 
   async function sGet(k){
     if (cloud.on && !isLocalKey(k)) { const v = cloud.mirror.get(k); return v == null ? null : { value: v }; }
@@ -3750,6 +3862,7 @@
   async function sSet(k,v){
     if (ghHook && !isLocalKey(k)) ghHook.write();
     if (cloud.on && !isLocalKey(k)) return cloudSet(k, v);
+    if (oyHook && !isLocalKey(k)) oyHook();
     if (k.indexOf('item:') === 0) { try { const old = localStorage.getItem(STORE_PREFIX + k); if (old !== null && old !== v) lhArchive(k, old); } catch (e) {} }
     try { localStorage.setItem(STORE_PREFIX + k, v); return true; }
     catch(e){
@@ -3792,6 +3905,7 @@
   async function sDel(k){
     if (ghHook && !isLocalKey(k)) ghHook.write();
     if (cloud.on && !isLocalKey(k)) { cloudDel(k); return; }
+    if (oyHook && !isLocalKey(k)) oyHook();
     if (k.indexOf('item:') === 0) { try { const old = localStorage.getItem(STORE_PREFIX + k); if (old !== null) lhArchive(k, old, true); } catch (e) {} }
     try { localStorage.removeItem(STORE_PREFIX + k); } catch(e){}
   }
@@ -4184,6 +4298,7 @@
     add('Çöp kutusu', () => openTrash(), '', 'silinenler geri getir');
     add('JSON yedeği indir', () => handleExportAction('json-export'), '', 'yedek dışa aktar kaydet');
     add('JSON yedeği yükle…', () => handleExportAction('json-import'), '', 'yedek içe aktar geri yükle');
+    add('Otomatik yedekler…', () => handleExportAction('oto-yedek'), '', 'yedek kopya geri yükle eski hali zaman');
     add('Takvim dosyası yükle (.ics)…', () => handleExportAction('ics-import'), '', 'takvim içe aktar google outlook');
     if (!isInstalled()) add('Uygulama olarak yükle…', () => installApp(), '', 'telefon bilgisayar pwa');
     const flow = f => async () => { await setView('flow'); f(); };
@@ -4891,12 +5006,43 @@
       return;
     }
 
-    // Her öğeyi türüne göre uygun HTML'e çevir ve ekrana yaz
-    el('list').innerHTML = mine.map(i => i.type === 'task' ? taskHTML(i) : noteHTML(i)).join('');
+    // Öğeler türüne göre HTML'e çevrilip ekrana yazılır — parça parça: önce ilk LIST_PARCA öğe, listenin sonuna
+    // yaklaşınca sıradaki parça eklenir (listDahaCiz). Arama, süzgeç, sıralama ya da proje değişince baştan başlar;
+    // aynı listede bir öğe değişince o ana kadar açılmış kısım korunur (kaydırılan yer kaybolmaz).
+    const baglam = [activeProject, q, dueFilter || '', pf, el('listSort').value].join('\u0001');
+    if (baglam !== listBaglam) { listBaglam = baglam; listHedef = LIST_PARCA; }
+    listSira = mine;
+    listCizilen = Math.min(mine.length, Math.max(LIST_PARCA, listHedef));
+    el('list').innerHTML = listHTML(mine.slice(0, listCizilen));
     el('list').classList.toggle('selecting', listSelOn);
-    bindItemEvents(); // yeni oluşan butonlara olayları bağla
+    listSonEkle();
   }
-
+  /* LİSTE PARÇA PARÇA ÇİZİLİR. Yüzlerce notta her tuşta, her işarette bütün listeyi yeniden kurmak telefonda
+     saniyeler sürüyordu (300 notta arama kutusuna her harf ~1 sn). Artık bir seferde LIST_PARCA öğe çizilir;
+     sondaki "… öğe daha" düğmesi ekrana yaklaşınca (ya da dokununca) sıradaki parça eklenir. */
+  const LIST_PARCA = 60;
+  let listSira = [], listCizilen = 0, listHedef = LIST_PARCA, listBaglam = '', listGozcu = null;
+  const listHTML = dilim => dilim.map(i => i.type === 'task' ? taskHTML(i) : noteHTML(i)).join('');
+  function listSonEkle() {
+    const kalan = listSira.length - listCizilen;
+    if (listGozcu) listGozcu.disconnect();
+    if (kalan <= 0) return;
+    el('list').insertAdjacentHTML('beforeend', '<button type="button" class="list-more">' + kalan + ' öğe daha — göster</button>');
+    if (!listGozcu && 'IntersectionObserver' in window) {
+      listGozcu = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) listDahaCiz(); }, { rootMargin: '700px 0px' });
+    }
+    if (listGozcu) listGozcu.observe(el('list').querySelector('.list-more'));
+  }
+  function listDahaCiz() {
+    const son = el('list').querySelector('.list-more');
+    if (!son || listCizilen >= listSira.length) return;
+    son.remove();
+    const dilim = listSira.slice(listCizilen, listCizilen + LIST_PARCA);
+    el('list').insertAdjacentHTML('beforeend', listHTML(dilim));
+    listCizilen += dilim.length;
+    listHedef = listCizilen;
+    listSonEkle();
+  }
   /* Arama kutusundaki metinden süzgeç üretir (liste ve pano birlikte kullanır).
      - Kelimeler ayrı ayrı aranır, hepsi geçmeli: "fatura ekim" → ikisini de içerenler
      - Türkçe harf ve büyük/küçük harf farkı yok: "odev" → "Ödev"
@@ -4915,10 +5061,15 @@
     }
     const words = fold(q).split(/\s+/).filter(Boolean);
     return { tag: null, test: i => {
-      const hay = fold((i.title || '') + ' ' + (i.body || '') + ' ' + (i.tags || []).map(t => '#' + t).join(' ') + ' ' + (i.subs || []).map(x => x.t).join(' '));
-      return words.every(w => hay.includes(w));
+      // Aranan metnin sadeleştirilmiş hali öğe başına saklanır (öğe değişince yenilenir): her tuşta bütün
+      // notların gövdesini yeniden sadeleştirmek uzun listelerde yazmayı takıltıyordu.
+      const raw = (i.title || '') + ' ' + (i.body || '') + ' ' + (i.tags || []).map(t => '#' + t).join(' ') + ' ' + (i.subs || []).map(x => x.t).join(' ');
+      let c = searchHay.get(i);
+      if (!c || c.raw !== raw) { c = { raw: raw, hay: fold(raw) }; searchHay.set(i, c); }
+      return words.every(w => c.hay.includes(w));
     } };
   }
+  const searchHay = new WeakMap();
   /* Etikete tıklanınca: listeyi o etikete süz (aynı etikete tekrar tıklayınca süzgeç kalkar) */
   function setTagFilter(tag) {
     const on = curTagFilter === flFold(tag);
@@ -4970,25 +5121,34 @@
     '</div>';
   }
 
-  /* Çizimden sonra, yeni oluşan kartlardaki kutucuk ve butonlara
-     tıklama/değişiklik olaylarını bağlar. */
-  function bindItemEvents() {
-    el('list').querySelectorAll('[data-check]').forEach(c => c.addEventListener('change', () => toggleDone(c.dataset.check)));
-    el('list').querySelectorAll('[data-subcheck]').forEach(c => c.addEventListener('change', () => { const [a, b] = c.dataset.subcheck.split(':'); toggleSub(a, b); }));
-    el('list').querySelectorAll('[data-mdline]').forEach(c => c.addEventListener('change', () => toggleMdCheck(c.closest('[data-mditem]').dataset.mditem, +c.dataset.mdline)));
-    el('list').querySelectorAll('[data-pin]').forEach(b => b.addEventListener('click', () => togglePin(b.dataset.pin)));
-    el('list').querySelectorAll('[data-tagf]').forEach(b => b.addEventListener('click', () => setTagFilter(b.dataset.tagf)));
-    // Silmeden önce sor (pano penceresindeki "Kartı sil" ile aynı davranış)
-    el('list').querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
-      removeItem(b.dataset.del);
-    }));
-    // Karta tıklayınca düzenleme penceresi açılsın (düğme/kutucuk ve metin seçimi hariç)
-    el('list').querySelectorAll('[data-item]').forEach(n => n.addEventListener('click', e => {
+  /* Listedeki kutucuk, düğme ve kart tıklamaları: olaylar tek tek öğelere değil listenin kendisine bağlıdır
+     (her çizimde binlerce dinleyici kurulmaz; sonradan eklenen parçalar da kendiliğinden çalışır). */
+  function bindListEvents() {
+    const list = el('list');
+    list.addEventListener('change', e => {
+      const t = e.target;
+      if (!t || !t.dataset) return;
+      if (t.dataset.check) toggleDone(t.dataset.check);
+      else if (t.dataset.subcheck) { const [a, b] = t.dataset.subcheck.split(':'); toggleSub(a, b); }
+      else if (t.dataset.mdline != null) { const m = t.closest('[data-mditem]'); if (m) toggleMdCheck(m.dataset.mditem, +t.dataset.mdline); }
+    });
+    list.addEventListener('click', e => {
+      const b = e.target.closest('.list-more, [data-pin], [data-tagf], [data-del]');
+      if (b && list.contains(b)) {
+        if (b.classList.contains('list-more')) listDahaCiz();
+        else if (b.dataset.pin) togglePin(b.dataset.pin);
+        else if (b.dataset.del) removeItem(b.dataset.del);
+        else setTagFilter(b.dataset.tagf);
+        return;
+      }
+      // Karta tıklayınca düzenleme penceresi açılsın (düğme/kutucuk ve metin seçimi hariç)
+      const n = e.target.closest('[data-item]');
+      if (!n || !list.contains(n)) return;
       if (listSelOn) { e.preventDefault(); toggleListSel(n.dataset.item); return; } // seçim kipinde dokununca seçilir
       if (e.target.closest('button, input, a')) return;
       if (String(window.getSelection())) return; // kullanıcı metin seçiyorsa açma
       openCard(n.dataset.item);
-    }));
+    });
   }
 
   /* ===================================================================
@@ -5025,6 +5185,9 @@
   function renderBoard() {
     const wrap = el('boardWrap');
     if (!wrap) return;
+    // Pano görünmüyorken çizilmez (her not eklemede / işaretlemede gizli pano da baştan kuruluyordu);
+    // Pano'ya geçilince setView çizer.
+    if (currentView !== 'board') return;
     if (!activeProject) { wrap.innerHTML = ''; return; }
 
     const cols = projectColumns(activeProject);
@@ -5766,33 +5929,88 @@
     renderProjects(); renderMain(); renderBoard();
   }
 
+  /* ---- HIZLI EKLE PENCERESİ ----
+     Panoda "+ Kart ekle" ve takvimde "+ Görev" eskiden tarayıcının kendi soru kutusunu (prompt) açıyordu: telefonda
+     site adresiyle çıkan, temaya uymayan, bazı tarayıcılarda "bu sayfa başka pencere açmasın" denince hiç açılmayan bir kutu.
+     Artık uygulamanın kendi penceresi açılır. o: { baslik, yer, saatli, saat, ekle: async (metin, saat) => {} } */
+  let hizli = null;
+  function openHizli(o) {
+    closeDrawer();
+    hizli = Object.assign({ mesgul: false }, o);
+    el('hizliBaslik').textContent = o.baslik;
+    el('hizliMetin').value = '';
+    el('hizliMetin').placeholder = o.yer || 'Başlık';
+    el('hizliSaat').hidden = !o.saatli;
+    el('hizliSaat').value = o.saatli && TIME_RE.test(o.saat || '') ? o.saat : '';
+    el('hizliEklenen').innerHTML = '';
+    el('hizliModal').classList.add('open');
+    el('hizliMetin').focus();   // yazmak için açıldı: telefonda klavye de açılsın
+  }
+  function closeHizli() {
+    const h = hizli;
+    el('hizliModal').classList.remove('open'); hizli = null;
+    // Kart eklenince pano yeniden çizilir, pencereyi açan düğme de yenilenir: odak yeni düğmeye döner
+    const d = h && h.donus ? h.donus() : null;
+    if (d && !matchMedia('(pointer: coarse)').matches) { try { d.focus({ preventScroll: true }); } catch (e) {} }
+  }
+  async function hizliGonder() {
+    const h = hizli;
+    if (!h || h.mesgul) return;
+    const metin = el('hizliMetin').value.trim().slice(0, 300);
+    if (!metin) { closeHizli(); return; }   // boş Enter: bitti
+    const saat = h.saatli && TIME_RE.test(el('hizliSaat').value) ? el('hizliSaat').value : null;
+    h.mesgul = true;
+    el('hizliMetin').value = '';   // sıradaki hemen yazılabilsin (kayıt sürerken yazılanlar karışmasın)
+    try { await h.ekle(metin, saat); }
+    catch (e) { console.error(e); if (hizli === h && !el('hizliMetin').value) el('hizliMetin').value = metin; h.mesgul = false; return; }
+    h.mesgul = false;
+    if (hizli !== h) return;   // bu arada kapatıldı
+    const li = document.createElement('li');
+    li.textContent = (saat ? saat + ' · ' : '') + metin;
+    el('hizliEklenen').appendChild(li);
+    li.scrollIntoView({ block: 'nearest' });
+    el('hizliMetin').focus();
+  }
+  el('hizliForm').addEventListener('submit', e => { e.preventDefault(); hizliGonder(); });
+  el('hizliBitti').addEventListener('click', async () => { if (el('hizliMetin').value.trim()) await hizliGonder(); closeHizli(); });   // yazılı duran da eklenir
+  el('hizliKapat').addEventListener('click', closeHizli);
+  // Dışarı tıklama: kutu boşsa kapatır; yazı varken kapatmaz (yanlışlıkla dokununca yazılan kaybolmasın)
+  el('hizliModal').addEventListener('click', e => { if (e.target === el('hizliModal') && !el('hizliMetin').value.trim()) closeHizli(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && el('hizliModal').classList.contains('open')) { e.stopPropagation(); e.preventDefault(); closeHizli(); } }, true);
+
   /* ---- KART: HIZLI EKLE (sütun altından) ----
      Sadece başlık sorar; detaylar sonra kart penceresinden düzenlenebilir. */
-  async function addCardToColumn(colId) {
-    const title = prompt('Yeni kart:', '');
-    if (title === null) return;
-    const trimmed = title.trim();
-    if (!trimmed) return;
-    // Sütunun sonuna eklensin
-    const inCol = items.filter(x => x.columnId === colId);
-    const maxOrder = inCol.length ? Math.max(...inCol.map(x => x.order ?? x.created)) : 0;
-    const item = {
-      id: uid(),
-      projectId: activeProject,
-      columnId: colId,
-      order: maxOrder + 10,
-      type: 'note',
-      title: trimmed,
-      body: '',
-      tags: [],
-      cover: null,
-      done: false,
-      pinned: false,
-      created: Date.now()
-    };
-    items.push(item);
-    await saveItem(item);
-    renderProjects(); renderMain(); renderBoard();
+  function addCardToColumn(colId) {
+    const col = columns.find(c => c.id === colId);
+    if (!col) return;
+    const pid = col.projectId;
+    openHizli({
+      baslik: '“' + String(col.name || 'Sütun').slice(0, 40) + '” sütununa kart ekle', yer: 'Kartın başlığı',
+      donus: () => document.querySelector('#boardWrap [data-addcard="' + colId + '"]'),
+      ekle: async metin => {
+        if (!columns.some(c => c.id === colId)) return;   // pencere açıkken sütun silindi (ör. ekipte başkası)
+        // Sütunun sonuna eklensin
+        const inCol = items.filter(x => x.columnId === colId);
+        const maxOrder = inCol.length ? Math.max(...inCol.map(x => x.order ?? x.created)) : 0;
+        const item = {
+          id: uid(),
+          projectId: pid,
+          columnId: colId,
+          order: maxOrder + 10,
+          type: 'note',
+          title: metin,
+          body: '',
+          tags: [],
+          cover: null,
+          done: false,
+          pinned: false,
+          created: Date.now()
+        };
+        items.push(item);
+        await saveItem(item);
+        renderProjects(); renderMain(); renderBoard();
+      }
+    });
   }
 
   /* ===================================================================
@@ -6476,19 +6694,24 @@
   }, 60000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkReminders(); });
 
-  async function calAddTask(time) {
-    const tm = TIME_RE.test(time || '') ? time : null;
-    const title = prompt(fmtLongDay(calSel) + (tm ? ' ' + tm : '') + ' için yeni görev:', '');
-    if (title === null || !title.trim()) return;
-    const cols = projectColumns(activeProject);
-    const colId = cols.length ? cols[0].id : null;
-    const inCol = items.filter(x => x.columnId === colId);
-    const item = { id: uid(), projectId: activeProject, columnId: colId, order: (inCol.length ? Math.max(...inCol.map(x => x.order ?? x.created)) : 0) + 10,
-                   type: 'task', title: title.trim().slice(0, 300), body: '', tags: [], cover: null, due: calSel, done: false, pinned: false, created: Date.now() };
-    if (tm) item.time = tm;
-    items.push(item);
-    await saveItem(item);
-    renderProjects(); renderMain(); renderBoard();
+  function calAddTask(time) {
+    const gun = calSel, pid = activeProject;
+    if (!gun) return;
+    openHizli({
+      baslik: fmtLongDay(gun) + ' için yeni görev', yer: 'Görevin adı', saatli: true, saat: TIME_RE.test(time || '') ? time : '',
+      donus: () => document.querySelector('#calDay [data-caladd], #calGrid [data-caladd]'),
+      ekle: async (metin, saat) => {
+        const cols = projectColumns(pid);
+        const colId = cols.length ? cols[0].id : null;
+        const inCol = items.filter(x => x.columnId === colId);
+        const item = { id: uid(), projectId: pid, columnId: colId, order: (inCol.length ? Math.max(...inCol.map(x => x.order ?? x.created)) : 0) + 10,
+                       type: 'task', title: metin, body: '', tags: [], cover: null, due: gun, done: false, pinned: false, created: Date.now() };
+        if (saat) item.time = saat;
+        items.push(item);
+        await saveItem(item);
+        renderProjects(); renderMain(); renderBoard();
+      }
+    });
   }
 
   /* ---- TAKVİMDE SÜRÜKLE ----
@@ -20086,6 +20309,153 @@
   TOOL_MENUS.forEach(id => toolMenuObserver.observe(el(id), { attributes: true, attributeFilter: ['class'] }));
   el('menuScrim').addEventListener('click', closeToolMenus);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeToolMenus(); });
+
+  /* ===================================================================
+     PENCERE YÖNETİCİSİ — bütün pencereler (modal-overlay), telefondaki çekmece ve açılır menüler için ortak
+     davranış. Pencerelerin kendi açma / kapama kodlarına dokunulmaz; "open" sınıfı izlenir (MutationObserver):
+       • Erişilebilirlik: role="dialog", aria-modal, başlıktan ad. Açılınca odak pencereye girer, Tab
+         pencerenin içinde döner (arkadaki sayfaya kaçmaz), kapanınca odak pencereyi açan düğmeye döner.
+       • Pencere en üstten açılır (içindeki bir kutuya odaklanmak başlığı ekranın dışına kaydırabiliyordu).
+       • GERİ tuşu / hareketi önce en üstteki pencereyi (telefonda çekmeceyi ve menüyü de) kapatır; eskiden
+         doğrudan uygulamadan çıkıyordu. Açık her katman için tarayıcı geçmişine bir kayıt eklenir
+         (history.state.wnKatman = derinlik); katman düğmeyle kapanınca kayıt geri alınır. Geçmişin gerçek
+         durumu her seferinde history.state'ten okunur (ayrı sayaç tutulmaz), böylece ikisi birbirinden kopmaz.
+       • Esc telefondaki çekmeceyi de kapatır.
+     =================================================================== */
+  const wnKatman = { acik: [], bekle: false, bekleT: 0 };
+  const wnCekmece = { cekmece: true };   // telefon çekmecesi de bir katmandır (DOM öğesi değil)
+  const WN_PENCERE_ADI = { cardModal: 'Kart', tableModal: 'Tablo' };   // başlığı yazı kutusu olan pencereler
+  const wnKatmanUst = () => wnKatman.acik[wnKatman.acik.length - 1] || null;
+  const wnPencereMi = k => k !== wnCekmece && k.classList.contains('modal-overlay');
+  const wnGorunur = n => !!(n.offsetWidth || n.offsetHeight || n.getClientRects().length) && getComputedStyle(n).visibility !== 'hidden';
+  function wnOdaklanabilir(kok) {
+    const hepsi = [...kok.querySelectorAll('a[href], button, input, select, textarea, summary, [tabindex], [contenteditable="true"]')]
+      .filter(n => !n.disabled && n.tabIndex >= 0 && n.type !== 'hidden' && wnGorunur(n));
+    // seçenek düğmeleri (radio): Tab bir kümede yalnız seçili olana uğrar
+    return hepsi.filter(n => !(n.type === 'radio' && n.name && !n.checked && hepsi.some(o => o !== n && o.type === 'radio' && o.name === n.name && o.checked)));
+  }
+  function wnPencereAcildi(k) {
+    const kutu = k.querySelector('.modal, [role="dialog"]') || k;
+    if (!kutu.getAttribute('role')) kutu.setAttribute('role', 'dialog');
+    if (!kutu.hasAttribute('aria-modal')) kutu.setAttribute('aria-modal', 'true');
+    if (!kutu.getAttribute('aria-label') && !kutu.getAttribute('aria-labelledby')) {
+      const b = kutu.querySelector('.modal-heading');
+      if (b) { if (!b.id) b.id = k.id + 'Baslik'; kutu.setAttribute('aria-labelledby', b.id); }
+      else kutu.setAttribute('aria-label', WN_PENCERE_ADI[k.id] || 'Pencere');
+    }
+    // Pencereyi açan düğme: odak hâlâ ondaysa o; açan kod odağı çoktan içeri taşıdıysa odağın geldiği yer
+    const a = document.activeElement, gelen = k._wnGelen;
+    k._wnGelen = null;
+    k._wnOnceki = a && a !== document.body && !k.contains(a) ? a : (gelen && gelen.isConnected ? gelen : null);
+    setTimeout(() => {
+      if (!k.classList.contains('open')) return;
+      // açan kod içeride bir kutuya odaklandıysa dokunulmaz; odak dışarıda kaldıysa pencerenin kendisine alınır
+      // (ilk düğmeye değil: telefonda klavye açılmasın, yanlışlıkla Enter ile bir şey tetiklenmesin)
+      if (!k.contains(document.activeElement) && wnKatmanUst() === k) {
+        const gecici = !kutu.hasAttribute('tabindex');
+        if (gecici) { kutu.setAttribute('tabindex', '-1'); kutu.addEventListener('blur', () => kutu.removeAttribute('tabindex'), { once: true }); }
+        try { kutu.focus({ preventScroll: true }); } catch (e) {}
+      }
+      if (kutu.getBoundingClientRect().top < 0) k.scrollTop = 0;   // başlık ekranın üstünde kaldıysa en üste
+    }, 50);
+  }
+  function wnPencereKapandi(k) {
+    const onceki = k._wnOnceki;
+    k._wnOnceki = k._wnGelen = null;
+    setTimeout(() => {
+      // Açan düğme artık görünmüyorsa: menüdeki bir seçenekse menüyü açan düğmeye, o sırada kapanmış başka bir
+      // pencerenin içindeyse o pencereyi açan düğmeye dönülür.
+      let o = onceki;
+      for (let i = 0; i < 4 && o && o.isConnected && !wnGorunur(o); i++) {
+        const menu = o.closest('.menu'), ust = o.closest('.modal-overlay');
+        o = menu && menu.parentElement ? menu.parentElement.querySelector('button') : (ust && ust !== k ? ust._wnDonus : null);
+        if (menu && o && menu.contains(o)) o = null;
+      }
+      if (!o || !o.isConnected || !wnGorunur(o)) o = null;
+      k._wnDonus = o;
+      if (!o) return;
+      const a = document.activeElement, ust = wnKatmanUst();
+      if (a && a !== document.body && !k.contains(a)) return;   // odak zaten başka bir yere taşındı
+      if (ust && wnPencereMi(ust) && !ust.contains(o)) return;    // üstte başka bir pencere açık: odak onda kalır
+      // telefonda yazı kutusuna geri odaklanmak klavyeyi açar: yalnız düğmelere dönülür
+      if (/^(?:INPUT|TEXTAREA|SELECT)$/.test(o.tagName) && matchMedia('(pointer: coarse)').matches) return;
+      try { o.focus({ preventScroll: true }); } catch (e) {}
+    }, 0);
+  }
+  function wnKatmanKapat(k) {   // Geri tuşu: katman kendi kapatma yoluyla kapanır (kaydetme gibi adımlar atlanmasın)
+    if (k === wnCekmece) { closeDrawer(); return; }
+    if (wnPencereMi(k)) {
+      const b = k.querySelector('.modal-close');
+      if (b) b.click();
+      if (k.classList.contains('open')) k.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      return;
+    }
+    closeThemeMenu(); closeExportMenu(); closeToolMenus();   // açılır menü
+    k.classList.remove('open');
+  }
+  const wnGecmisD = () => { try { return (history.state && history.state.wnKatman) | 0; } catch (e) { return 0; } };
+  function wnKatmanGecmis() {   // geçmişteki kayıt derinliği = açık katman sayısı
+    if (wnKatman.bekle) return;   // geri gidiş sürüyor; bitince (popstate) yeniden bakılır
+    const n = wnKatman.acik.length;
+    let d = wnGecmisD();
+    try {
+      // Adreste davet bağlantısı (#…) dururken kayıt eklenmez: anahtar taşıyan adres geçmişte ikinci bir kayda kopyalanmasın
+      if (d < n && location.hash.length > 1) return;
+      while (d < n) history.pushState({ wnKatman: ++d }, '');
+      if (d > n) {
+        wnKatman.bekle = true;
+        clearTimeout(wnKatman.bekleT);
+        wnKatman.bekleT = setTimeout(() => {   // popstate gelmediyse (olmaması gerekir) yeniden denenmez; kayıt etkisizleştirilir
+          wnKatman.bekle = false;
+          try { if (wnGecmisD() > wnKatman.acik.length) history.replaceState(null, ''); } catch (e) {}
+        }, 2000);
+        history.go(n - d);
+      }
+    } catch (e) { wnKatman.bekle = false; }
+  }
+  function wnKatmanDegisti(muts) {
+    muts.forEach(m => {
+      const n = m.target, cekmece = n.id === 'app', k = cekmece ? wnCekmece : n;
+      const pencere = !cekmece && n.classList.contains('modal-overlay');
+      const acik = cekmece ? n.classList.contains('drawer-open') && isPhoneWidth()
+        : n.classList.contains('open') && (pencere || isPhoneWidth());   // menüler yalnız telefonda katman sayılır
+      const i = wnKatman.acik.indexOf(k);
+      if (acik && i < 0) { wnKatman.acik.push(k); if (pencere) wnPencereAcildi(k); }
+      else if (!acik && i >= 0) { wnKatman.acik.splice(i, 1); if (pencere) wnPencereKapandi(k); }
+    });
+    wnKatmanGecmis();
+  }
+  window.addEventListener('popstate', () => {
+    const bizim = wnKatman.bekle;   // katman düğmeyle kapandığı için kaydı biz geri aldık
+    wnKatman.bekle = false; clearTimeout(wnKatman.bekleT);
+    if (!bizim) {   // kullanıcı Geri'ye bastı: geçmişteki derinlikten fazla olan katmanlar üstten başlayarak kapanır
+      const d = wnGecmisD();
+      for (let i = wnKatman.acik.length - 1; i >= d; i--) wnKatmanKapat(wnKatman.acik[i]);
+    }
+    setTimeout(wnKatmanGecmis, 0);   // kapanmayan katman için kaydı yerine koyar; İleri'ye basıldıysa geri alır
+  });
+  // odak bir pencereye dışarıdan girdiyse nereden geldiği (pencere kapanınca oraya dönülür)
+  document.addEventListener('focusout', e => {
+    const y = e.relatedTarget, k = y && y.closest ? y.closest('.modal-overlay') : null;
+    if (k && !k._wnOnceki && !k.contains(e.target)) k._wnGelen = e.target;
+  });
+  document.addEventListener('keydown', e => {
+    const k = wnKatmanUst();
+    if (!k || e.defaultPrevented) return;
+    if (e.key === 'Escape') { if (k === wnCekmece) closeDrawer(); return; }
+    if (e.key !== 'Tab' || e.ctrlKey || e.metaKey || e.altKey || !wnPencereMi(k)) return;
+    const f = wnOdaklanabilir(k), a = document.activeElement;
+    if (!f.length) { e.preventDefault(); return; }
+    const disarida = !k.contains(a);
+    const uc = e.shiftKey ? (a === f[0] || (f.indexOf(a) < 0 && a.tabIndex < 0 && !a.closest('input, textarea, select, [contenteditable="true"]'))) : a === f[f.length - 1];
+    if (disarida || uc) { e.preventDefault(); f[e.shiftKey ? f.length - 1 : 0].focus(); }
+  });
+  {
+    const gozcu = new MutationObserver(wnKatmanDegisti);
+    document.querySelectorAll('.modal-overlay, .menu[id]').forEach(m => gozcu.observe(m, { attributes: true, attributeFilter: ['class'] }));
+    gozcu.observe(el('app'), { attributes: true, attributeFilter: ['class'] });
+    wnKatmanGecmis();   // sayfa, açık bir pencerenin geçmiş kaydı üstündeyken yenilendiyse o kayıt geri alınır
+  }
   el('flEmpty').addEventListener('click', e => { const b = e.target.closest('[data-flact]'); if (b) flFileAction(b.dataset.flact); });
 
   // Şekiller: gövdeden tut -> taşı, kenardaki noktadan tut -> ok çiz, dokun -> seç, iki kez dokun -> düzenle
@@ -21181,14 +21551,16 @@
 
   /* JSON YEDEĞİ İNDİR:
      Tüm projeleri, öğeleri ve TEMA tercihini tek bir JSON dosyasına yazar (tam yedek). */
-  function exportJSON() {
+  function backupData() {
     // Seçili tema (ör. "dark", "sepia" ya da cihaza göre: "auto")
     const theme = themePref;
-    const data = { version: 5, exported: Date.now(), theme: theme, fontSize: fontPref, contrast: hcPref == null ? 'auto' : hcPref ? 'on' : 'off',
-                   projects: projects, columns: columns, items: items,
-                   dbTables: dbTables, dbLinks: dbLinks, dbSettings: Object.values(dbSettings),
-                   flowCharts: flowCharts, flowNodes: flowNodes, flowEdges: flowEdges, flSettings: Object.values(flSettings) };
-    download(JSON.stringify(data, null, 2), 'notlar-yedek-' + todayStr() + '.json', 'application/json');
+    return { version: 5, exported: Date.now(), theme: theme, fontSize: fontPref, contrast: hcPref == null ? 'auto' : hcPref ? 'on' : 'off',
+             projects: projects, columns: columns, items: items,
+             dbTables: dbTables, dbLinks: dbLinks, dbSettings: Object.values(dbSettings),
+             flowCharts: flowCharts, flowNodes: flowNodes, flowEdges: flowEdges, flSettings: Object.values(flSettings) };
+  }
+  function exportJSON() {
+    download(JSON.stringify(backupData(), null, 2), 'notlar-yedek-' + todayStr() + '.json', 'application/json');
   }
 
   /* ---- YEDEK DOĞRULAMA ----
@@ -21319,6 +21691,7 @@
     if (merge && !picked.length) return;
     if (!merge && el('bkSafe').checked) exportJSON(); // değiştirmeden önce mevcut verinin yedeği
     closeBackupModal();
+    if (!merge) { try { await oyAl('once'); } catch (e) {} }   // ayrıca bu cihazda bir kopya: "Otomatik yedekler"den geri dönülebilir
     try {
       if (merge) await mergeBackup(data, picked);
       else await replaceWithBackup(data);
@@ -21328,6 +21701,215 @@
       renderProjects(); renderMain(); renderBoard(); renderSchema(); renderFlow();
     }
   }
+
+  /* ===================================================================
+     OTOMATİK YEDEK (kişisel alan)
+     Kişisel alandaki her şeyin (projeler, notlar, pano, şema, akış) tam kopyası bu cihazda, tarayıcının IndexedDB
+     deposunda saklanır (wn-yedek): açılışta (son kopyadan beri değişiklik varsa), değişiklik oldukça en sık yarım
+     saatte bir, sekme arka plana geçerken ve "Hepsini değiştir" ile yedek yüklemeden hemen önce. İçerik son kopyayla
+     aynıysa yenisi alınmaz. En yeni 6 kopya, son 14 günün her günü ve son 8 haftanın her haftası için birer kopya
+     tutulur (toplam 60 MB'ı geçmez); eskiler kendiliğinden silinir. Kopyalar sıkıştırılarak (gzip) saklanır.
+     "Dışa / İçe aktar → Otomatik yedekler" penceresinden bir kopya geri yüklenir (yedek yükleme penceresi açılır:
+     mevcutlara eklenir ya da hepsi değiştirilir) ya da dosya olarak indirilir.
+     Bu, cihazın bozulmasına / tarayıcı verilerinin silinmesine karşı korumaz (kopyalar da aynı tarayıcıda durur);
+     onun için "JSON yedeği indir" vardır. Ekip alanı sunucuda / Firebase'de durur, buraya alınmaz.
+     =================================================================== */
+  const OY_ARALIK = 30 * 60000, OY_SINIR = 60 * 1024 * 1024;
+  const oy = { kirli: true, son: 0, mesgul: false, zaman: 0 };
+  const oyOk = () => typeof indexedDB !== 'undefined' && /^https?:$|^file:$/.test(location.protocol);
+  let oyDbP = null;
+  function oyDb() {
+    if (!oyDbP) {
+      oyDbP = new Promise((ok, no) => {
+        let r;
+        try { r = indexedDB.open('wn-yedek', 1); } catch (e) { no(e); return; }
+        // ozet: { id, t, h, neden, b, s, n: { p, i, t, c }, tema } · veri: { id, z, d } (kopyanın kendisi; liste çizilirken okunmaz)
+        r.onupgradeneeded = () => { r.result.createObjectStore('ozet', { keyPath: 'id', autoIncrement: true }); r.result.createObjectStore('veri', { keyPath: 'id' }); };
+        r.onsuccess = () => { const d = r.result; d.onversionchange = () => { try { d.close(); } catch (e) {} oyDbP = null; }; ok(d); };
+        r.onerror = () => no(r.error);
+        r.onblocked = () => no(new Error('IndexedDB kilitli'));
+      });
+      oyDbP.catch(() => { oyDbP = null; });
+    }
+    return oyDbP;
+  }
+  const oyIstek = q => new Promise((ok, no) => { q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); });
+  async function oyListe() {   // yeniden eskiye
+    const d = await oyDb();
+    const rows = await oyIstek(d.transaction('ozet', 'readonly').objectStore('ozet').getAll());
+    return (rows || []).filter(r => r && typeof r.t === 'number' && isFinite(r.t)).sort((a, b) => (b.t - a.t) || (b.id - a.id));
+  }
+  function oyOzet(metin) {   // içerik değişti mi diye bakmak için (güvenlik amaçlı değil)
+    let a = 0x811c9dc5, b = 5381;
+    for (let i = 0; i < metin.length; i++) { const c = metin.charCodeAt(i); a = Math.imul(a ^ c, 0x01000193); b = (Math.imul(b, 33) + c) | 0; }
+    return metin.length + ':' + (a >>> 0).toString(36) + ':' + (b >>> 0).toString(36);
+  }
+  async function oySikistir(metin) {
+    if (typeof CompressionStream === 'function') {
+      try { return { z: 'gzip', d: await new Response(new Blob([metin]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer() }; } catch (e) {}
+    }
+    return { z: '', d: metin };
+  }
+  async function oyAc(v) {
+    if (v.z !== 'gzip') return String(v.d);
+    return await new Response(new Blob([v.d]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  }
+  /* Tutulmayacak kopyaların kimlikleri (liste: yeniden eskiye) */
+  function oyFazla(liste, simdi) {
+    const tut = new Set(), gun = new Set(), hafta = new Set();
+    liste.slice(0, 6).forEach(k => tut.add(k.id));
+    liste.forEach(k => {
+      const yas = simdi - k.t, d = new Date(k.t);
+      const g = d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate();
+      if (yas < 14 * 864e5 && !gun.has(g)) { gun.add(g); tut.add(k.id); }                    // günün son kopyası
+      const pzt = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7)).getTime();
+      if (yas < 56 * 864e5 && !hafta.has(pzt)) { hafta.add(pzt); tut.add(k.id); }            // haftanın son kopyası
+    });
+    let toplam = 0;   // toplam boyut sınırı: eskiden başlayarak bırakılır (en yeni 3 her durumda kalır)
+    liste.filter(k => tut.has(k.id)).forEach((k, i) => { toplam += +k.s || 0; if (i >= 3 && toplam > OY_SINIR) tut.delete(k.id); });
+    return liste.filter(k => !tut.has(k.id)).map(k => k.id);
+  }
+  /* Kopya al. neden: '' kendiliğinden · 'elle' · 'once' (yedek yüklenmeden hemen önce).
+     Döner: özet kaydı · { ayni: true } (son kopyadan beri değişiklik yok) · null (alınmadı). */
+  async function oyAl(neden) {
+    if (!oyOk() || cloud.on || !storageOK || oy.mesgul) return null;
+    oy.mesgul = true;
+    try {
+      const veri = backupData();
+      // boş alan saklanmaz (her şey yanlışlıkla silindiyse eski kopyaların yerini boş bir kopya almasın)
+      if (!veri.items.length && !veri.dbTables.length && !veri.flowNodes.length && veri.projects.length <= 1) { oy.kirli = false; return null; }
+      const tema = { theme: veri.theme, fontSize: veri.fontSize, contrast: veri.contrast };
+      delete veri.theme; delete veri.fontSize; delete veri.contrast;   // görünüm tercihleri özet kaydında durur: tema değişti diye yeni kopya alınmaz
+      veri.exported = 0;
+      const metin = JSON.stringify(veri), h = oyOzet(metin), liste = await oyListe();
+      if (liste.length && liste[0].h === h) { oy.kirli = false; oy.son = Math.max(oy.son, liste[0].t); return { ayni: true }; }
+      const sik = await oySikistir(metin), t = Date.now();
+      const ozet = { t: t, h: h, neden: neden || '', b: metin.length, s: sik.z ? sik.d.byteLength : metin.length * 2, tema: tema,
+        n: { p: veri.projects.length, i: veri.items.length, t: veri.dbTables.length, c: Math.max(veri.flowCharts.length, veri.flowNodes.length ? 1 : 0) } };
+      const db = await oyDb();
+      await new Promise((ok, no) => {
+        const tx = db.transaction(['ozet', 'veri'], 'readwrite'), q = tx.objectStore('ozet').add(ozet);
+        q.onsuccess = () => {
+          ozet.id = q.result;
+          tx.objectStore('veri').put({ id: ozet.id, z: sik.z, d: sik.d });
+          oyFazla([ozet].concat(liste), t).forEach(id => { tx.objectStore('ozet').delete(id); tx.objectStore('veri').delete(id); });
+        };
+        tx.oncomplete = () => ok();
+        tx.onerror = tx.onabort = () => no(tx.error || new Error('Yedek yazılamadı'));
+      });
+      oy.kirli = false; oy.son = t;
+      return ozet;
+    } catch (e) { return null; }
+    finally { oy.mesgul = false; }
+  }
+  async function oyOku(id) {
+    const db = await oyDb(), tx = db.transaction(['ozet', 'veri'], 'readonly');
+    const [o, v] = await Promise.all([oyIstek(tx.objectStore('ozet').get(id)), oyIstek(tx.objectStore('veri').get(id))]);
+    if (!o || !v) return null;
+    let data = null;
+    try { data = JSON.parse(await oyAc(v)); } catch (e) {}
+    // yedek dosyası yüklerken yapılan denetimin aynısı (kimlikler güvenli mi): depodaki kopya bozulmuş olabilir
+    if (!data || typeof data !== 'object' || !Array.isArray(data.projects) || !Array.isArray(data.items) || !backupIdsOk(data)) return null;
+    return Object.assign(data, o.tema && typeof o.tema === 'object' ? { theme: o.tema.theme, fontSize: o.tema.fontSize, contrast: o.tema.contrast } : {}, { exported: o.t });
+  }
+  /* Zamanlama */
+  function oyZamanla(ms) { clearTimeout(oy.zaman); oy.zaman = setTimeout(oyBak, Math.max(1000, ms)); }
+  async function oyBak() {
+    if (!oy.kirli || cloud.on || !oyOk()) return;
+    const kalan = oy.son + OY_ARALIK - Date.now();
+    if (kalan > 0) { oyZamanla(kalan + 500); return; }
+    await oyAl('');
+    if (oy.kirli) oyZamanla(OY_ARALIK);   // alınamadı (ör. depo dolu / başka kopya sürüyordu): sonra yeniden denenir
+  }
+  oyHook = () => {   // kişisel alanda bir kayıt değişti
+    if (oy.kirli) return;
+    oy.kirli = true;
+    oyZamanla(Math.max(20000, oy.son + OY_ARALIK - Date.now()));
+  };
+  async function oyBasla() {   // açılışta: son kopyadan beri değişiklik varsa (ve en az 10 dakika geçtiyse) hemen bir kopya
+    if (!oyOk() || cloud.on) return;
+    try {
+      const l = await oyListe();
+      oy.son = l.length ? l[0].t : 0;
+      if (Date.now() - oy.son >= 10 * 60000) await oyAl(''); else oyZamanla(oy.son + OY_ARALIK - Date.now());
+      // Notlar yalnız bu tarayıcıda duruyor: tarayıcıdan, yer azalınca bu sitenin verilerini silmemesi istenir.
+      // (Chrome sormadan karar verir; soru çıkaran tarayıcılarda yalnız "Otomatik yedekler" penceresi açılınca istenir.)
+      if (window.chrome && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', () => {   // sekme arka plana geçerken: oturumun son hâli de saklansın
+    if (document.hidden && oy.kirli && !cloud.on && Date.now() - oy.son >= 10 * 60000) oyAl('');
+  });
+
+  /* Pencere */
+  function oyZamanAdi(t) {
+    const d = new Date(t), k = dayDiff(dateStr(d));
+    const saat = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    return (k === 0 ? 'Bugün' : k === -1 ? 'Dün' : d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' }) + (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '')) + ' ' + saat;
+  }
+  const oyBoyut = b => b >= 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+  async function renderOy() {
+    const kutu = el('oyListe');
+    el('oySimdi').disabled = cloud.on || !oyOk() || !storageOK;
+    el('oySimdi').title = cloud.on ? 'Ekip alanı açıkken alınmaz: ekip verileri sunucuda durur' : '';
+    if (!oyOk()) { kutu.innerHTML = '<div class="oy-bos">Bu tarayıcıda otomatik yedek saklanamıyor.</div>'; el('oySil').disabled = true; return; }
+    let l;
+    try { l = await oyListe(); } catch (e) { kutu.innerHTML = '<div class="oy-bos">Kopyalar okunamadı (tarayıcı depolamaya izin vermiyor olabilir).</div>'; el('oySil').disabled = true; return; }
+    el('oySil').disabled = !l.length;
+    if (!l.length) { kutu.innerHTML = '<div class="oy-bos">Henüz kopya yok. ' + (cloud.on ? 'Kopyalar kişisel alan içindir; kişisel alana geçince alınır.' : 'Bir şeyler ekleyince ilk kopya kendiliğinden alınır; istersen <b>Şimdi yedekle</b>.') + '</div>'; return; }
+    kutu.innerHTML = l.map(k => {
+      const n = k.n || {};
+      const ne = [(+n.p || 0) + ' proje', (+n.i || 0) + ' not/görev', n.t ? n.t + ' tablo' : '', n.c ? n.c + ' akış' : '', oyBoyut(+k.s || 0)].filter(Boolean).join(' · ');
+      const rozet = k.neden === 'once' ? 'yedek yüklemeden önce' : k.neden === 'elle' ? 'elle alındı' : '';
+      return '<div class="oy-row" data-oy="' + (+k.id) + '"><div class="oy-ne"><span><b>' + esc(oyZamanAdi(k.t)) + '</b>' + (rozet ? '<span class="oy-rozet">' + rozet + '</span>' : '') + '</span><small>' + esc(ne) + '</small></div>' +
+        '<button class="er-btn" type="button" data-oyind="' + (+k.id) + '" title="Bu kopyayı dosya olarak indir">İndir</button>' +
+        '<button class="er-btn" type="button" data-oygeri="' + (+k.id) + '"' + (cloud.on ? ' disabled title="Geri yüklemek için kişisel alana geç"' : '') + '>Geri yükle&hellip;</button></div>';
+    }).join('');
+  }
+  function openOy() {
+    closeDrawer();
+    el('oyListe').innerHTML = '<div class="oy-bos">Yükleniyor…</div>';
+    el('oyModal').classList.add('open');
+    renderOy();
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
+  }
+  function closeOy() { el('oyModal').classList.remove('open'); }
+  el('oyKapat').addEventListener('click', closeOy);
+  el('oyBitti').addEventListener('click', closeOy);
+  el('oyModal').addEventListener('click', e => { if (e.target === el('oyModal')) closeOy(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && el('oyModal').classList.contains('open')) { e.stopPropagation(); closeOy(); } }, true);
+  el('oySimdi').addEventListener('click', async () => {
+    el('oySimdi').disabled = true;
+    const r = await oyAl('elle');
+    await renderOy();
+    showSnack(r && r.ayni ? 'Son kopyadan beri değişiklik yok; yeni kopya gerekmedi.' : r ? 'Yedek alındı.' : 'Yedek alınamadı' + (items.length || dbTables.length || flowNodes.length ? ' (tarayıcı depolamaya izin vermiyor olabilir).' : ': saklanacak bir şey yok.'));
+  });
+  el('oySil').addEventListener('click', async () => {
+    if (!confirm('Bu cihazdaki otomatik yedek kopyalarının hepsi silinsin mi?\n\nNotlarına ve projelerine dokunulmaz; yalnız eski kopyalar silinir.')) return;
+    try {
+      const db = await oyDb();
+      await new Promise((ok, no) => { const tx = db.transaction(['ozet', 'veri'], 'readwrite'); tx.objectStore('ozet').clear(); tx.objectStore('veri').clear(); tx.oncomplete = () => ok(); tx.onerror = tx.onabort = () => no(tx.error); });
+      oy.son = 0; oy.kirli = true;
+    } catch (e) { showSnack('Kopyalar silinemedi.'); }
+    renderOy();
+  });
+  el('oyListe').addEventListener('click', async e => {
+    const ind = e.target.closest('[data-oyind]'), geri = e.target.closest('[data-oygeri]');
+    if (!ind && !geri) return;
+    const id = +(ind || geri).dataset[ind ? 'oyind' : 'oygeri'];
+    let data = null;
+    try { data = await oyOku(id); } catch (err) {}
+    if (!data) { showSnack('Bu kopya okunamadı (bozulmuş olabilir). Başka bir kopyayı dene.'); return; }
+    if (ind) {
+      const d = new Date(data.exported);
+      download(JSON.stringify(data, null, 2), 'notlar-yedek-' + dateStr(d) + '-' + pad2(d.getHours()) + pad2(d.getMinutes()) + '.json', 'application/json');
+      return;
+    }
+    if (cloud.on) return;
+    closeOy();
+    pendingImport = { data: data, file: 'Otomatik yedek' };
+    openBackupModal();
+  });
 
   /* MEVCUTLARA EKLE:
      Seçilen projeler ve içindeki her şey (öğeler, sütunlar, tablolar, alanlar, dizinler,
@@ -21517,6 +22099,7 @@
       case 'all-ics': exportICS('all'); break;
       case 'json-export': exportJSON(); break;
       case 'json-import': el('importFile').click(); break; // gizli dosya seçiciyi aç
+      case 'oto-yedek': openOy(); break;
       case 'ics-import': el('icsFile').click(); break;     // Google Takvim / Outlook / okul takvimi
       case 'install': installApp(); break;
     }
@@ -21577,13 +22160,17 @@
   el('newProj').addEventListener('keydown', e => { if (e.key==='Enter') el('addProj').click(); });
 
   /* Ekleme kutusu: dar ekranda kapalı başlar (sadece başlık satırı), dokununca açılır;
-     boşken dışarıya dokununca yine kapanır. Geniş ekranda CSS hep açık gösterir. */
+     boşken dışarıya dokununca yine kapanır. Geniş ekranda CSS hep açık gösterir.
+     Kapanma, dokunuş bittikten (tıklama işlendikten) SONRA olur. Eskiden parmak değer değmez (pointerdown) kapanıyordu:
+     kutu kapanınca liste yukarı kayıyor, dokunulan onay kutusu / kart parmağın altından kaçıyor ve o dokunuş boşa
+     gidiyordu (not ekledikten sonraki ilk dokunuş "tutmuyordu"); listeyi kaydırmaya başlayınca da sayfa zıplıyordu. */
   const composerEl = document.querySelector('.composer');
   const composerHasText = () => ['cTitle', 'cBody', 'cTags', 'cDue'].some(id => el(id).value.trim());
   composerEl.addEventListener('focusin', () => composerEl.classList.add('open'));
-  document.addEventListener('pointerdown', e => {
-    if (composerEl.classList.contains('open') && !composerEl.contains(e.target) && !composerHasText()) composerEl.classList.remove('open');
-  });
+  document.addEventListener('click', e => {
+    if (!composerEl.classList.contains('open') || composerEl.contains(e.target)) return;
+    setTimeout(() => { if (!composerHasText() && !composerEl.contains(document.activeElement)) composerEl.classList.remove('open'); }, 0);
+  }, true);
 
   // Not / Görev türü seçimi
   el('tNote').addEventListener('click', () => setType('note'));
@@ -21603,6 +22190,25 @@
 
   // Arama kutusuna her yazıldığında listeyi süz (pano da güncellenir)
   el('search').addEventListener('input', () => { renderMain(); renderBoard(); });
+
+  /* ---- GÜN DEĞİŞİNCE ----
+     Uygulama gece boyunca açık kalırsa (telefonda arka planda bekleyip sabah öne gelirse) "Bugün",
+     "Gecikenler", son tarih rozetleri ve takvimdeki bugün işareti dünde kalıyordu. Gün değişimi gece
+     yarısında (zamanlayıcı) ve uygulama yeniden öne gelince denetlenir; değiştiyse görünümler yeniden çizilir. */
+  let wnGun = todayStr(), wnGunT = 0;
+  function wnGunBak() {
+    const bugun = todayStr();
+    if (bugun !== wnGun) {
+      wnGun = bugun;
+      try { renderProjects(); renderMain(); renderBoard(); } catch (e) {}   // renderMain açıksa takvimi de çizer
+    }
+    clearTimeout(wnGunT);
+    const yarin = new Date(); yarin.setHours(24, 0, 2, 0);
+    wnGunT = setTimeout(wnGunBak, Math.max(1000, Math.min(yarin - Date.now(), 6 * 3600 * 1000)));
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) wnGunBak(); });
+  window.addEventListener('focus', wnGunBak);
+  wnGunBak();
 
   /* ---- GÖRÜNÜM DÜĞMELERİ (Liste / Pano / Şema) ---- */
   el('viewList').addEventListener('click', () => setView('list'));
@@ -21691,6 +22297,8 @@
     } else if (e.key === 'Enter') { e.preventDefault(); gsOpen(gsResults[gsSel]); }
     else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeGs(); }
   });
+  // Esc, odak sonuçlardan birinde ya da Kapat düğmesindeyken de kapatsın (eskiden yalnız arama kutusundayken kapatıyordu)
+  el('gsModal').addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeGs(); } });
   el('gsList').addEventListener('click', e => { const b = e.target.closest('[data-gs]'); if (b) gsOpen(gsResults[+b.dataset.gs]); });
   el('gsList').addEventListener('mousemove', e => {
     const b = e.target.closest('[data-gs]');
@@ -21913,6 +22521,7 @@
     if (v) applyView(+v.dataset.view);
   });
   el('listSelBtn').addEventListener('click', () => setListSel(!listSelOn));
+  bindListEvents();
   /* Seçim kipinde karttaki düğme / kutucuk / bağlantılar çalışmasın: tıklama yalnızca seçer
      (yakalama aşamasında, kartın içindekilerden önce) */
   el('list').addEventListener('click', e => {
@@ -23106,6 +23715,7 @@ service cloud.firestore {
     else if (leave) openTeamPanel(leave);
     ghStart();
     handleShareTarget();
+    setTimeout(oyBasla, 4000);   // otomatik yedek (kişisel alan): açılış işleri bittikten sonra
   }
   async function switchWorkspace(id) {
     if (cloud.on && cloud.prov === 'srv') await srvDrain(3000);   // yoldaki yazmalar bitsin, kalanlar cihaza yazılsın
@@ -23380,7 +23990,7 @@ service cloud.firestore {
       });
       srvAfterRender(body);
       const f = body.querySelector('[data-autofocus]');
-      if (f && !('ontouchstart' in window)) f.focus();
+      if (f && !('ontouchstart' in window)) f.focus({ preventScroll: true });
       return;
     }
     if (tp.invite && tp.invite.srv) { body.innerHTML = '<div class="team-msg err">Bu davet bağlantısı bir White Note sunucusu içindir; bağlantıyı gönderen kişinin verdiği adreste aç.</div>'; tp.invite = null; return; }
@@ -23395,7 +24005,7 @@ service cloud.firestore {
     if (!tp.inst) { body.innerHTML = msg + '<p class="modal-note">Firebase\'e bağlanılamadı.</p><div class="modal-actions"><button class="modal-btn" data-tact="change-cfg">Firebase ayarlarını değiştir</button><button class="modal-btn primary" data-tact="retry">Tekrar dene</button></div>'; return; }
     body.innerHTML = msg + (tp.user ? teamHomeHTML() : teamSigninHTML());
     const f = body.querySelector('[data-autofocus]');
-    if (f && !('ontouchstart' in window)) f.focus();
+    if (f && !('ontouchstart' in window)) f.focus({ preventScroll: true });
   }
 
   function teamSetupHTML() {
@@ -24389,11 +24999,36 @@ service cloud.firestore {
      Pi GitHub'daki yeni sürümü kendisi kurar (sunucu/whitenote-guncelle.sh). Sayfa hangi sürümle açıldıysa (sunucunun
      yazdığı wn-surum) sunucudakiyle (/api/durum) karşılaştırılır: sayfaya dönülünce, internet gelince ve iki dakikada
      bir. Yeni sürüm varsa sayfa uygun anda yenilenir: arka plandan dönülünce ya da bir dakikadır dokunulmuyorken;
-     yazı kutusundayken ya da bir pencere açıkken hiç (yazılanlar kaybolmasın). O ana kadar "Şimdi yenile" düğmeli
-     kısa bir not çıkar. */
+     yazı kutusundayken, ekleme kutusunda yarım yazı varken ya da bir pencere açıkken hiç (yazılanlar kaybolmasın).
+     O ana kadar "Şimdi yenile" düğmeli kısa bir not çıkar.
+     GitHub Pages gibi sunucusuz yayında da aynı düzen işler: sayfanın açıldığı kopyanın tarihi (document.lastModified)
+     sitedeki index.html'in tarihiyle karşılaştırılır (birkaç yüz baytlık HEAD isteği; en sık 15 dakikada bir).
+     Böylece telefona yüklenmiş, günlerce açık kalan uygulama da eski sürümde takılı kalmaz. */
   const WN_SURUM = (() => { try { const m = document.querySelector('meta[name="wn-surum"]'); return (m && m.getAttribute('content')) || ''; } catch (e) { return ''; } })();
-  const wnGuncel = { yeni: false, son: Date.now(), bakildi: 0, gizli: false, zamanlayici: null };
+  const wnGuncel = { yeni: false, son: Date.now(), bakildi: 0, gizli: false, zamanlayici: null, tarih: 0 };
+  const WN_STATIK = !SRV.ok && /^https?:$/.test(location.protocol);
+  const WN_BELGE_T = (() => { try { const t = Date.parse(document.lastModified); return isFinite(t) ? t : 0; } catch (e) { return 0; } })();
+  async function wnStatikBak(zorla) {
+    if (!WN_STATIK || !WN_BELGE_T || wnGuncel.yeni || navigator.onLine === false || (!zorla && Date.now() - wnGuncel.bakildi < 15 * 60000)) return;
+    wnGuncel.bakildi = Date.now();
+    try {
+      const r = await fetch(location.pathname, { method: 'HEAD', cache: 'no-store', credentials: 'same-origin' });
+      const t = r.ok ? Date.parse(r.headers.get('Last-Modified') || '') : NaN;
+      const fark = t - WN_BELGE_T;
+      if (!isFinite(t) || fark <= 2000) return;
+      // document.lastModified yerel saatle yazılır; bir tarayıcı onu başka saat dilimiyle verirse fark çeyrek saatin
+      // tam katı çıkar. Öyle bir farkta emin olunamaz: boşuna yenilememek için o sürüm atlanır (sonraki açılışta gelir).
+      if (fark < 15 * 3600000 && Math.abs(fark - Math.round(fark / 900000) * 900000) <= 2000) return;
+      // Bu tarih için bir kez yenilendi ama sayfa yine eski geldiyse (ara bellek) yeniden denenmez: yenileme döngüsü olmasın
+      let denenen = 0; try { denenen = +sessionStorage.getItem('wn:yeniSurum') || 0; } catch (e) {}
+      if (denenen === t) return;
+      wnGuncel.yeni = true; wnGuncel.tarih = t;
+      showSnack('Uygulamanın yeni sürümü yayınlandı; uygun anda kendiliğinden yenilenecek.', () => wnYenile('simdi'), 'Şimdi yenile');
+      wnYenile();
+    } catch (e) {}
+  }
   async function wnSurumBak(zorla) {
+    if (WN_STATIK) return wnStatikBak(zorla === 'cevrimici');
     if (!SRV.ok || !WN_SURUM || wnGuncel.yeni || (!zorla && Date.now() - wnGuncel.bakildi < 20000)) return;
     wnGuncel.bakildi = Date.now();
     try {
@@ -24408,15 +25043,17 @@ service cloud.firestore {
   function wnMesgul() {   // yazı yazılıyor ya da bir pencere açık: yenileme beklesin
     const a = document.activeElement;
     if (a && (a.tagName === 'TEXTAREA' || a.isContentEditable || (a.tagName === 'INPUT' && !/^(?:button|checkbox|radio|range|color|file|submit|reset)$/i.test(a.type || '')))) return true;
+    if (['cTitle', 'cBody', 'cTags'].some(id => { const n = el(id); return !!(n && n.value && n.value.trim()); })) return true;   // ekleme kutusunda yarım yazı
     return !!document.querySelector('.modal-overlay.open');
   }
   async function wnYenile(mod) {   // mod: 'simdi' (düğme) · 'donus' (arka plandan dönüldü, dokunulmadı) · boş (bir dakika dokunulmadıysa)
     if (!wnGuncel.yeni) return;
     if (mod !== 'simdi' && (wnMesgul() || (mod !== 'donus' && Date.now() - wnGuncel.son < 60000))) return;
     try { if (cloud.team && cloud.prov === 'srv') await srvDrain(3000); } catch (e) {}
+    try { if (wnGuncel.tarih) sessionStorage.setItem('wn:yeniSurum', String(wnGuncel.tarih)); } catch (e) {}
     location.reload();
   }
-  if (SRV.ok && WN_SURUM) {
+  if ((SRV.ok && WN_SURUM) || (WN_STATIK && WN_BELGE_T)) {
     ['pointerdown', 'keydown', 'input', 'wheel'].forEach(k => document.addEventListener(k, () => { wnGuncel.son = Date.now(); }, { capture: true, passive: true }));
     document.addEventListener('visibilitychange', () => {
       clearTimeout(wnGuncel.zamanlayici);
@@ -24428,8 +25065,10 @@ service cloud.firestore {
         wnYenile(wnGuncel.son <= donus ? 'donus' : '');
       }, 1500);
     });
-    window.addEventListener('online', () => wnSurumBak(true));
+    window.addEventListener('online', () => wnSurumBak('cevrimici'));
     setInterval(() => { if (!document.hidden) { wnSurumBak(false); wnYenile(); } }, 120000);
+    // Sunucusuz yayında sayfa ara bellekten (ya da internet yokken kayıtlı kopyadan) açılmış olabilir: açılışta bir kez bakılır
+    if (WN_STATIK) setTimeout(() => { if (!document.hidden) wnSurumBak('cevrimici'); }, 8000);
   }
 
   /* ---------- Oturum kapandı / erişim bitti: kişisel alana dönülür, Ekip penceresi nedenini söyler ---------- */
@@ -26447,7 +27086,7 @@ service cloud.firestore {
     body.innerHTML = msg + h;
     el('ghTitle').textContent = gh.view === 'ask' ? 'Hangisi kalsın?' : 'GitHub ile paylaş';
     const f = body.querySelector('[data-autofocus]');
-    if (f && !f.value && !('ontouchstart' in window)) f.focus();
+    if (f && !f.value && !('ontouchstart' in window)) f.focus({ preventScroll: true });
   }
   function ghSetupHTML() {
     const inv = gh.invite, c = gh.cfg || {}, d = gh.draft || {};

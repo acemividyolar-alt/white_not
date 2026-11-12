@@ -59,7 +59,11 @@ Aynı menünün altında:
 - Arama Türkçe harf ve büyük/küçük harf farkı gözetmez (`odev` → "Ödev"), kelimeler ayrı ayrı aranır;
   **etikete tıklayınca** liste o etikete süzülür (`#etiket` yazmak da olur)
 - **Son tarih:** görevlere ve notlara tarih verilir; gecikenler kırmızı, bugünküler sarı görünür,
-  "Gecikenler / Bugün / 7 gün içinde" süzgeçleri ve kenar çubuğunda gecikmiş sayısı
+  "Gecikenler / Bugün / 7 gün içinde" süzgeçleri ve kenar çubuğunda gecikmiş sayısı. Uygulama açıkken gün
+  değişince (gece yarısı ya da cihaz uykudan dönünce) bunlar ve takvimdeki "bugün" kendiliğinden güncellenir
+- **Uzun listeler:** liste 60'ar öğe çizilir; sona yaklaşınca sıradakiler kendiliğinden eklenir (sondaki
+  "… öğe daha" düğmesine basmak da olur). Böylece yüzlerce notta da yazmak, aramak ve işaretlemek akıcı kalır;
+  arama ve "Hepsi" seçimi her zaman bütün notlarda çalışır
 - **Markdown:** `**kalın**`, `*italik*`, `# başlık`, `- madde`, `1. sıralı`, `> alıntı`, `` `kod` ``,
   bağlantı ve **işaretlenebilir kontrol listesi** (`- [ ] yapılacak`) — maddeler kartın üstünden
   işaretlenir, ilerleme (☑ 2/5) görünür
@@ -92,7 +96,9 @@ Aynı menünün altında:
 
 ### Takvim
 - Son tarihi olan not ve görevler **Ay**, **Hafta** ya da **Gün** görünümünde; güne tıklayınca o günün listesi
-- O güne doğrudan görev ekleme, görevi oradan tamamlama, "Tüm projeler" seçeneği
+- O güne doğrudan görev ekleme (**+ Bu güne görev ekle**: uygulamanın kendi küçük penceresi açılır, istersen saat de
+  verirsin; Enter ekler ve pencere açık kalır, art arda birkaç görev yazılabilir), görevi oradan tamamlama,
+  "Tüm projeler" seçeneği
 - **Saatli görevler:** kart penceresinde son tarihin yanına saat ve süre (15 dk – 4 saat) verilir; rozette
   "Bugün 14:30" görünür, saati geçen bugünkü görev gecikmiş sayılır
 - **Gün görünümü:** üstte "Tüm gün" şeridi, altta saat çizelgesi (saatli görevler, o günün dersleri, kırmızı
@@ -126,6 +132,8 @@ Aynı menünün altında:
 - Kartları sütunlar arasında ve sütun içinde **sürükleyerek** taşı
   (telefonda karta kısa süre basılı tut, sonra sürükle)
 - Sütunları başlığından tutup **sürükleyerek** sırala
+- **+ Kart ekle:** sütunun altından açılan küçük pencereye başlığı yaz, Enter'a bas; pencere açık kalır, art arda
+  kart eklenir (boş Enter, Esc ya da **Bitti** kapatır)
 - "Bitti" benzeri sütuna taşınan görev otomatik tamamlanır; başka bir sütunu da menüden **Bitti sütunu** yapabilirsin
 - **Kart sınırı (Kanban WIP):** sütun menüsünden "aynı anda en fazla şu kadar kart" sınırı; başlıkta 3/5 görünür,
   sınır dolunca sarı, aşılınca kırmızı olur ve uyarı çıkar (kart yine de taşınır)
@@ -380,7 +388,16 @@ ve boşaltma da yapılır.
 
 Dışa / İçe aktar → **Telefona / bilgisayara yükle**. Chrome ve Edge doğrudan yükler; iPhone'da
 Safari'nin Paylaş → **Ana Ekrana Ekle** adımı gösterilir. Yüklenen uygulama kendi simgesiyle,
-tarayıcı çubukları olmadan açılır ve internetsiz çalışır (`sw.js`).
+tarayıcı çubukları olmadan açılır ve internetsiz çalışır (`sw.js`): internet yokken ya da site geçici olarak
+hata verirken son açılan kopya açılır, notlar yerinde durur.
+
+- **Geri tuşu:** telefonda Geri tuşu / hareketi önce açık pencereyi, menüyü ya da kenar çekmecesini kapatır;
+  hiçbiri açık değilken uygulamadan çıkar.
+- **Kendiliğinden güncelleme:** site (GitHub Pages) güncellenince açık duran uygulama bunu fark eder
+  (en sık 15 dakikada bir, küçük bir istekle) ve uygun anda kendiliğinden yenilenir: arka plandan dönünce ya da
+  bir dakikadır dokunulmuyorken. Yazı yazarken, ekleme kutusunda yarım yazı varken ya da bir pencere açıkken
+  yenilenmez; o ana kadar altta **Şimdi yenile** düğmeli kısa bir not durur. (Kendi sunucunda da aynısı olur,
+  bkz. Kendi sunucunda ekip.)
 
 **Paylaş hedefi:** Android'de uygulama yüklüyse başka bir uygulamada (tarayıcı, YouTube, mesajlar…)
 Paylaş → **White Note** seçilebilir: başlık, metin ve bağlantı ekleme kutusuna gelir, **Ekle** ile not olur
@@ -579,6 +596,15 @@ kayıtların artık o depoya gider. Bağlantıyı tanımadığın birinden aldı
 - Başka cihaza taşımak ya da yedeklemek için: **Dışa / İçe aktar → JSON yedeği indir / yükle**.
   Yüklerken iki seçenek var: **Mevcutlara ekle** (projeleri tek tek seçip ekler; hiçbir kaydın üstüne
   yazmaz, aynı ada "(2)" ekler) ya da **Hepsini değiştir** (önce şu anki verinin yedeği indirilir).
+- **Otomatik yedekler:** kişisel alanın tam kopyası bu cihazda kendiliğinden saklanır (tarayıcının IndexedDB
+  deposunda, sıkıştırılmış): açılışta ve değişiklik oldukça en sık yarım saatte bir; içerik aynıysa yeni kopya
+  alınmaz. En yeni 6 kopya, son 14 günün her günü ve son 8 haftanın her haftası için birer kopya kalır.
+  **Dışa / İçe aktar → Otomatik yedekler** penceresinden bir kopya **geri yüklenir** (yedek yükleme penceresi
+  açılır: mevcutlara eklenir ya da hepsi değiştirilir; değiştirmeden hemen önceki durum da kopyalanır, yani geri
+  yükleme de geri alınabilir) ya da dosya olarak **indirilir**. Çöp kutusunun kapsamadığı şeyleri de (şema
+  tabloları, toplu değişiklikler, yanlış yüklenen yedek) kurtarır. Kopyalar aynı tarayıcıda durduğu için site
+  verilerini silmek ya da cihazı kaybetmek bunları da götürür: önemli şeyler için ara sıra dosya da indir.
+  Ekip alanı sunucuda / Firebase'de durur, buraya alınmaz.
 - Notlar ayrıca Markdown, düz metin ve PDF olarak dışa aktarılabilir (şema SQL'i ve akış
   şemasının algoritma adımları dahil).
 
